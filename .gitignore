@@ -1,16 +1,65 @@
-# Compiled class file
+# Kotlin
 *.class
+*.kt~  # backup files
+*.kts~ # script backup files
+.kotlin/
 
-# Log file
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+gradle-app.setting
+gradle-app.setting.lock
+
+# Android
+*.apk
+*.ap_
+*.dex
+*.so
+*.c
+*.h
+*.o
+*.swp
+*.lock
+*.db
+*.iml
+.idea/
+captures/
+.externalNativeBuild/
+.cxx/
+local.properties
+*.jks
+*.keystore
+app/release/
+app/debug/
+
+# Android Studio / IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
 *.log
 
-# BlueJ files
-*.ctxt
+# Mac OS
+.DS_Store
 
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
 
-# Package Files #
+# JetBrains specific
+.idea/
+*.iml
+*.ipr
+out/
+
+# Virtual machine crash logs
+hs_err_pid*
+replay_pid*
+
+# Packaging files
 *.jar
 *.war
 *.nar
@@ -19,9 +68,9 @@
 *.tar.gz
 *.rar
 
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
-hs_err_pid*
-replay_pid*
-
-# Kotlin Gradle plugin data, see https://kotlinlang.org/docs/whatsnew20.html#new-directory-for-kotlin-data-in-gradle-projects
-.kotlin/
+# Miscellaneous
+*.tmp
+*.bak
+*.swp
+*~.nib
+*.orig
