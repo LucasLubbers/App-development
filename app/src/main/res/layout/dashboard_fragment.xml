@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <!-- Titel -->
+        <TextView
+            android:text="Dashboard"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+        <!-- Statistiek Cards -->
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:weightSum="3">
+
+            <!-- Workout Count -->
+            <LinearLayout
+                android:id="@+id/card_workouts"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:orientation="vertical"
+                android:background="#EEEEEE"
+                android:padding="12dp"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content">
+                <TextView android:text="Totaal\nworkouts" android:textSize="14sp"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content" />
+                <TextView android:id="@+id/tvWorkoutCount" android:text="0" android:textStyle="bold"
+                    android:textSize="18sp" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+            </LinearLayout>
+
+            <!-- Time Trained -->
+            <LinearLayout
+                android:id="@+id/card_duration"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:orientation="vertical"
+                android:background="#EEEEEE"
+                android:padding="12dp"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content">
+                <TextView android:text="Totale tijd" android:textSize="14sp"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content" />
+                <TextView android:id="@+id/tvTotalTime" android:text="0u 0m" android:textStyle="bold"
+                    android:textSize="18sp" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+            </LinearLayout>
+
+            <!-- Goals -->
+            <LinearLayout
+                android:id="@+id/card_goals"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:background="#EEEEEE"
+                android:padding="12dp"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content">
+                <TextView android:text="Doelen" android:textSize="14sp"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content" />
+                <TextView android:id="@+id/tvGoals" android:text="0/3" android:textStyle="bold"
+                    android:textSize="18sp" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Recente Workouts -->
+        <TextView
+            android:text="Recente workouts"
+            android:textStyle="bold"
+            android:layout_marginTop="24dp"
+            android:textSize="18sp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp" />
+
+        <!-- Wekelijkse voortgang -->
+        <TextView
+            android:text="Wekelijkse voortgang"
+            android:textStyle="bold"
+            android:layout_marginTop="24dp"
+            android:textSize="18sp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+        <com.github.mikephil.charting.charts.BarChart
+            android:id="@+id/barChart"
+            android:layout_width="match_parent"
+            android:layout_height="300dp"
+            android:layout_marginTop="8dp" />
+    </LinearLayout>
+</ScrollView>
