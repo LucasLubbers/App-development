@@ -8,6 +8,6 @@
     <fragment
         android:id="@+id/dashboardFragment"
         android:name="com.nhlstenden.WorkoutNHLStenden.DashboardFragment"
-        android:label="Dashboard"
+        android:label="@string/dashboard_title"
         tools:layout="@layout/dashboard_fragment" />
 </navigation>

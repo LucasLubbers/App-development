@@ -26,6 +26,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_marginTop="?attr/actionBarSize"
+        android:layout_marginHorizontal="12dp"
         app:defaultNavHost="true"
         app:navGraph="@navigation/nav_graph" />
 

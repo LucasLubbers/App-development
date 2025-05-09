@@ -30,19 +30,19 @@ class DashboardFragment : Fragment() {
         val workouts = listOf(
             mapOf(
                 "title" to "Krachttraining",
-                "time" to "Vandaag, 10:30",
+                "time" to "Vrijdag, 9 mei",
                 "duration" to "45 min",
                 "description" to "Benen en core"
             ),
             mapOf(
                 "title" to "Cardio",
-                "time" to "Gisteren, 18:00",
+                "time" to "Donderdag, 8 mei",
                 "duration" to "30 min",
                 "description" to "5 km hardlopen"
             ),
             mapOf(
                 "title" to "Yoga",
-                "time" to "2 dagen geleden, 08:15",
+                "time" to "Woensdag, 30 april",
                 "duration" to "60 min",
                 "description" to "Ochtend routine"
             )
