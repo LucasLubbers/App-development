@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/navigation_profile"
+        android:title="@string/nav_profile" />
+    <item
+        android:id="@+id/navigation_history"
+        android:title="@string/nav_history" />
+    <item
+        android:id="@+id/navigation_start_workout"
+        android:title="@string/nav_start_workout" />
+    <item
+        android:id="@+id/navigation_exercises"
+        android:title="@string/nav_exercises" />
+    <item
+        android:id="@+id/navigation_progress"
+        android:title="@string/nav_progress" />
+</menu> 
