@@ -25,9 +25,9 @@
         
     <fragment
         android:id="@+id/navigation_start_workout"
-        android:name="com.nhlstenden.WorkoutNHLStenden.DashboardFragment"
+        android:name="com.nhlstenden.WorkoutNHLStenden.StartWorkoutFragment"
         android:label="@string/nav_start_workout"
-        tools:layout="@layout/dashboard_fragment" />
+        tools:layout="@layout/fragment_start_workout" />
         
     <fragment
         android:id="@+id/navigation_exercises"
