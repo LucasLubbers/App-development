@@ -10,4 +10,34 @@
         android:name="com.nhlstenden.WorkoutNHLStenden.DashboardFragment"
         android:label="@string/dashboard_title"
         tools:layout="@layout/dashboard_fragment" />
+        
+    <fragment
+        android:id="@+id/navigation_profile"
+        android:name="com.nhlstenden.WorkoutNHLStenden.DashboardFragment"
+        android:label="@string/nav_profile"
+        tools:layout="@layout/dashboard_fragment" />
+        
+    <fragment
+        android:id="@+id/navigation_history"
+        android:name="com.nhlstenden.WorkoutNHLStenden.DashboardFragment"
+        android:label="@string/nav_history"
+        tools:layout="@layout/dashboard_fragment" />
+        
+    <fragment
+        android:id="@+id/navigation_start_workout"
+        android:name="com.nhlstenden.WorkoutNHLStenden.DashboardFragment"
+        android:label="@string/nav_start_workout"
+        tools:layout="@layout/dashboard_fragment" />
+        
+    <fragment
+        android:id="@+id/navigation_exercises"
+        android:name="com.nhlstenden.WorkoutNHLStenden.DashboardFragment"
+        android:label="@string/nav_exercises"
+        tools:layout="@layout/dashboard_fragment" />
+        
+    <fragment
+        android:id="@+id/navigation_progress"
+        android:name="com.nhlstenden.WorkoutNHLStenden.DashboardFragment"
+        android:label="@string/nav_progress"
+        tools:layout="@layout/dashboard_fragment" />
 </navigation>
