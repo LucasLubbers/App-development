@@ -7,6 +7,8 @@ services:
       - ./pb_data:/pb/pb_data
     environment:
       - PB_DB_FILE=/pb/pb_data/db.sqlite
+      - POCKETBASE_ADMIN_EMAIL=admin@aktiv.com
+      - POCKETBASE_ADMIN_PASSWORD=Password123!
     networks:
       - pocketbase_network
 
