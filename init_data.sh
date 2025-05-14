@@ -19,12 +19,12 @@ if [ -z "$TOKEN" ]; then
   exit 1
 fi
 
-# Check if the collection exists
-COLLECTION_EXISTS=$(curl -s -X GET http://localhost:8090/api/collections/workouts \
+# Check if the collection exists using HTTP status code
+HTTP_STATUS=$(curl -s -o response.json -w "%{http_code}" -X GET http://localhost:8090/api/collections/workouts \
   -H "Authorization: Bearer $TOKEN")
 
-if echo "$COLLECTION_EXISTS" | grep -q '"code":'; then
-  # If the collection doesn't exist, create it
+if [ "$HTTP_STATUS" = "404" ]; then
+  # Collection doesn't exist; create it
   COLLECTION_CREATE_RESPONSE=$(curl -s -X POST http://localhost:8090/api/collections \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer $TOKEN" \
@@ -42,10 +42,9 @@ if echo "$COLLECTION_EXISTS" | grep -q '"code":'; then
 
   echo "Collection created successfully."
   COLLECTION_ID=$(echo "$COLLECTION_CREATE_RESPONSE" | jq -r '.id')
-
 else
-  # If the collection exists, get its ID
-  COLLECTION_ID=$(echo "$COLLECTION_EXISTS" | jq -r '.id')
+  # Collection exists; extract ID
+  COLLECTION_ID=$(jq -r '.id' < response.json)
   echo "Collection already exists. Using ID: $COLLECTION_ID"
 fi
 
@@ -103,6 +102,7 @@ RECORDS=(
   '{"name": "Push-ups", "difficulty": 3}'
   '{"name": "Squats", "difficulty": 2}'
   '{"name": "Lunges", "difficulty": 4}'
+  '{"name": "Sit-ups", "difficulty": 2}'
 )
 
 for RECORD in "${RECORDS[@]}"; do
