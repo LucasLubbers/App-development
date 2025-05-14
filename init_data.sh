@@ -46,8 +46,8 @@ COLLECTIONS["goals"]='{
     { "name": "completed", "type": "bool", "required": false, "unique": false }
   ],
   "records": [
-    { "description": "Run-5k", "completed": false },
-    { "description": "30-day-yoga-challenge", "completed": true }
+    { "description": "Run 5k", "completed": false },
+    { "description": "30 day yoga challenge", "completed": true }
   ]
 }'
 
@@ -106,8 +106,7 @@ for COLLECTION_NAME in "${!COLLECTIONS[@]}"; do
   echo "Cleared existing records in '$COLLECTION_NAME'"
 
   # Add new records with correct formatting
-  RECORDS=$(echo "$CONFIG_JSON" | jq -c '.records[]')
-  for RECORD in $RECORDS; do
+  echo "$CONFIG_JSON" | jq -c '.records[]' | while IFS= read -r RECORD; do
     echo "Adding record: $RECORD"
 
     ADD_RESP=$(curl -s -X POST "http://localhost:8090/api/collections/$COLLECTION_NAME/records" \
@@ -124,6 +123,7 @@ for COLLECTION_NAME in "${!COLLECTIONS[@]}"; do
       echo "Successfully added record to $COLLECTION_NAME: $RECORD"
     fi
   done
+
 
   echo "Added records to '$COLLECTION_NAME'"
 done
