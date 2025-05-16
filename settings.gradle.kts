@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "WorkoutNHLStenden"
+rootProject.name = "WorkoutBuddyApplication"
 include(":app")
