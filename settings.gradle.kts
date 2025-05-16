@@ -16,8 +16,9 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven("https://jitpack.io")
     }
 }
 
-rootProject.name = "WorkoutNHLStenden"
+rootProject.name = "WorkoutBuddyApplication"
 include(":app")
