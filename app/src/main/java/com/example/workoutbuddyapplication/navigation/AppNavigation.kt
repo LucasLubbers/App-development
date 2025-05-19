@@ -9,6 +9,7 @@ import androidx.navigation.compose.composable
 import com.example.workoutbuddyapplication.screens.AddWorkoutScreen
 import com.example.workoutbuddyapplication.screens.BluetoothDevicesScreen
 import com.example.workoutbuddyapplication.screens.DashboardScreen
+import com.example.workoutbuddyapplication.screens.ExercisesScreen
 import com.example.workoutbuddyapplication.screens.GoalsScreen
 import com.example.workoutbuddyapplication.screens.HistoryScreen
 import com.example.workoutbuddyapplication.screens.LoginScreen
@@ -35,6 +36,7 @@ sealed class Screen(val route: String) {
     object WorkoutCompleted : Screen("workout_completed")
     object BluetoothDevices : Screen("bluetooth_devices")
     object QRScanner : Screen("qr_scanner")
+    object Exercises : Screen("exercises")
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -79,6 +81,9 @@ fun AppNavigation(navController: NavHostController) {
         }
         composable(Screen.BluetoothDevices.route) {
             BluetoothDevicesScreen(navController = navController)
+        }
+        composable(Screen.Exercises.route) {
+            ExercisesScreen(navController = navController)
         }
     }
 }
