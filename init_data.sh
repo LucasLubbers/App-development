@@ -29,25 +29,38 @@ declare -A COLLECTIONS
 
 COLLECTIONS["workouts"]='{
   "fields": [
-    { "name": "name", "type": "text", "required": false, "unique": false },
-    { "name": "difficulty", "type": "number", "required": false, "unique": false }
+    { "name": "name", "type": "text", "required": false, "unique": true },
+    { "name": "difficulty", "type": "number", "required": false, "unique": true }
   ],
   "records": [
-    { "name": "Push-ups", "difficulty": 3 },
-    { "name": "Squats", "difficulty": 2 },
-    { "name": "Lunges", "difficulty": 4 },
-    { "name": "Sit-ups", "difficulty": 2 }
+    { "name": "Upper body", "difficulty": 2 },
+    { "name": "Lower body", "difficulty": 3 },
+    { "name": "Full body", "difficulty": 4 },
+    { "name": "Cardio", "difficulty": 2 }
   ]
 }'
 
 COLLECTIONS["goals"]='{
   "fields": [
-    { "name": "description", "type": "text", "required": false, "unique": false },
-    { "name": "completed", "type": "bool", "required": false, "unique": false }
+    { "name": "description", "type": "text", "required": false, "unique": true },
+    { "name": "completed", "type": "bool", "required": false, "unique": true }
   ],
   "records": [
     { "description": "Run 5k", "completed": false },
     { "description": "30 day yoga challenge", "completed": true }
+  ]
+}'
+
+COLLECTIONS["exercises"]='{
+  "fields": [
+    { "name": "name", "type": "text", "required": false, "unique": false },
+    { "name": "intensity", "type": "text", "required": false, "unique": false }
+  ],
+  "records": [
+    { "name": "Bench press", "intensity": "medium" },
+    { "name": "Squats", "intensity": "medium" },
+    { "name": "Deadlifts", "intensity": "high" },
+    { "name": "Running", "intensity": "low" }
   ]
 }'
 
