@@ -75,10 +75,13 @@ dependencies {
     implementation(libs.kotlin.stdlib)
     implementation(libs.hilt.android.v2562)
     implementation(libs.androidx.datastore.preferences)
+    implementation(libs.okhttp)
+    implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.kotlinx.serialization.json)
 
     // Adding the necessary Compose dependencies
-    implementation("androidx.compose.ui:ui:1.8.0") // Compose UI
-    implementation("androidx.compose.compiler:compiler:1.5.15") // Compose Compiler for Kotlin 2.0
+    implementation(libs.androidx.ui.v180) // Compose UI
+    implementation(libs.androidx.compiler) // Compose Compiler for Kotlin 2.0
     //noinspection UseTomlInstead
     implementation("com.google.dagger:hilt-android:2.56.2")
 }
