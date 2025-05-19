@@ -16,32 +16,6 @@ else
   exit 1
 fi
 
-# Create default admin user if none exists
-echo "Checking for existing admin user..."
-
-ADMIN_COUNT=$(curl -s -X GET "http://localhost:8090/api/admins/stats" | jq -r '.total')
-
-if [ "$ADMIN_COUNT" -eq 0 ]; then
-  echo "No admin users found. Creating default admin user..."
-
-  CREATE_ADMIN_RESP=$(curl -s -X POST "http://localhost:8090/api/admins" \
-    -H "Content-Type: application/json" \
-    -d '{
-      "email": "'"$ADMIN_EMAIL"'",
-      "password": "'"$ADMIN_PASSWORD"'",
-      "passwordConfirm": "'"$ADMIN_PASSWORD"'"
-    }')
-
-  if echo "$CREATE_ADMIN_RESP" | jq -e '.code?' > /dev/null; then
-    echo "Failed to create admin user: $CREATE_ADMIN_RESP"
-    exit 1
-  else
-    echo "Default admin user created: $ADMIN_EMAIL"
-  fi
-else
-  echo "Admin user already exists. Skipping admin creation."
-fi
-
 # Use the API key from the .env file
 TOKEN=$API_KEY
 
@@ -149,6 +123,7 @@ for COLLECTION_NAME in "${!COLLECTIONS[@]}"; do
       echo "Successfully added record to $COLLECTION_NAME: $RECORD"
     fi
   done
+
 
   echo "Added records to '$COLLECTION_NAME'"
 done
