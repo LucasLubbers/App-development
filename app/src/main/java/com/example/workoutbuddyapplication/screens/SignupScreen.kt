@@ -1,22 +1,8 @@
 package com.example.workoutbuddyapplication.screens
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -25,6 +11,47 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.workoutbuddyapplication.navigation.Screen
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
+import com.example.workoutbuddyapplication.BuildConfig
+
+suspend fun registerUser(email: String, password: String, name: String): Boolean = withContext(Dispatchers.IO) {
+    val client = OkHttpClient()
+    val json = JSONObject()
+    json.put("email", email)
+    json.put("password", password)
+    // Optionally, add user metadata
+    val userMeta = JSONObject()
+    userMeta.put("name", name)
+    json.put("data", userMeta)
+
+    val body = json.toString().toRequestBody("application/json".toMediaType())
+    val request = Request.Builder()
+        .url("https://attsgwsxdlblbqxnboqx.supabase.co/auth/v1/signup")
+        .post(body)
+        .addHeader("apikey", BuildConfig.SUPABASE_ANON_KEY)
+        .addHeader("Authorization", "Bearer ${BuildConfig.SUPABASE_ANON_KEY}")
+        .build()
+
+    try {
+        val response = client.newCall(request).execute()
+        val responseBody = response.body?.string()
+        if (!response.isSuccessful) {
+            println("Supabase signup error: $responseBody")
+        }
+        response.isSuccessful
+    } catch (e: Exception) {
+        e.printStackTrace()
+        println("Supabase signup exception: ${e.message}")
+        false
+    }
+}
 
 @Composable
 fun SignupScreen(navController: NavController) {
@@ -32,6 +59,8 @@ fun SignupScreen(navController: NavController) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    val coroutineScope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier
@@ -41,7 +70,7 @@ fun SignupScreen(navController: NavController) {
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "WorkoutBuddy",
+            text = "Aktiv",
             fontSize = 30.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
@@ -96,10 +125,28 @@ fun SignupScreen(navController: NavController) {
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(
-            onClick = { navController.navigate(Screen.Dashboard.route) },
+            onClick = {
+                if (password != confirmPassword) {
+                    errorMessage = "Wachtwoorden komen niet overeen"
+                    return@Button
+                }
+                coroutineScope.launch {
+                    val success = registerUser(email, password, name)
+                    if (success) {
+                        navController.navigate(Screen.Dashboard.route)
+                    } else {
+                        errorMessage = "Registratie mislukt"
+                    }
+                }
+            },
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Registreren")
+        }
+
+        errorMessage?.let {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(it, color = MaterialTheme.colorScheme.error)
         }
 
         Spacer(modifier = Modifier.height(12.dp))

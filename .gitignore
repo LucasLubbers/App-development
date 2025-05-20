@@ -10,6 +10,7 @@ build/
 !gradle/wrapper/gradle-wrapper.jar
 gradle-app.setting
 gradle-app.setting.lock
+gradle.properties
 
 # Android
 *.apk
