@@ -5,9 +5,15 @@ plugins {
     id("kotlin-parcelize")
 }
 
+val supabaseAnonKey = project.findProperty("supabase.anon.key") as String? ?: ""
+
 android {
     namespace = "com.example.workoutbuddyapplication"
     compileSdk = 35
+
+    buildFeatures {
+        buildConfig = true
+    }
 
     defaultConfig {
         applicationId = "com.example.workoutbuddyapplication"
@@ -17,6 +23,8 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
     }
 
     buildFeatures {

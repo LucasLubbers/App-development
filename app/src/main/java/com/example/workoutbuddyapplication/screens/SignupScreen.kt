@@ -19,32 +19,36 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
+import com.example.workoutbuddyapplication.BuildConfig
 
 suspend fun registerUser(email: String, password: String, name: String): Boolean = withContext(Dispatchers.IO) {
     val client = OkHttpClient()
     val json = JSONObject()
     json.put("email", email)
-    json.put("emailVisibility", true)
     json.put("password", password)
-    json.put("passwordConfirm", password)
-    json.put("name", name)
+    // Optionally, add user metadata
+    val userMeta = JSONObject()
+    userMeta.put("name", name)
+    json.put("data", userMeta)
 
     val body = json.toString().toRequestBody("application/json".toMediaType())
     val request = Request.Builder()
-        .url("http://192.168.2.10:8090/api/collections/users/records")
+        .url("https://attsgwsxdlblbqxnboqx.supabase.co/auth/v1/signup")
         .post(body)
+        .addHeader("apikey", BuildConfig.SUPABASE_ANON_KEY)
+        .addHeader("Authorization", "Bearer ${BuildConfig.SUPABASE_ANON_KEY}")
         .build()
 
     try {
         val response = client.newCall(request).execute()
         val responseBody = response.body?.string()
         if (!response.isSuccessful) {
-            println("Signup error: $responseBody")
+            println("Supabase signup error: $responseBody")
         }
         response.isSuccessful
     } catch (e: Exception) {
         e.printStackTrace()
-        println("Signup exception: ${e.message}")
+        println("Supabase signup exception: ${e.message}")
         false
     }
 }
