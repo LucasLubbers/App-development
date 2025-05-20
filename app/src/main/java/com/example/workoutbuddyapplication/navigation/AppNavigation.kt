@@ -3,22 +3,17 @@ package com.example.workoutbuddyapplication.navigation
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.example.workoutbuddyapplication.screens.AddWorkoutScreen
-import com.example.workoutbuddyapplication.screens.BluetoothDevicesScreen
-import com.example.workoutbuddyapplication.screens.DashboardScreen
-import com.example.workoutbuddyapplication.screens.GoalsScreen
-import com.example.workoutbuddyapplication.screens.HistoryScreen
-import com.example.workoutbuddyapplication.screens.LoginScreen
-import com.example.workoutbuddyapplication.screens.RunningWorkoutScreen
-import com.example.workoutbuddyapplication.screens.SignupScreen
-import com.example.workoutbuddyapplication.screens.StartWorkoutScreen
-import com.example.workoutbuddyapplication.screens.StatsScreen
-import com.example.workoutbuddyapplication.screens.StrengthWorkoutScreen
-import com.example.workoutbuddyapplication.screens.WorkoutCompletedScreen
-import com.example.workoutbuddyapplication.screens.YogaWorkoutScreen
+import androidx.navigation.navArgument
+import androidx.compose.ui.platform.LocalContext
+import com.example.workoutbuddyapplication.models.Exercise
+import com.example.workoutbuddyapplication.screens.*
+import org.json.JSONObject
+import kotlin.reflect.KProperty
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
@@ -35,11 +30,17 @@ sealed class Screen(val route: String) {
     object WorkoutCompleted : Screen("workout_completed")
     object BluetoothDevices : Screen("bluetooth_devices")
     object QRScanner : Screen("qr_scanner")
+    object Exercises : Screen("exercises")
+    object ExerciseDetail : Screen("exercise_detail/{exerciseName}") {
+        fun createRoute(exerciseName: String) = "exercise_detail/$exerciseName"
+    }
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun AppNavigation(navController: NavHostController) {
+    val context = LocalContext.current
+    
     NavHost(navController = navController, startDestination = Screen.Login.route) {
         composable(Screen.Login.route) {
             LoginScreen(navController = navController)
@@ -79,6 +80,66 @@ fun AppNavigation(navController: NavHostController) {
         }
         composable(Screen.BluetoothDevices.route) {
             BluetoothDevicesScreen(navController = navController)
+        }
+        composable(Screen.Exercises.route) {
+            ExercisesScreen(navController = navController)
+        }
+        composable(
+            route = Screen.ExerciseDetail.route,
+            arguments = listOf(
+                navArgument("exerciseName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val exerciseName = backStackEntry.arguments?.getString("exerciseName") ?: return@composable
+            val loadExercise = remember(context) { 
+                { name: String ->
+                    try {
+                        val jsonString = context.assets.open("exercises.json")
+                            .bufferedReader()
+                            .use { it.readText() }
+                        
+                        val jsonObject = JSONObject(jsonString)
+                        val exercisesArray = jsonObject.getJSONArray("exercises")
+                        
+                        for (i in 0 until exercisesArray.length()) {
+                            val exerciseObj = exercisesArray.getJSONObject(i)
+                            if (exerciseObj.getString("name") == name) {
+                                val primaryMuscles = mutableListOf<String>()
+                                val musclesArray = exerciseObj.getJSONArray("primaryMuscles")
+                                for (j in 0 until musclesArray.length()) {
+                                    primaryMuscles.add(musclesArray.getString(j))
+                                }
+
+                                val instructions = mutableListOf<String>()
+                                val instructionsArray = exerciseObj.getJSONArray("instructions")
+                                for (j in 0 until instructionsArray.length()) {
+                                    instructions.add(instructionsArray.getString(j))
+                                }
+                                
+                                Exercise(
+                                    name = exerciseObj.getString("name"),
+                                    level = exerciseObj.getString("level"),
+                                    equipment = if (exerciseObj.has("equipment") && !exerciseObj.isNull("equipment")) 
+                                        exerciseObj.getString("equipment") else null,
+                                    primaryMuscles = primaryMuscles,
+                                    category = exerciseObj.getString("category"),
+                                    instructions = instructions
+                                )
+                            }
+                        }
+                        null
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        null
+                    }
+                }
+            }
+            
+            ExerciseDetailScreen(
+                navController = navController,
+                exerciseName = exerciseName,
+                onLoadExercise = loadExercise
+            )
         }
     }
 }

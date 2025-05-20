@@ -51,6 +51,15 @@ fun StatsScreen(navController: NavController) {
                     selected = selectedTabIndex == 2,
                     onClick = {
                         selectedTabIndex = 2
+                        navController.navigate(Screen.Exercises.route)
+                    },
+                    icon = { Icon(Icons.Default.FitnessCenter, contentDescription = "Oefeningen") },
+                    label = { Text("Oefeningen") }
+                )
+                NavigationBarItem(
+                    selected = selectedTabIndex == 3,
+                    onClick = {
+                        selectedTabIndex = 3
                         navController.navigate(Screen.Stats.route)
                     },
                     icon = { Icon(Icons.Default.SelfImprovement, contentDescription = "Statistieken") },
