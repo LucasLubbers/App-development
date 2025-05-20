@@ -6,7 +6,15 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization") version "1.9.0"
 }
 
-val supabaseAnonKey = project.findProperty("supabase.anon.key") as String? ?: ""
+import java.util.Properties
+import java.io.FileInputStream
+
+val localProperties = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        load(FileInputStream(localPropertiesFile))
+    }
+}
 
 android {
     namespace = "com.example.workoutbuddyapplication"
@@ -26,8 +34,8 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        buildConfigField("String", "SUPABASE_URL", "\"https://attsgwsxdlblbqxnboqx.supabase.co\"")
-        buildConfigField("String", "SUPABASE_ANON_KEY", "\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF0dHNnd3N4ZGxibGJxeG5ib3F4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc3MzU2ODQsImV4cCI6MjA2MzMxMTY4NH0.m5cEVSpbrgbEM6-OPiIn7gNmClncxmwcY_UfW_2uK-s\"")
+        buildConfigField("String", "SUPABASE_URL", "\"${localProperties.getProperty("SUPABASE_URL", "https://example.supabase.co")}\"")
+        buildConfigField("String", "SUPABASE_ANON_KEY", "\"${localProperties.getProperty("SUPABASE_ANON_KEY", "YOUR_ANON_KEY")}\"")
     }
 
     composeOptions {
