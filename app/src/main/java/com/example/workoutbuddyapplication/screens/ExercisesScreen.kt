@@ -19,10 +19,29 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.workoutbuddyapplication.navigation.Screen
 import com.example.workoutbuddyapplication.models.Exercise
-import org.json.JSONObject
+import com.example.workoutbuddyapplication.data.SupabaseClient
+import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import io.github.jan.supabase.postgrest.postgrest
+
+@Serializable
+data class ExerciseDTO(
+    val id: String? = null,
+    val name: String,
+    val force: String? = null,
+    val level: String? = null,
+    val mechanic: String? = null,
+    val equipment: String? = null,
+    val primary_muscles: List<String>,
+    val secondary_muscles: List<String>? = null,
+    val category: String,
+    val instructions: List<String>,
+    val created_at: String? = null,
+    val updated_at: String? = null
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @RequiresApi(Build.VERSION_CODES.O)
@@ -30,12 +49,45 @@ import androidx.compose.foundation.layout.fillMaxWidth
 fun ExercisesScreen(navController: NavController) {
     var selectedTabIndex by remember { mutableStateOf(2) }
     val context = LocalContext.current
-    val exercises = remember { loadExercises(context) }
     var searchQuery by remember { mutableStateOf("") }
     var selectedBodyPart by remember { mutableStateOf("Any Body Part") }
     var selectedCategory by remember { mutableStateOf("Any Category") }
     var showBodyPartDialog by remember { mutableStateOf(false) }
     var showCategoryDialog by remember { mutableStateOf(false) }
+    
+    var exercises by remember { mutableStateOf<List<Exercise>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+    
+    val coroutineScope = rememberCoroutineScope()
+    
+    // Fetch exercises from Supabase
+    LaunchedEffect(key1 = true) {
+        coroutineScope.launch {
+            try {
+                val exerciseDTOs = SupabaseClient.client.postgrest
+                    .from("exercises")
+                    .select()
+                    .decodeList<ExerciseDTO>()
+                
+                // Convert DTOs to Exercise model objects
+                exercises = exerciseDTOs.map { dto ->
+                    Exercise(
+                        name = dto.name,
+                        level = dto.level ?: "Beginner",
+                        equipment = dto.equipment,
+                        primaryMuscles = dto.primary_muscles,
+                        category = dto.category,
+                        instructions = dto.instructions
+                    )
+                }
+                isLoading = false
+            } catch (e: Exception) {
+                error = "Failed to load exercises: ${e.message}"
+                isLoading = false
+            }
+        }
+    }
     
     // Extract unique body parts and categories
     val bodyParts = remember(exercises) {
@@ -238,21 +290,70 @@ fun ExercisesScreen(navController: NavController) {
             }
         }
     ) { paddingValues ->
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues),
-            verticalArrangement = Arrangement.spacedBy(0.dp)
+                .padding(paddingValues)
         ) {
-            items(filteredExercises) { exercise ->
-                ExerciseCard(
-                    exercise = exercise,
-                    navController = navController
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.Center)
                 )
-                Divider(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant
-                )
+            } else if (error != null) {
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(error!!, color = MaterialTheme.colorScheme.error)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(onClick = {
+                        isLoading = true
+                        error = null
+                        coroutineScope.launch {
+                            try {
+                                val exerciseDTOs = SupabaseClient.client.postgrest
+                                    .from("exercises")
+                                    .select()
+                                    .decodeList<ExerciseDTO>()
+                                
+                                exercises = exerciseDTOs.map { dto ->
+                                    Exercise(
+                                        name = dto.name,
+                                        level = dto.level ?: "Beginner",
+                                        equipment = dto.equipment,
+                                        primaryMuscles = dto.primary_muscles,
+                                        category = dto.category,
+                                        instructions = dto.instructions
+                                    )
+                                }
+                                isLoading = false
+                            } catch (e: Exception) {
+                                error = "Failed to load exercises: ${e.message}"
+                                isLoading = false
+                            }
+                        }
+                    }) {
+                        Text("Retry")
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(0.dp)
+                ) {
+                    items(filteredExercises) { exercise ->
+                        ExerciseCard(
+                            exercise = exercise,
+                            navController = navController
+                        )
+                        Divider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant
+                        )
+                    }
+                }
             }
         }
     }
@@ -278,48 +379,5 @@ fun ExerciseCard(exercise: Exercise, navController: NavController) {
             fontSize = 14.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-    }
-}
-
-private fun loadExercises(context: android.content.Context): List<Exercise> {
-    return try {
-        val jsonString = context.assets.open("exercises.json")
-            .bufferedReader()
-            .use { it.readText() }
-        
-        val jsonObject = JSONObject(jsonString)
-        val exercisesArray = jsonObject.getJSONArray("exercises")
-        val exercises = mutableListOf<Exercise>()
-
-        for (i in 0 until exercisesArray.length()) {
-            val exerciseObj = exercisesArray.getJSONObject(i)
-            val primaryMuscles = mutableListOf<String>()
-            val musclesArray = exerciseObj.getJSONArray("primaryMuscles")
-            for (j in 0 until musclesArray.length()) {
-                primaryMuscles.add(musclesArray.getString(j))
-            }
-
-            val instructions = mutableListOf<String>()
-            val instructionsArray = exerciseObj.getJSONArray("instructions")
-            for (j in 0 until instructionsArray.length()) {
-                instructions.add(instructionsArray.getString(j))
-            }
-
-            exercises.add(
-                Exercise(
-                    name = exerciseObj.getString("name"),
-                    level = exerciseObj.getString("level"),
-                    equipment = if (exerciseObj.has("equipment") && !exerciseObj.isNull("equipment")) 
-                        exerciseObj.getString("equipment") else null,
-                    primaryMuscles = primaryMuscles,
-                    category = exerciseObj.getString("category"),
-                    instructions = instructions
-                )
-            )
-        }
-        exercises
-    } catch (e: Exception) {
-        e.printStackTrace()
-        emptyList()
     }
 } 
