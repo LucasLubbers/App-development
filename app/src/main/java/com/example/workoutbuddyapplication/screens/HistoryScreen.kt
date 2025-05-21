@@ -2,94 +2,89 @@ package com.example.workoutbuddyapplication.screens
 
 import android.os.Build
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DirectionsRun
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.SelfImprovement
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.Icon
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.workoutbuddyapplication.models.Workout
-import com.example.workoutbuddyapplication.models.WorkoutType
 import com.example.workoutbuddyapplication.navigation.Screen
+import com.example.workoutbuddyapplication.BuildConfig
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.json.JSONArray
 import java.time.LocalDate
 import java.time.Month
 import java.time.format.TextStyle
 import java.util.Locale
 
+suspend fun fetchWorkouts(): List<Workout> = withContext(Dispatchers.IO) {
+    val client = OkHttpClient()
+    val request = Request.Builder()
+        .url("https://attsgwsxdlblbqxnboqx.supabase.co/rest/v1/workouts?select=*")
+        .addHeader("apikey", BuildConfig.SUPABASE_ANON_KEY)
+        .addHeader("Authorization", "Bearer ${BuildConfig.SUPABASE_ANON_KEY}")
+        .build()
+
+    try {
+        val response = client.newCall(request).execute()
+        val responseBody = response.body?.string()
+        if (!response.isSuccessful || responseBody == null) return@withContext emptyList()
+        val jsonArray = JSONArray(responseBody)
+        val workouts = mutableListOf<Workout>()
+        for (i in 0 until jsonArray.length()) {
+            val obj = jsonArray.getJSONObject(i)
+            workouts.add(
+                Workout(
+                    id = obj.getInt("id"),
+                    type = obj.getString("type"), // Now just a String
+                    date = LocalDate.parse(obj.getString("date")),
+                    duration = obj.getString("duration"),
+                    distance = if (obj.isNull("distance")) null else obj.getDouble("distance"),
+                    notes = if (obj.isNull("notes")) null else obj.getString("notes")
+                )
+            )
+        }
+        workouts
+    } catch (e: Exception) {
+        e.printStackTrace()
+        emptyList()
+    }
+}
+
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun HistoryScreen(navController: NavController) {
-    val sampleWorkouts = remember {
-        listOf(
-            Workout(
-                id = 1,
-                type = WorkoutType.RUNNING,
-                date = LocalDate.now(),
-                duration = 30,
-                distance = 5.0,
-                notes = "Goed gevoel"
-            ),
-            Workout(
-                id = 2,
-                type = WorkoutType.STRENGTH,
-                date = LocalDate.now().minusDays(1),
-                duration = 45,
-                distance = null,
-                notes = "Zwaar maar productief"
-            ),
-            Workout(
-                id = 3,
-                type = WorkoutType.YOGA,
-                date = LocalDate.now().minusDays(2),
-                duration = 60,
-                distance = null,
-                notes = "Ontspannend"
-            ),
-            Workout(
-                id = 4,
-                type = WorkoutType.RUNNING,
-                date = LocalDate.now().minusDays(4),
-                duration = 25,
-                distance = 4.0,
-                notes = "Kort maar krachtig"
-            ),
-            Workout(
-                id = 5,
-                type = WorkoutType.CYCLING,
-                date = LocalDate.now().minusDays(6),
-                duration = 90,
-                distance = 30.0,
-                notes = "Lange fietstocht"
-            )
-        )
-    }
-
+    var workouts by remember { mutableStateOf<List<Workout>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
     var selectedTabIndex by remember { mutableStateOf(1) }
 
+    LaunchedEffect(Unit) {
+        isLoading = true
+        error = null
+        val result = fetchWorkouts()
+        if (result.isNotEmpty()) {
+            workouts = result
+        } else {
+            error = "No workouts found or failed to fetch."
+        }
+        isLoading = false
+    }
+
     // Group workouts by month
-    val workoutsByMonth = sampleWorkouts.groupBy {
+    val workoutsByMonth = workouts.groupBy {
         Month.of(it.date.monthValue).getDisplayName(TextStyle.FULL, Locale.getDefault()) + " " + it.date.year
     }
 
@@ -149,21 +144,33 @@ fun HistoryScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            LazyColumn(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                workoutsByMonth.forEach { (month, workouts) ->
-                    item {
-                        Text(
-                            text = month,
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        )
-                    }
-
-                    items(workouts.sortedByDescending { it.date }) { workout ->
-                        WorkoutItem(workout = workout)
-                        Spacer(modifier = Modifier.height(8.dp))
+            when {
+                isLoading -> {
+                    CircularProgressIndicator()
+                }
+                error != null -> {
+                    Text(error!!, color = MaterialTheme.colorScheme.error)
+                }
+                workouts.isEmpty() -> {
+                    Text("No workouts found.")
+                }
+                else -> {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        workoutsByMonth.forEach { (month, workouts) ->
+                            item {
+                                Text(
+                                    text = month,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    modifier = Modifier.padding(vertical = 8.dp)
+                                )
+                            }
+                            items(workouts.sortedByDescending { it.date }) { workout ->
+                                WorkoutItem(workout = workout)
+                                Spacer(modifier = Modifier.height(8.dp))
+                            }
+                        }
                     }
                 }
             }

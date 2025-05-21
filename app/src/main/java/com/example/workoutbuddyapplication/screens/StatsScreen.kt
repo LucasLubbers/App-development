@@ -187,9 +187,9 @@ fun StatsSummaryCards() {
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        SummaryCard("Totaal", "23", "workouts", Modifier.weight(1f))
+        StatsSummaryCard("Totaal", "23", "workouts", Modifier.weight(1f))
         Spacer(modifier = Modifier.width(8.dp))
-        SummaryCard("Totale Tijd", "15.5", "uren", Modifier.weight(1f))
+        StatsSummaryCard("Totale Tijd", "15.5", "uren", Modifier.weight(1f))
     }
 
     Spacer(modifier = Modifier.height(8.dp))
@@ -198,9 +198,9 @@ fun StatsSummaryCards() {
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        SummaryCard("Afstand", "87", "km", Modifier.weight(1f))
+        StatsSummaryCard("Afstand", "87", "km", Modifier.weight(1f))
         Spacer(modifier = Modifier.width(8.dp))
-        SummaryCard("Gemiddeld", "3.2", "per week", Modifier.weight(1f))
+        StatsSummaryCard("Gemiddeld", "3.2", "per week", Modifier.weight(1f))
     }
 }
 
