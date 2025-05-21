@@ -6,4 +6,4 @@ kotlin.code.style=official
 android.nonTransitiveRClass=true
 android.defaults.buildfeatures.buildconfig=true
 
-supabase.anon.key=
+supabase.anon.key=YOUR_SUPABASE_API_KEY_HERE
