@@ -1,5 +1,6 @@
 package com.example.workoutbuddyapplication.screens
 
+import Workout
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.*
@@ -16,7 +17,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.workoutbuddyapplication.models.Workout
 import com.example.workoutbuddyapplication.navigation.Screen
 import com.example.workoutbuddyapplication.BuildConfig
 import kotlinx.coroutines.Dispatchers
@@ -24,7 +24,6 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONArray
-import java.time.LocalDate
 import java.time.Month
 import java.time.format.TextStyle
 import java.util.Locale
@@ -48,9 +47,9 @@ suspend fun fetchWorkouts(): List<Workout> = withContext(Dispatchers.IO) {
             workouts.add(
                 Workout(
                     id = obj.getInt("id"),
-                    type = obj.getString("type"), // Now just a String
-                    date = LocalDate.parse(obj.getString("date")),
-                    duration = obj.getString("duration"),
+                    type = WorkoutType.fromString(obj.getString("type")),
+                    date = java.time.LocalDate.parse(obj.getString("date")),
+                    duration = obj.getInt("duration"),
                     distance = if (obj.isNull("distance")) null else obj.getDouble("distance"),
                     notes = if (obj.isNull("notes")) null else obj.getString("notes")
                 )
