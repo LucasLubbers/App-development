@@ -1,5 +1,6 @@
 package com.example.workoutbuddyapplication.screens
 
+import Workout
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.*
@@ -19,7 +20,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.workoutbuddyapplication.models.Workout
 import com.example.workoutbuddyapplication.navigation.Screen
 import java.time.format.DateTimeFormatter
 import androidx.compose.material.icons.filled.DirectionsRun
@@ -30,8 +30,7 @@ import androidx.compose.material.icons.filled.Timer
 fun SummaryCard(workouts: List<Workout> = emptyList()) {
     val totalWorkouts = workouts.size
     val totalDistance = workouts.mapNotNull { it.distance }.sum()
-    val totalDuration = workouts.mapNotNull { it.duration.toIntOrNull() }.sum()
-
+    val totalDuration = workouts.sumOf { it.duration }
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
@@ -214,18 +213,23 @@ fun WorkoutItem(workout: Workout) {
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Icon(
+                imageVector = workout.type.icon,
+                contentDescription = workout.type.displayName,
+                modifier = Modifier.size(32.dp)
+            )
             Spacer(modifier = Modifier.width(16.dp))
             Column {
                 Text(
-                    text = workout.type,
-                    fontWeight = FontWeight.Medium
+                    text = workout.type.displayName,
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium)
                 )
                 Text(
                     text = workout.date.format(DateTimeFormatter.ofPattern("dd MMM yyyy")),
                     style = MaterialTheme.typography.bodySmall
                 )
                 Text(
-                    text = "${workout.duration}" +
+                    text = "${workout.duration} minuten" +
                             (workout.distance?.let { " | ${it} km" } ?: ""),
                     style = MaterialTheme.typography.bodySmall
                 )

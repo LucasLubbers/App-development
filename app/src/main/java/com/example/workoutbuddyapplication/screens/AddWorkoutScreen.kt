@@ -35,7 +35,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.example.workoutbuddyapplication.models.WorkoutType
 import com.example.workoutbuddyapplication.navigation.Screen
 
 @OptIn(ExperimentalMaterial3Api::class)

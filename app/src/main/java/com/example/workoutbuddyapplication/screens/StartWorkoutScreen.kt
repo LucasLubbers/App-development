@@ -1,5 +1,6 @@
 package com.example.workoutbuddyapplication.screens
 
+import WorkoutType
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -41,7 +42,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.workoutbuddyapplication.models.WorkoutType
 import com.example.workoutbuddyapplication.navigation.Screen
 
 @OptIn(ExperimentalMaterial3Api::class)
