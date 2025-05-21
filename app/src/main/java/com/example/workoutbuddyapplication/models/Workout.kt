@@ -4,10 +4,10 @@ import java.time.LocalDate
 
 data class Workout(
     val id: Int,
-    val type: WorkoutType,
+    val type: String, // Changed from WorkoutType to String
     val date: LocalDate,
-    val duration: Int, // in minutes
-    val distance: Double?, // in kilometers
+    val duration: String,
+    val distance: Double?,
     val notes: String?
 )
 
