@@ -13,7 +13,6 @@ import androidx.compose.ui.platform.LocalContext
 import com.example.workoutbuddyapplication.models.Exercise
 import com.example.workoutbuddyapplication.screens.*
 import org.json.JSONObject
-import kotlin.reflect.KProperty
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
@@ -85,6 +84,13 @@ fun AppNavigation(navController: NavHostController) {
             ExercisesScreen(navController = navController)
         }
         composable(
+            route = "workoutDetail/{workoutId}",
+            arguments = listOf(navArgument("workoutId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val workoutId = backStackEntry.arguments?.getInt("workoutId") ?: return@composable
+            WorkoutDetailScreen(navController = navController, workoutId = workoutId)
+        }
+        composable(
             route = Screen.ExerciseDetail.route,
             arguments = listOf(
                 navArgument("exerciseName") { type = NavType.StringType }
@@ -115,13 +121,18 @@ fun AppNavigation(navController: NavHostController) {
                                 for (j in 0 until instructionsArray.length()) {
                                     instructions.add(instructionsArray.getString(j))
                                 }
-                                
+
                                 Exercise(
                                     name = exerciseObj.getString("name"),
+                                    force = exerciseObj.optString("force", ""),
                                     level = exerciseObj.getString("level"),
-                                    equipment = if (exerciseObj.has("equipment") && !exerciseObj.isNull("equipment")) 
-                                        exerciseObj.getString("equipment") else null,
+                                    mechanic = exerciseObj.optString("mechanic", ""),
+                                    equipment = exerciseObj.optString("equipment", ""),
                                     primaryMuscles = primaryMuscles,
+                                    secondaryMuscles = if (exerciseObj.has("secondaryMuscles")) {
+                                        val arr = exerciseObj.getJSONArray("secondaryMuscles")
+                                        List(arr.length()) { arr.getString(it) }
+                                    } else emptyList(),
                                     category = exerciseObj.getString("category"),
                                     instructions = instructions
                                 )

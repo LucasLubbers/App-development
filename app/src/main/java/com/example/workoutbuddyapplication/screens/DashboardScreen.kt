@@ -3,6 +3,7 @@ package com.example.workoutbuddyapplication.screens
 import Workout
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -22,8 +23,6 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.workoutbuddyapplication.navigation.Screen
 import java.time.format.DateTimeFormatter
-import androidx.compose.material.icons.filled.DirectionsRun
-import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Timer
 
 @Composable
@@ -153,7 +152,7 @@ fun DashboardScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            SummaryCard()
+            SummaryCard(workouts)
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -190,7 +189,10 @@ fun DashboardScreen(navController: NavController) {
                 else -> {
                     LazyColumn {
                         items(workouts.sortedByDescending { it.date }.take(5)) { workout ->
-                            WorkoutItem(workout = workout)
+                            WorkoutItem(
+                                workout = workout,
+                                onClick = { navController.navigate("workoutDetail/${workout.id}") }
+                            )
                             Spacer(modifier = Modifier.height(8.dp))
                         }
                     }
@@ -202,9 +204,11 @@ fun DashboardScreen(navController: NavController) {
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun WorkoutItem(workout: Workout) {
+fun WorkoutItem(workout: Workout, onClick: () -> Unit = {}) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
@@ -233,7 +237,6 @@ fun WorkoutItem(workout: Workout) {
                             (workout.distance?.let { " | ${it} km" } ?: ""),
                     style = MaterialTheme.typography.bodySmall
                 )
-                // Show notes if present
                 if (!workout.notes.isNullOrBlank()) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(

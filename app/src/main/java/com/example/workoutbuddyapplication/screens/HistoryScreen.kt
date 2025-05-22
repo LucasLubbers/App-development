@@ -82,7 +82,6 @@ fun HistoryScreen(navController: NavController) {
         isLoading = false
     }
 
-    // Group workouts by month
     val workoutsByMonth = workouts.groupBy {
         Month.of(it.date.monthValue).getDisplayName(TextStyle.FULL, Locale.getDefault()) + " " + it.date.year
     }
@@ -166,7 +165,10 @@ fun HistoryScreen(navController: NavController) {
                                 )
                             }
                             items(workouts.sortedByDescending { it.date }) { workout ->
-                                WorkoutItem(workout = workout)
+                                WorkoutItem(
+                                    workout = workout,
+                                    onClick = { navController.navigate("workoutDetail/${workout.id}") }
+                                )
                                 Spacer(modifier = Modifier.height(8.dp))
                             }
                         }
