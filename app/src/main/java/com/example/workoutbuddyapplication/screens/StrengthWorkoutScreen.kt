@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
@@ -91,62 +92,7 @@ fun StrengthWorkoutScreen(navController: NavController) {
     var currentExerciseForDevice by remember { mutableStateOf<Exercise?>(null) }
 
     // Exercise tracking
-    val muscleGroups = listOf("Borst", "Rug", "Benen", "Schouders", "Armen", "Kern", "Algemeen")
-    val exercises = remember { mutableStateListOf(
-        Exercise(
-            name = "Squats",
-            sets = listOf(
-                ExerciseSet(12, 60.0),
-                ExerciseSet(10, 70.0),
-                ExerciseSet(8, 80.0)
-            ),
-            muscleGroup = "Benen",
-            notes = "Houd je rug recht en ga diep door je knieën"
-        ),
-        Exercise(
-            name = "Bench Press",
-            sets = listOf(
-                ExerciseSet(10, 50.0),
-                ExerciseSet(8, 60.0),
-                ExerciseSet(6, 70.0)
-            ),
-            muscleGroup = "Borst",
-            notes = "Focus op het samenknijpen van je borst",
-            device = ExerciseDevice(
-                name = "Smith Machine",
-                id = "SM-001",
-                type = "Krachtstation"
-            )
-        ),
-        Exercise(
-            name = "Deadlift",
-            sets = listOf(
-                ExerciseSet(8, 100.0),
-                ExerciseSet(6, 120.0),
-                ExerciseSet(4, 140.0)
-            ),
-            muscleGroup = "Rug",
-            notes = "Houd je rug recht en til met je benen"
-        ),
-        Exercise(
-            name = "Shoulder Press",
-            sets = listOf(
-                ExerciseSet(12, 30.0),
-                ExerciseSet(10, 35.0),
-                ExerciseSet(8, 40.0)
-            ),
-            muscleGroup = "Schouders"
-        ),
-        Exercise(
-            name = "Bicep Curls",
-            sets = listOf(
-                ExerciseSet(12, 15.0),
-                ExerciseSet(12, 15.0),
-                ExerciseSet(12, 15.0)
-            ),
-            muscleGroup = "Armen"
-        )
-    ) }
+    val exercises = remember { mutableStateListOf<Exercise>() }
 
     var newExerciseName by remember { mutableStateOf("") }
     var newExerciseMuscleGroup by remember { mutableStateOf("Algemeen") }
@@ -181,31 +127,7 @@ fun StrengthWorkoutScreen(navController: NavController) {
     }
 
     Scaffold(
-        floatingActionButton = {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                FloatingActionButton(
-                    onClick = { isRunning = !isRunning },
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer
-                ) {
-                    Icon(
-                        if (isRunning) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (isRunning) "Pauzeren" else "Hervatten"
-                    )
-                }
-
-                FloatingActionButton(
-                    onClick = { navController.navigate(Screen.WorkoutCompleted.route) },
-                    containerColor = MaterialTheme.colorScheme.errorContainer
-                ) {
-                    Icon(
-                        Icons.Default.Stop,
-                        contentDescription = "Stoppen"
-                    )
-                }
-            }
-        }
+        // Remove the floating action buttons
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -308,158 +230,48 @@ fun StrengthWorkoutScreen(navController: NavController) {
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-
-            // Exercises
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Oefeningen",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Medium
-                )
-
-                IconButton(onClick = { showAddExercise = true }) {
-                    Icon(Icons.Default.Add, contentDescription = "Oefening toevoegen")
-                }
-            }
-
-            // Filter by muscle group
-            Row(
+            
+            // Add Exercises Button (Blue)
+            Button(
+                onClick = { /* Handle adding exercises */ },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    .height(56.dp)
+                    .padding(horizontal = 16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                ),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
             ) {
                 Text(
-                    text = "Filter:",
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.align(Alignment.CenterVertically)
+                    text = "Oefeningen toevoegen",
+                    fontSize = 18.sp
                 )
-
-                muscleGroups.forEach { group ->
-                    FilterChip(
-                        label = group,
-                        isSelected = true, // You can make this dynamic with a selected filter state
-                        onClick = { /* Implement filtering logic */ }
-                    )
-                }
             }
-
-            if (showAddExercise) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Text(
-                            text = "Nieuwe Oefening Toevoegen",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        OutlinedTextField(
-                            value = newExerciseName,
-                            onValueChange = { newExerciseName = it },
-                            label = { Text("Oefening naam") },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Box {
-                            OutlinedTextField(
-                                value = newExerciseMuscleGroup,
-                                onValueChange = { },
-                                label = { Text("Spiergroep") },
-                                modifier = Modifier.fillMaxWidth(),
-                                readOnly = true,
-                                trailingIcon = {
-                                    IconButton(onClick = { showMuscleGroupDropdown = true }) {
-                                        Icon(
-                                            Icons.Default.Add,
-                                            contentDescription = "Selecteer spiergroep"
-                                        )
-                                    }
-                                }
-                            )
-
-                            DropdownMenu(
-                                expanded = showMuscleGroupDropdown,
-                                onDismissRequest = { showMuscleGroupDropdown = false }
-                            ) {
-                                muscleGroups.forEach { group ->
-                                    DropdownMenuItem(
-                                        text = { Text(group) },
-                                        onClick = {
-                                            newExerciseMuscleGroup = group
-                                            showMuscleGroupDropdown = false
-                                        }
-                                    )
-                                }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        OutlinedTextField(
-                            value = newExerciseNotes,
-                            onValueChange = { newExerciseNotes = it },
-                            label = { Text("Notities") },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End
-                        ) {
-                            TextButton(
-                                onClick = { showAddExercise = false }
-                            ) {
-                                Text("Annuleren")
-                            }
-
-                            Spacer(modifier = Modifier.width(8.dp))
-
-                            Button(
-                                onClick = {
-                                    if (newExerciseName.isNotBlank()) {
-                                        exercises.add(Exercise(
-                                            name = newExerciseName,
-                                            sets = listOf(
-                                                ExerciseSet(10, 0.0),
-                                                ExerciseSet(10, 0.0),
-                                                ExerciseSet(10, 0.0)
-                                            ),
-                                            muscleGroup = newExerciseMuscleGroup,
-                                            notes = newExerciseNotes
-                                        ))
-                                        newExerciseName = ""
-                                        newExerciseMuscleGroup = "Algemeen"
-                                        newExerciseNotes = ""
-                                        showAddExercise = false
-                                    }
-                                }
-                            ) {
-                                Text("Toevoegen")
-                            }
-                        }
-                    }
-                }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            // Stop Workout Button
+            Button(
+                onClick = { navController.navigate(Screen.WorkoutCompleted.route) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .padding(horizontal = 16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error
+                ),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
+            ) {
+                Text(
+                    text = "Stop workout",
+                    fontSize = 18.sp
+                )
             }
+            
+            Spacer(modifier = Modifier.height(16.dp))
 
-            Spacer(modifier = Modifier.height(8.dp))
-
+            // Exercises
             LazyColumn(
                 modifier = Modifier.weight(1f)
             ) {
