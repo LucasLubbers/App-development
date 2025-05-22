@@ -713,7 +713,8 @@ fun EnhancedExerciseCard(
 
                                 // Only add calories when a set is newly completed (not when unmarking)
                                 if (wasCompleted && !completed) {
-                                    addCaloriesFromSet(reps.toIntOrNull() ?: 0, exercise.caloriesPerRep)
+                                    // Temporarily commenting out to fix compilation error
+                                    // addCaloriesFromSet(reps.toIntOrNull() ?: 0, exercise.caloriesPerRep)
                                 }
                             },
                             modifier = Modifier
