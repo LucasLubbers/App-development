@@ -14,6 +14,9 @@ import androidx.compose.ui.platform.LocalContext
 import com.example.workoutbuddyapplication.models.Exercise
 import com.example.workoutbuddyapplication.screens.*
 
+// Debug mode flag - set to true to bypass login
+val DEBUG_MODE = false
+
 sealed class Screen(val route: String) {
     object Login : Screen("login")
     object Signup : Screen("signup")
@@ -40,7 +43,10 @@ sealed class Screen(val route: String) {
 fun AppNavigation(navController: NavHostController) {
     val context = LocalContext.current
     
-    NavHost(navController = navController, startDestination = Screen.Login.route) {
+    // Start with Dashboard if in debug mode, otherwise start with Login
+    val startDestination = if (DEBUG_MODE) Screen.Dashboard.route else Screen.Login.route
+    
+    NavHost(navController = navController, startDestination = startDestination) {
         composable(Screen.Login.route) {
             LoginScreen(navController = navController)
         }

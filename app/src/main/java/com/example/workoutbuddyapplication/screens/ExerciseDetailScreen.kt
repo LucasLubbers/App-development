@@ -18,6 +18,8 @@ import com.example.workoutbuddyapplication.models.ExerciseDTO
 import com.example.workoutbuddyapplication.data.SupabaseClient
 import kotlinx.coroutines.launch
 import io.github.jan.supabase.postgrest.postgrest
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.decodeFromString
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,7 +36,7 @@ fun ExerciseDetailScreen(
     LaunchedEffect(key1 = exerciseName) {
         coroutineScope.launch {
             try {
-                // Get all exercises with matching name
+                // Get all exercises with matching name - standard approach
                 val response = SupabaseClient.client.postgrest
                     .from("exercises")
                     .select()
@@ -64,6 +66,8 @@ fun ExerciseDetailScreen(
             } catch (e: Exception) {
                 error = "Failed to load exercise: ${e.message}"
                 isLoading = false
+                println("Error loading exercise detail: ${e.message}")
+                e.printStackTrace()
             }
         }
     }
