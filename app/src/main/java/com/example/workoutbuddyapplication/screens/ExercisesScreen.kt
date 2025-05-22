@@ -64,9 +64,9 @@ fun ExercisesScreen(navController: NavController) {
                     }
                     items(bodyParts) { bodyPart ->
                         TextButton(
-                            onClick = { 
+                            onClick = {
                                 selectedBodyPart = bodyPart
-                                showBodyPartDialog = false 
+                                showBodyPartDialog = false
                             }
                         ) {
                             Text(bodyPart)

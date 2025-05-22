@@ -1,6 +1,7 @@
 package com.example.workoutbuddyapplication.screens
 
 import Workout
+import androidx.compose.foundation.clickable
 import androidx.compose.runtime.*
 import androidx.compose.material3.*
 import androidx.compose.foundation.layout.*
@@ -23,6 +24,7 @@ import org.json.JSONArray
 import com.example.workoutbuddyapplication.models.Exercise
 import androidx.compose.ui.Alignment
 import com.example.workoutbuddyapplication.models.WorkoutExerciseWithDetails
+import com.example.workoutbuddyapplication.navigation.Screen
 
 suspend fun fetchWorkoutById(workoutId: Int): Workout? = withContext(Dispatchers.IO) {
     val client = OkHttpClient()
@@ -211,7 +213,7 @@ fun WorkoutDetailScreen(
                     Text("Oefeningen:", style = MaterialTheme.typography.titleMedium)
                     LazyColumn {
                         items(exercises) { item ->
-                            WorkoutExerciseDetailCard(item)
+                            WorkoutExerciseDetailCard(item, navController)
                             Spacer(modifier = Modifier.height(8.dp))
                         }
                     }
@@ -222,10 +224,19 @@ fun WorkoutDetailScreen(
 }
 
 @Composable
-fun WorkoutExerciseDetailCard(item: WorkoutExerciseWithDetails) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+fun WorkoutExerciseDetailCard(item: WorkoutExerciseWithDetails, navController: NavController) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                navController.navigate(Screen.ExerciseDetail.createRoute(item.exercise.name))
+            }
+    ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Text(item.exercise.name, style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = item.exercise.name,
+                style = MaterialTheme.typography.titleMedium
+            )
             item.sets?.let { Text("Sets: $it") }
             item.reps?.let { Text("Reps: $it") }
             item.weight?.let { Text("Gewicht: $it kg") }

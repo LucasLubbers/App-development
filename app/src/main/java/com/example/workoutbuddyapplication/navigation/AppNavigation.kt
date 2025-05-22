@@ -39,7 +39,7 @@ sealed class Screen(val route: String) {
 @Composable
 fun AppNavigation(navController: NavHostController) {
     val context = LocalContext.current
-    
+
     NavHost(navController = navController, startDestination = Screen.Login.route) {
         composable(Screen.Login.route) {
             LoginScreen(navController = navController)
@@ -101,16 +101,16 @@ fun AppNavigation(navController: NavHostController) {
             )
         ) { backStackEntry ->
             val exerciseName = backStackEntry.arguments?.getString("exerciseName") ?: return@composable
-            val loadExercise = remember(context) { 
+            val loadExercise = remember(context) {
                 { name: String ->
                     try {
                         val jsonString = context.assets.open("exercises.json")
                             .bufferedReader()
                             .use { it.readText() }
-                        
+
                         val jsonObject = JSONObject(jsonString)
                         val exercisesArray = jsonObject.getJSONArray("exercises")
-                        
+
                         for (i in 0 until exercisesArray.length()) {
                             val exerciseObj = exercisesArray.getJSONObject(i)
                             if (exerciseObj.getString("name") == name) {
@@ -149,11 +149,10 @@ fun AppNavigation(navController: NavHostController) {
                     }
                 }
             }
-            
+
             ExerciseDetailScreen(
                 navController = navController,
                 exerciseName = exerciseName,
-                onLoadExercise = loadExercise
             )
         }
     }
