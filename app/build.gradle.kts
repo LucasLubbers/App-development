@@ -3,16 +3,26 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.compose.compiler)
     id("kotlin-parcelize")
+    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.0"
 }
 
-val supabaseAnonKey = project.findProperty("supabase.anon.key") as String? ?: ""
+import java.util.Properties
+import java.io.FileInputStream
+
+val localProperties = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        load(FileInputStream(localPropertiesFile))
+    }
+}
 
 android {
     namespace = "com.example.workoutbuddyapplication"
     compileSdk = 35
 
     buildFeatures {
-        buildConfig = true
+        compose = true // Enabling Compose
+        buildConfig = true // Enable buildConfig generation
     }
 
     defaultConfig {
@@ -24,11 +34,8 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
-    }
-
-    buildFeatures {
-        compose = true // Enabling Compose
+        buildConfigField("String", "SUPABASE_URL", "\"${localProperties.getProperty("SUPABASE_URL", "https://example.supabase.co")}\"")
+        buildConfigField("String", "SUPABASE_ANON_KEY", "\"${localProperties.getProperty("SUPABASE_ANON_KEY", "YOUR_ANON_KEY")}\"")
     }
 
     composeOptions {
@@ -92,4 +99,29 @@ dependencies {
     implementation(libs.androidx.compiler) // Compose Compiler for Kotlin 2.0
     //noinspection UseTomlInstead
     implementation("com.google.dagger:hilt-android:2.56.2")
+
+    // Supabase dependencies
+    implementation(platform("io.github.jan-tennert.supabase:bom:2.0.0"))
+    implementation("io.github.jan-tennert.supabase:postgrest-kt")
+    implementation("io.github.jan-tennert.supabase:gotrue-kt")
+    implementation("io.github.jan-tennert.supabase:compose-auth") {
+        exclude(group = "androidx.compose.material3", module = "material3")
+    }
+    implementation("io.github.jan-tennert.supabase:compose-auth-ui") {
+        exclude(group = "androidx.compose.material3", module = "material3")
+    }
+    
+    // Ktor dependencies
+    implementation("io.ktor:ktor-client-android:2.3.7")
+    implementation("io.ktor:ktor-client-core:2.3.7")
+    implementation("io.ktor:ktor-client-cio:2.3.7")
+    implementation("io.ktor:ktor-client-content-negotiation:2.3.7")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.7")
+    
+    // Kotlin serialization
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
+    
+    // Coroutines
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
 }
