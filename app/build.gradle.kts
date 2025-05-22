@@ -10,7 +10,7 @@ import java.util.Properties
 import java.io.FileInputStream
 
 val localProperties = Properties().apply {
-    val localPropertiesFile = rootProject.file("local.properties")
+    val localPropertiesFile = rootProject.file("gradle.properties")
     if (localPropertiesFile.exists()) {
         load(FileInputStream(localPropertiesFile))
     }
@@ -34,8 +34,8 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        buildConfigField("String", "SUPABASE_URL", "\"${localProperties.getProperty("SUPABASE_URL", "https://example.supabase.co")}\"")
-        buildConfigField("String", "SUPABASE_ANON_KEY", "\"${localProperties.getProperty("SUPABASE_ANON_KEY", "YOUR_ANON_KEY")}\"")
+        buildConfigField ("String", "SUPABASE_URL", "\"https://attsgwsxdlblbqxnboqx.supabase.co\"")
+        buildConfigField("String", "SUPABASE_ANON_KEY", "\"${localProperties.getProperty("supabase.anon.key", "YOUR_ANON_KEY")}\"")
     }
 
     composeOptions {
