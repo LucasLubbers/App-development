@@ -25,6 +25,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.background
 import io.github.jan.supabase.postgrest.postgrest
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -163,7 +164,14 @@ fun ExercisesScreen(navController: NavController) {
                 exercise.category == selectedCategory
 
             matchesSearch && matchesBodyPart && matchesCategory
-        }
+        }.sortedBy { it.name } // Sort by name
+    }
+    
+    // Group exercises by first letter
+    val groupedExercises = remember(filteredExercises) {
+        filteredExercises.groupBy { exercise ->
+            exercise.name.first().uppercase()
+        }.toSortedMap() // Sort by letter
     }
 
     Scaffold(
@@ -327,15 +335,31 @@ fun ExercisesScreen(navController: NavController) {
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(0.dp)
                 ) {
-                    items(filteredExercises) { exercise ->
-                        ExerciseCard(
-                            exercise = exercise,
-                            navController = navController
-                        )
-                        Divider(
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant
-                        )
+                    groupedExercises.forEach { (letter, exercisesInGroup) ->
+                        // Add header for each letter
+                        item {
+                            Text(
+                                text = letter,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 20.sp,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                                    .padding(vertical = 8.dp, horizontal = 16.dp)
+                            )
+                        }
+                        
+                        // Add exercises for this letter
+                        items(exercisesInGroup) { exercise ->
+                            ExerciseCard(
+                                exercise = exercise,
+                                navController = navController
+                            )
+                            Divider(
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                color = MaterialTheme.colorScheme.outlineVariant
+                            )
+                        }
                     }
                 }
             }
