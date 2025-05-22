@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -5,9 +8,6 @@ plugins {
     id("kotlin-parcelize")
     id("org.jetbrains.kotlin.plugin.serialization") version "1.9.0"
 }
-
-import java.util.Properties
-import java.io.FileInputStream
 
 val localProperties = Properties().apply {
     val localPropertiesFile = rootProject.file("gradle.properties")
