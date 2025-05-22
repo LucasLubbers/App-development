@@ -13,6 +13,7 @@ import androidx.navigation.navArgument
 import androidx.compose.ui.platform.LocalContext
 import com.example.workoutbuddyapplication.models.Exercise
 import com.example.workoutbuddyapplication.screens.*
+import org.json.JSONObject
 
 // Debug mode flag - set to true to bypass login
 val DEBUG_MODE = false
@@ -42,11 +43,9 @@ sealed class Screen(val route: String) {
 @Composable
 fun AppNavigation(navController: NavHostController) {
     val context = LocalContext.current
-    
-    // Start with Dashboard if in debug mode, otherwise start with Login
-    val startDestination = if (DEBUG_MODE) Screen.Dashboard.route else Screen.Login.route
-    
-    NavHost(navController = navController, startDestination = startDestination) {
+
+    NavHost(navController = navController, startDestination = Screen.Login.route) {
+
         composable(Screen.Login.route) {
             LoginScreen(navController = navController)
         }
@@ -90,16 +89,75 @@ fun AppNavigation(navController: NavHostController) {
             ExercisesScreen(navController = navController)
         }
         composable(
+            route = "workoutDetail/{workoutId}/{selectedTabIndex}",
+            arguments = listOf(
+                navArgument("workoutId") { type = NavType.IntType },
+                navArgument("selectedTabIndex") { type = NavType.IntType }
+            )
+        ) { backStackEntry ->
+            val workoutId = backStackEntry.arguments?.getInt("workoutId") ?: return@composable
+            val selectedTabIndex = backStackEntry.arguments?.getInt("selectedTabIndex") ?: 0
+            WorkoutDetailScreen(navController = navController, workoutId = workoutId, selectedTabIndex = selectedTabIndex)
+        }
+        composable(
             route = Screen.ExerciseDetail.route,
             arguments = listOf(
                 navArgument("exerciseName") { type = NavType.StringType }
             )
         ) { backStackEntry ->
             val exerciseName = backStackEntry.arguments?.getString("exerciseName") ?: return@composable
-            
+            val loadExercise = remember(context) {
+                { name: String ->
+                    try {
+                        val jsonString = context.assets.open("exercises.json")
+                            .bufferedReader()
+                            .use { it.readText() }
+
+                        val jsonObject = JSONObject(jsonString)
+                        val exercisesArray = jsonObject.getJSONArray("exercises")
+
+                        for (i in 0 until exercisesArray.length()) {
+                            val exerciseObj = exercisesArray.getJSONObject(i)
+                            if (exerciseObj.getString("name") == name) {
+                                val primaryMuscles = mutableListOf<String>()
+                                val musclesArray = exerciseObj.getJSONArray("primaryMuscles")
+                                for (j in 0 until musclesArray.length()) {
+                                    primaryMuscles.add(musclesArray.getString(j))
+                                }
+
+                                val instructions = mutableListOf<String>()
+                                val instructionsArray = exerciseObj.getJSONArray("instructions")
+                                for (j in 0 until instructionsArray.length()) {
+                                    instructions.add(instructionsArray.getString(j))
+                                }
+
+                                Exercise(
+                                    name = exerciseObj.getString("name"),
+                                    force = exerciseObj.optString("force", ""),
+                                    level = exerciseObj.getString("level"),
+                                    mechanic = exerciseObj.optString("mechanic", ""),
+                                    equipment = exerciseObj.optString("equipment", ""),
+                                    primaryMuscles = primaryMuscles,
+                                    secondaryMuscles = if (exerciseObj.has("secondaryMuscles")) {
+                                        val arr = exerciseObj.getJSONArray("secondaryMuscles")
+                                        List(arr.length()) { arr.getString(it) }
+                                    } else emptyList(),
+                                    category = exerciseObj.getString("category"),
+                                    instructions = instructions
+                                )
+                            }
+                        }
+                        null
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        null
+                    }
+                }
+            }
+
             ExerciseDetailScreen(
                 navController = navController,
-                exerciseName = exerciseName
+                exerciseName = exerciseName,
             )
         }
     }

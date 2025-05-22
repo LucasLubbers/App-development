@@ -2,10 +2,9 @@
 
 ## Setup Instructions
 
-### Step 1: Configure Properties Files
+### Step 1: Configure Properties File
 
 - Copy the contents of `gradle.properties.example` to a new file named `gradle.properties` in the project root.
-- Copy the contents of `local.properties.example` to a new file named `local.properties` in the project root.
 
 ### Step 2: Add Supabase API Key
 

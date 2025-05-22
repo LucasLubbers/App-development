@@ -4,7 +4,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DirectionsRun
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.SelfImprovement
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,12 +17,38 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.workoutbuddyapplication.models.Exercise
-import com.example.workoutbuddyapplication.models.ExerciseDTO
-import com.example.workoutbuddyapplication.data.SupabaseClient
-import kotlinx.coroutines.launch
-import io.github.jan.supabase.postgrest.postgrest
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.decodeFromString
+import com.example.workoutbuddyapplication.BuildConfig
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.json.JSONArray
+
+suspend fun fetchExerciseByName(name: String): Exercise? = withContext(Dispatchers.IO) {
+    val client = OkHttpClient()
+    val url = "https://attsgwsxdlblbqxnboqx.supabase.co/rest/v1/exercises?name=eq.${name}&select=*"
+    val request = Request.Builder()
+        .url(url)
+        .addHeader("apikey", BuildConfig.SUPABASE_ANON_KEY)
+        .addHeader("Authorization", "Bearer ${BuildConfig.SUPABASE_ANON_KEY}")
+        .build()
+    val response = client.newCall(request).execute()
+    val responseBody = response.body?.string() ?: return@withContext null
+    val jsonArray = JSONArray(responseBody)
+    if (jsonArray.length() == 0) return@withContext null
+    val obj = jsonArray.getJSONObject(0)
+    Exercise(
+        name = obj.getString("name"),
+        force = obj.optString("force", ""),
+        level = obj.optString("level", ""),
+        mechanic = obj.optString("mechanic", ""),
+        equipment = obj.optString("equipment", null),
+        primaryMuscles = obj.optJSONArray("primary_muscles")?.let { arr -> List(arr.length()) { arr.getString(it) } } ?: emptyList(),
+        secondaryMuscles = obj.optJSONArray("secondary_muscles")?.let { arr -> List(arr.length()) { arr.getString(it) } } ?: emptyList(),
+        instructions = obj.optJSONArray("instructions")?.let { arr -> List(arr.length()) { arr.getString(it) } } ?: emptyList(),
+        category = obj.optString("category", "")
+    )
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,46 +59,17 @@ fun ExerciseDetailScreen(
     var exercise by remember { mutableStateOf<Exercise?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
-    val coroutineScope = rememberCoroutineScope()
+    var selectedTabIndex by remember { mutableStateOf(2) }
 
-    // Fetch the exercise details from Supabase
-    LaunchedEffect(key1 = exerciseName) {
-        coroutineScope.launch {
-            try {
-                // Get all exercises with matching name - standard approach
-                val response = SupabaseClient.client.postgrest
-                    .from("exercises")
-                    .select()
-                    .decodeList<ExerciseDTO>()
-                
-                // Find the one with matching name
-                val exerciseData = response.find { it.name == exerciseName }
-                
-                if (exerciseData != null) {
-                    exercise = Exercise(
-                        id = exerciseData.id,
-                        name = exerciseData.name,
-                        force = exerciseData.force,
-                        level = exerciseData.level ?: "Beginner",
-                        mechanic = exerciseData.mechanic,
-                        equipment = exerciseData.equipment,
-                        primaryMuscles = exerciseData.primary_muscles,
-                        secondaryMuscles = exerciseData.secondary_muscles,
-                        category = exerciseData.category,
-                        instructions = exerciseData.instructions
-                    )
-                    isLoading = false
-                } else {
-                    error = "Exercise not found"
-                    isLoading = false
-                }
-            } catch (e: Exception) {
-                error = "Failed to load exercise: ${e.message}"
-                isLoading = false
-                println("Error loading exercise detail: ${e.message}")
-                e.printStackTrace()
-            }
+    LaunchedEffect(exerciseName) {
+        isLoading = true
+        error = null
+        try {
+            exercise = fetchExerciseByName(exerciseName)
+        } catch (e: Exception) {
+            error = "Could not load exercise."
         }
+        isLoading = false
     }
 
     Scaffold(
@@ -82,189 +82,148 @@ fun ExerciseDetailScreen(
                     }
                 }
             )
+        },
+        bottomBar = {
+            NavigationBar {
+                NavigationBarItem(
+                    selected = selectedTabIndex == 0,
+                    onClick = {
+                        selectedTabIndex = 0
+                        navController.navigate("dashboard")
+                    },
+                    icon = { Icon(Icons.Default.FitnessCenter, contentDescription = "Dashboard") },
+                    label = { Text("Dashboard") }
+                )
+                NavigationBarItem(
+                    selected = selectedTabIndex == 1,
+                    onClick = {
+                        selectedTabIndex = 1
+                        navController.navigate("history")
+                    },
+                    icon = { Icon(Icons.AutoMirrored.Filled.DirectionsRun, contentDescription = "History") },
+                    label = { Text("Geschiedenis") }
+                )
+                NavigationBarItem(
+                    selected = selectedTabIndex == 2,
+                    onClick = {
+                        selectedTabIndex = 2
+                        navController.navigate("exercises")
+                    },
+                    icon = { Icon(Icons.Default.FitnessCenter, contentDescription = "Exercises") },
+                    label = { Text("Oefeningen") }
+                )
+                NavigationBarItem(
+                    selected = selectedTabIndex == 3,
+                    onClick = {
+                        selectedTabIndex = 3
+                        navController.navigate("stats")
+                    },
+                    icon = { Icon(Icons.Default.SelfImprovement, contentDescription = "Stats") },
+                    label = { Text("Statistieken") }
+                )
+            }
         }
     ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(paddingValues),
+            contentAlignment = Alignment.TopCenter
         ) {
-            if (isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.Center)
-                )
-            } else if (error != null) {
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(error!!, color = MaterialTheme.colorScheme.error)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Button(onClick = {
-                        isLoading = true
-                        error = null
-                        coroutineScope.launch {
-                            try {
-                                // Get all exercises with matching name
-                                val response = SupabaseClient.client.postgrest
-                                    .from("exercises")
-                                    .select()
-                                    .decodeList<ExerciseDTO>()
-                                
-                                // Find the one with matching name
-                                val exerciseData = response.find { it.name == exerciseName }
-                                
-                                if (exerciseData != null) {
-                                    exercise = Exercise(
-                                        id = exerciseData.id,
-                                        name = exerciseData.name,
-                                        force = exerciseData.force,
-                                        level = exerciseData.level ?: "Beginner",
-                                        mechanic = exerciseData.mechanic,
-                                        equipment = exerciseData.equipment,
-                                        primaryMuscles = exerciseData.primary_muscles,
-                                        secondaryMuscles = exerciseData.secondary_muscles,
-                                        category = exerciseData.category,
-                                        instructions = exerciseData.instructions
-                                    )
-                                    isLoading = false
-                                } else {
-                                    error = "Exercise not found"
-                                    isLoading = false
+            when {
+                isLoading -> CircularProgressIndicator()
+                error != null -> Text(error!!, color = MaterialTheme.colorScheme.error)
+                exercise == null -> Text("Oefening niet gevonden")
+                else -> {
+                    Card(
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .fillMaxWidth(),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .padding(20.dp)
+                                .verticalScroll(rememberScrollState())
+                        ) {
+                            Text(
+                                text = exercise!!.name,
+                                fontSize = 28.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                            Divider(modifier = Modifier.padding(vertical = 8.dp))
+
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.FitnessCenter, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Level: ", fontWeight = FontWeight.SemiBold)
+                                Text(exercise!!.level)
+                            }
+                            Spacer(Modifier.height(4.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.FitnessCenter, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Kracht: ", fontWeight = FontWeight.SemiBold)
+                                Text(exercise!!.force)
+                            }
+                            Spacer(Modifier.height(4.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.FitnessCenter, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Mechaniek: ", fontWeight = FontWeight.SemiBold)
+                                Text(exercise!!.mechanic)
+                            }
+                            Spacer(Modifier.height(4.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.FitnessCenter, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Apparatuur: ", fontWeight = FontWeight.SemiBold)
+                                Text(exercise!!.equipment ?: "No equipment needed")
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            Divider(modifier = Modifier.padding(vertical = 8.dp))
+
+                            Text("Primaire Spieren:", fontWeight = FontWeight.SemiBold)
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            ) {
+                                exercise!!.primaryMuscles.forEach {
+                                    AssistChip(onClick = {}, label = { Text(it) })
                                 }
-                            } catch (e: Exception) {
-                                error = "Failed to load exercise: ${e.message}"
-                                isLoading = false
+                            }
+                            if (exercise!!.secondaryMuscles.isNotEmpty()) {
+                                Text("Secundaire Spieren:", fontWeight = FontWeight.SemiBold)
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.padding(vertical = 4.dp)
+                                ) {
+                                    exercise!!.secondaryMuscles.forEach {
+                                        AssistChip(onClick = {}, label = { Text(it) })
+                                    }
+                                }
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            Text("Categorie: ${exercise!!.category}", fontWeight = FontWeight.SemiBold)
+                            Divider(modifier = Modifier.padding(vertical = 8.dp))
+
+                            Text("Instructies:", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                            Spacer(Modifier.height(4.dp))
+                            exercise!!.instructions.forEachIndexed { idx, instr ->
+                                Row(
+                                    verticalAlignment = Alignment.Top,
+                                    modifier = Modifier.padding(bottom = 4.dp)
+                                ) {
+                                    Text("${idx + 1}.", fontWeight = FontWeight.Bold)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(instr)
+                                }
                             }
                         }
-                    }) {
-                        Text("Retry")
                     }
-                }
-            } else if (exercise != null) {
-                val exerciseData = exercise!!
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp)
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    // Exercise Name
-                    Text(
-                        text = exerciseData.name,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    // Force
-                    if (exerciseData.force != null) {
-                        Text(
-                            text = "Force",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Text(text = exerciseData.force)
-                        
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
-                    
-                    // Level
-                    Text(
-                        text = "Level",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Text(text = exerciseData.level)
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    // Mechanic
-                    if (exerciseData.mechanic != null) {
-                        Text(
-                            text = "Mechanic",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Text(text = exerciseData.mechanic)
-                        
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
-                    
-                    // Equipment
-                    Text(
-                        text = "Equipment",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Text(text = exerciseData.equipment ?: "No equipment needed")
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    // Primary Muscles
-                    Text(
-                        text = "Primary Muscles",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                    exerciseData.primaryMuscles.forEach { muscle ->
-                        Text(text = "• $muscle")
-                    }
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    // Secondary Muscles
-                    if (exerciseData.secondaryMuscles != null && exerciseData.secondaryMuscles.isNotEmpty()) {
-                        Text(
-                            text = "Secondary Muscles",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                        exerciseData.secondaryMuscles.forEach { muscle ->
-                            Text(text = "• $muscle")
-                        }
-                        
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
-                    
-                    // Category
-                    Text(
-                        text = "Category",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Text(text = exerciseData.category)
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    // Instructions
-                    Text(
-                        text = "Instructions",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    exerciseData.instructions.forEachIndexed { index, instruction ->
-                        Text(
-                            text = "${index + 1}. $instruction",
-                            modifier = Modifier.padding(vertical = 4.dp)
-                        )
-                    }
-                }
-            } else {
-                // Show error when exercise is null but there's no error
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("Exercise not found")
                 }
             }
         }
     }
-} 
+}
