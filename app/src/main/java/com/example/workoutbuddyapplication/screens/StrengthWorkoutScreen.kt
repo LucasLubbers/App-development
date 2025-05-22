@@ -229,7 +229,7 @@ fun StrengthWorkoutScreen(navController: NavController) {
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(40.dp))
             
             // Add Exercises Button (Blue)
             Button(
