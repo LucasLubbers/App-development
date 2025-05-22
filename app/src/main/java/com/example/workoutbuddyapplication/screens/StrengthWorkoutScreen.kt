@@ -261,6 +261,11 @@ fun StrengthWorkoutScreen(navController: NavController) {
                 )
                 exercises.add(newExercise)
                 showExerciseSelector = false
+            },
+            onScanQrCode = {
+                showExerciseSelector = false // Close the dialog first
+                // Navigate to QR scanner
+                navController.navigate(Screen.QRScanner.route)
             }
         )
     }
@@ -856,7 +861,8 @@ fun ExerciseSelectorDialog(
     isLoading: Boolean,
     error: String?,
     onDismiss: () -> Unit,
-    onExerciseSelected: (AvailableExercise) -> Unit
+    onExerciseSelected: (AvailableExercise) -> Unit,
+    onScanQrCode: () -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
     
@@ -919,7 +925,36 @@ fun ExerciseSelectorDialog(
                     singleLine = true
                 )
                 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                // Camera icon button
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Button(
+                        onClick = { onScanQrCode() },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.QrCode,
+                                contentDescription = "Scan QR Code",
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Scan oefening QR code")
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
                 
                 // Exercise list
                 if (isLoading) {
