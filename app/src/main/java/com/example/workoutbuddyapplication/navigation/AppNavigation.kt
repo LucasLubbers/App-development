@@ -84,11 +84,15 @@ fun AppNavigation(navController: NavHostController) {
             ExercisesScreen(navController = navController)
         }
         composable(
-            route = "workoutDetail/{workoutId}",
-            arguments = listOf(navArgument("workoutId") { type = NavType.IntType })
+            route = "workoutDetail/{workoutId}/{selectedTabIndex}",
+            arguments = listOf(
+                navArgument("workoutId") { type = NavType.IntType },
+                navArgument("selectedTabIndex") { type = NavType.IntType }
+            )
         ) { backStackEntry ->
             val workoutId = backStackEntry.arguments?.getInt("workoutId") ?: return@composable
-            WorkoutDetailScreen(navController = navController, workoutId = workoutId)
+            val selectedTabIndex = backStackEntry.arguments?.getInt("selectedTabIndex") ?: 0
+            WorkoutDetailScreen(navController = navController, workoutId = workoutId, selectedTabIndex = selectedTabIndex)
         }
         composable(
             route = Screen.ExerciseDetail.route,

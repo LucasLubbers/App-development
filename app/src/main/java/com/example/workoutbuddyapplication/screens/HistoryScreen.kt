@@ -165,9 +165,10 @@ fun HistoryScreen(navController: NavController) {
                                 )
                             }
                             items(workouts.sortedByDescending { it.date }) { workout ->
+
                                 WorkoutItem(
                                     workout = workout,
-                                    onClick = { navController.navigate("workoutDetail/${workout.id}") }
+                                    onClick = { navController.navigate("workoutDetail/${workout.id}/1") }
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                             }

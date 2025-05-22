@@ -191,7 +191,7 @@ fun DashboardScreen(navController: NavController) {
                         items(workouts.sortedByDescending { it.date }.take(5)) { workout ->
                             WorkoutItem(
                                 workout = workout,
-                                onClick = { navController.navigate("workoutDetail/${workout.id}") }
+                                onClick = { navController.navigate("workoutDetail/${workout.id}/0") }
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                         }

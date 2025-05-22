@@ -81,6 +81,7 @@ suspend fun fetchExercisesForWorkout(workoutId: Int): List<WorkoutExerciseWithDe
             WorkoutExerciseWithDetails(
                 exercise = exercise,
                 sets = if (obj.isNull("sets")) null else obj.getInt("sets"),
+                reps = if (obj.isNull("reps")) null else obj.getInt("reps"),
                 weight = if (obj.isNull("weight")) null else obj.getDouble("weight"),
                 notes = if (obj.isNull("notes")) null else obj.getString("notes"),
                 restTime = if (obj.isNull("rest_time")) null else obj.getInt("rest_time")
@@ -92,12 +93,16 @@ suspend fun fetchExercisesForWorkout(workoutId: Int): List<WorkoutExerciseWithDe
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WorkoutDetailScreen(workoutId: Int, navController: NavController) {
+fun WorkoutDetailScreen(
+    workoutId: Int,
+    navController: NavController,
+    selectedTabIndex: Int
+) {
     var workout by remember { mutableStateOf<Workout?>(null) }
     var exercises by remember { mutableStateOf<List<WorkoutExerciseWithDetails>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
-    var selectedTabIndex by remember { mutableIntStateOf(1) }
+    var currentTabIndex by remember { mutableIntStateOf(selectedTabIndex) }
 
     LaunchedEffect(workoutId) {
         isLoading = true
@@ -125,36 +130,36 @@ fun WorkoutDetailScreen(workoutId: Int, navController: NavController) {
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
-                    selected = selectedTabIndex == 0,
+                    selected = currentTabIndex == 0,
                     onClick = {
-                        selectedTabIndex = 0
+                        currentTabIndex = 0
                         navController.navigate("dashboard")
                     },
                     icon = { Icon(Icons.Default.FitnessCenter, contentDescription = "Dashboard") },
                     label = { Text("Dashboard") }
                 )
                 NavigationBarItem(
-                    selected = selectedTabIndex == 1,
+                    selected = currentTabIndex == 1,
                     onClick = {
-                        selectedTabIndex = 1
+                        currentTabIndex = 1
                         navController.navigate("history")
                     },
                     icon = { Icon(Icons.AutoMirrored.Filled.DirectionsRun, contentDescription = "History") },
                     label = { Text("Geschiedenis") }
                 )
                 NavigationBarItem(
-                    selected = selectedTabIndex == 2,
+                    selected = currentTabIndex == 2,
                     onClick = {
-                        selectedTabIndex = 2
+                        currentTabIndex = 2
                         navController.navigate("exercises")
                     },
                     icon = { Icon(Icons.Default.FitnessCenter, contentDescription = "Exercises") },
                     label = { Text("Oefeningen") }
                 )
                 NavigationBarItem(
-                    selected = selectedTabIndex == 3,
+                    selected = currentTabIndex == 3,
                     onClick = {
-                        selectedTabIndex = 3
+                        currentTabIndex = 3
                         navController.navigate("stats")
                     },
                     icon = { Icon(Icons.Default.SelfImprovement, contentDescription = "Stats") },
@@ -173,7 +178,6 @@ fun WorkoutDetailScreen(workoutId: Int, navController: NavController) {
                 error != null -> Text(error!!, color = MaterialTheme.colorScheme.error)
                 workout == null -> Text("Workout not found.")
                 else -> {
-                    // Workout info card with icon
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -223,9 +227,10 @@ fun WorkoutExerciseDetailCard(item: WorkoutExerciseWithDetails) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(item.exercise.name, style = MaterialTheme.typography.titleMedium)
             item.sets?.let { Text("Sets: $it") }
-            item.weight?.let { Text("Weight: $it kg") }
-            item.restTime?.let { Text("Rest: $it sec") }
-            item.notes?.takeIf { it.isNotBlank() }?.let { Text("Notes: $it") }
+            item.reps?.let { Text("Reps: $it") }
+            item.weight?.let { Text("Gewicht: $it kg") }
+            item.restTime?.let { Text("Rust: $it sec") }
+            item.notes?.takeIf { it.isNotBlank() }?.let { Text("Notities: $it") }
         }
     }
 }
