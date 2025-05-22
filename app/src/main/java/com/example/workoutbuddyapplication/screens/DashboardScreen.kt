@@ -233,6 +233,15 @@ fun WorkoutItem(workout: Workout) {
                             (workout.distance?.let { " | ${it} km" } ?: ""),
                     style = MaterialTheme.typography.bodySmall
                 )
+                // Show notes if present
+                if (!workout.notes.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = workout.notes,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }
