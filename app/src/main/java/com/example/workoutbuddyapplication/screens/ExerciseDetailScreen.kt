@@ -101,7 +101,7 @@ fun ExerciseDetailScreen(
                         navController.navigate("history")
                     },
                     icon = { Icon(Icons.AutoMirrored.Filled.DirectionsRun, contentDescription = "History") },
-                    label = { Text("History") }
+                    label = { Text("Geschiedenis") }
                 )
                 NavigationBarItem(
                     selected = selectedTabIndex == 2,
@@ -110,7 +110,7 @@ fun ExerciseDetailScreen(
                         navController.navigate("exercises")
                     },
                     icon = { Icon(Icons.Default.FitnessCenter, contentDescription = "Exercises") },
-                    label = { Text("Exercises") }
+                    label = { Text("Oefeningen") }
                 )
                 NavigationBarItem(
                     selected = selectedTabIndex == 3,
@@ -119,7 +119,7 @@ fun ExerciseDetailScreen(
                         navController.navigate("stats")
                     },
                     icon = { Icon(Icons.Default.SelfImprovement, contentDescription = "Stats") },
-                    label = { Text("Stats") }
+                    label = { Text("Statistieken") }
                 )
             }
         }
@@ -133,7 +133,7 @@ fun ExerciseDetailScreen(
             when {
                 isLoading -> CircularProgressIndicator()
                 error != null -> Text(error!!, color = MaterialTheme.colorScheme.error)
-                exercise == null -> Text("Exercise not found")
+                exercise == null -> Text("Oefening niet gevonden")
                 else -> {
                     Card(
                         modifier = Modifier
@@ -164,27 +164,27 @@ fun ExerciseDetailScreen(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.FitnessCenter, contentDescription = null)
                                 Spacer(Modifier.width(8.dp))
-                                Text("Force: ", fontWeight = FontWeight.SemiBold)
+                                Text("Kracht: ", fontWeight = FontWeight.SemiBold)
                                 Text(exercise!!.force)
                             }
                             Spacer(Modifier.height(4.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.FitnessCenter, contentDescription = null)
                                 Spacer(Modifier.width(8.dp))
-                                Text("Mechanic: ", fontWeight = FontWeight.SemiBold)
+                                Text("Mechaniek: ", fontWeight = FontWeight.SemiBold)
                                 Text(exercise!!.mechanic)
                             }
                             Spacer(Modifier.height(4.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.FitnessCenter, contentDescription = null)
                                 Spacer(Modifier.width(8.dp))
-                                Text("Equipment: ", fontWeight = FontWeight.SemiBold)
+                                Text("Apparatuur: ", fontWeight = FontWeight.SemiBold)
                                 Text(exercise!!.equipment ?: "No equipment needed")
                             }
                             Spacer(Modifier.height(8.dp))
                             Divider(modifier = Modifier.padding(vertical = 8.dp))
 
-                            Text("Primary Muscles:", fontWeight = FontWeight.SemiBold)
+                            Text("Primaire Spieren:", fontWeight = FontWeight.SemiBold)
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 modifier = Modifier.padding(vertical = 4.dp)
@@ -194,7 +194,7 @@ fun ExerciseDetailScreen(
                                 }
                             }
                             if (exercise!!.secondaryMuscles.isNotEmpty()) {
-                                Text("Secondary Muscles:", fontWeight = FontWeight.SemiBold)
+                                Text("Secundaire Spieren:", fontWeight = FontWeight.SemiBold)
                                 Row(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     modifier = Modifier.padding(vertical = 4.dp)
@@ -205,10 +205,10 @@ fun ExerciseDetailScreen(
                                 }
                             }
                             Spacer(Modifier.height(8.dp))
-                            Text("Category: ${exercise!!.category}", fontWeight = FontWeight.SemiBold)
+                            Text("Categorie: ${exercise!!.category}", fontWeight = FontWeight.SemiBold)
                             Divider(modifier = Modifier.padding(vertical = 8.dp))
 
-                            Text("Instructions:", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                            Text("Instructies:", fontWeight = FontWeight.Bold, fontSize = 18.sp)
                             Spacer(Modifier.height(4.dp))
                             exercise!!.instructions.forEachIndexed { idx, instr ->
                                 Row(
