@@ -1,5 +1,6 @@
 package com.example.workoutbuddyapplication.navigation
 
+import android.bluetooth.BluetoothDevice
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
@@ -26,7 +27,7 @@ sealed class Screen(val route: String) {
     object StrengthWorkout : Screen("strength_workout")
     object YogaWorkout : Screen("yoga_workout")
     object WorkoutCompleted : Screen("workout_completed")
-    object BluetoothDevices : Screen("bluetooth_devices")
+    object BluetoothDevice : Screen("bluetooth_device")
     object QRScanner : Screen("qr_scanner")
     object Exercises : Screen("exercises")
     object ExerciseDetail : Screen("exercise_detail/{exerciseName}") {
@@ -76,8 +77,8 @@ fun AppNavigation(navController: NavHostController) {
         composable(Screen.WorkoutCompleted.route) {
             WorkoutCompletedScreen(navController = navController)
         }
-        composable(Screen.BluetoothDevices.route) {
-            BluetoothDevicesScreen(navController = navController)
+        composable(Screen.BluetoothDevice.route) {
+            BluetoothDeviceScreen(navController = navController)
         }
         composable(Screen.Exercises.route) {
             ExercisesScreen(navController = navController)
