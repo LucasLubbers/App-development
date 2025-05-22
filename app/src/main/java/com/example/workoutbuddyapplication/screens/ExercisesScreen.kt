@@ -27,6 +27,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.background
 import io.github.jan.supabase.postgrest.postgrest
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.decodeFromString
 
 @OptIn(ExperimentalMaterial3Api::class)
 @RequiresApi(Build.VERSION_CODES.O)
@@ -70,6 +72,8 @@ fun ExercisesScreen(navController: NavController) {
             } catch (e: Exception) {
                 error = "Failed to load exercises: ${e.message}"
                 isLoading = false
+                println("Error loading exercises: ${e.message}")
+                e.printStackTrace()
             }
         }
     }

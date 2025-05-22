@@ -41,6 +41,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -62,6 +63,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -76,7 +78,14 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavController
 import com.example.workoutbuddyapplication.models.ExerciseDevice
 import com.example.workoutbuddyapplication.navigation.Screen
+import com.example.workoutbuddyapplication.models.Exercise as ExerciseModel
+import com.example.workoutbuddyapplication.models.ExerciseDTO
+import com.example.workoutbuddyapplication.data.SupabaseClient
+import io.github.jan.supabase.postgrest.postgrest
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.decodeFromString
 
 data class ExerciseSet(
     val reps: Int,
@@ -90,13 +99,15 @@ data class Exercise(
     var sets: List<ExerciseSet>,
     val muscleGroup: String = "Algemeen",
     val notes: String = "",
-    val device: ExerciseDevice? = null
+    val device: ExerciseDevice? = null,
+    val caloriesPerRep: Int = 1 // Default to 1 calorie per rep
 )
 
 data class AvailableExercise(
     val name: String,
     val muscleGroup: String,
-    val equipment: String
+    val equipment: String,
+    val caloriesPerRep: Int = 1 // Default to 1 calorie per rep
 )
 
 @Composable
@@ -104,6 +115,7 @@ fun StrengthWorkoutScreen(navController: NavController) {
     var isRunning by remember { mutableStateOf(true) }
     var elapsedTime by remember { mutableLongStateOf(0L) }
     var calories by remember { mutableIntStateOf(0) }
+    var exerciseCalories by remember { mutableIntStateOf(0) } // Track exercise calories separately
     var currentExerciseForDevice by remember { mutableStateOf<Exercise?>(null) }
     var showExerciseSelector by remember { mutableStateOf(false) }
 
@@ -115,6 +127,87 @@ fun StrengthWorkoutScreen(navController: NavController) {
 
     // Exercise tracking
     val exercises = remember { mutableStateListOf<Exercise>() }
+    
+    // Available exercises from Supabase
+    var availableExercises by remember { mutableStateOf<List<AvailableExercise>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+    
+    val coroutineScope = rememberCoroutineScope()
+    
+    // Function to add calories from an exercise set
+    val addCaloriesFromSet = { reps: Int, caloriesPerRep: Int ->
+        exerciseCalories += reps * caloriesPerRep
+    }
+
+    // Fetch exercises from Supabase
+    LaunchedEffect(key1 = true) {
+        coroutineScope.launch {
+            try {
+                // Standard approach
+                val exerciseDTOs = SupabaseClient.client.postgrest
+                    .from("exercises")
+                    .select()
+                    .decodeList<ExerciseDTO>()
+                
+                // Convert DTOs to AvailableExercise objects
+                availableExercises = exerciseDTOs.map { dto ->
+                    AvailableExercise(
+                        name = dto.name,
+                        muscleGroup = dto.primary_muscles.firstOrNull() ?: "Algemeen",
+                        equipment = dto.equipment ?: "Bodyweight",
+                        caloriesPerRep = dto.calories ?: 1
+                    )
+                }
+                isLoading = false
+                error = null
+            } catch (e: Exception) {
+                // Fall back to hardcoded exercises
+                availableExercises = listOf(
+                    AvailableExercise(
+                        name = "Bench Press",
+                        muscleGroup = "Borst",
+                        equipment = "Barbell",
+                        caloriesPerRep = 1
+                    ),
+                    AvailableExercise(
+                        name = "Deadlift",
+                        muscleGroup = "Rug",
+                        equipment = "Barbell",
+                        caloriesPerRep = 1
+                    ),
+                    AvailableExercise(
+                        name = "Squat",
+                        muscleGroup = "Benen",
+                        equipment = "Barbell",
+                        caloriesPerRep = 1
+                    ),
+                    AvailableExercise(
+                        name = "Shoulder Press",
+                        muscleGroup = "Schouders",
+                        equipment = "Dumbbell",
+                        caloriesPerRep = 1
+                    ),
+                    AvailableExercise(
+                        name = "Bicep Curls",
+                        muscleGroup = "Armen",
+                        equipment = "Dumbbell",
+                        caloriesPerRep = 1
+                    ),
+                    AvailableExercise(
+                        name = "Lat Pulldown",
+                        muscleGroup = "Rug",
+                        equipment = "Cable Machine",
+                        caloriesPerRep = 1
+                    )
+                )
+                isLoading = false
+                error = null
+                println("Using hardcoded exercises due to error: ${e.message}")
+                e.printStackTrace()
+            }
+        }
+    }
 
     // Rest timer effect - only run when timer is actually active
     LaunchedEffect(timerActive) {
@@ -141,71 +234,20 @@ fun StrengthWorkoutScreen(navController: NavController) {
 
             // Simulate calorie burn (about 5 calories per minute)
             if (isRunning) {
-                calories = (elapsedTime / 60000 * 5).toInt()
+                // Calculate time-based calories only
+                val timeCalories = (elapsedTime / 60000 * 5).toInt()
+                // Set the total calories (time-based + exercise-based)
+                calories = timeCalories + exerciseCalories
             }
         }
-    }
-
-    // Sample available exercises
-    val availableExercises = remember {
-        listOf(
-            AvailableExercise(
-                name = "Bench Press",
-                muscleGroup = "Borst",
-                equipment = "Barbell"
-            ),
-            AvailableExercise(
-                name = "Deadlift",
-                muscleGroup = "Rug",
-                equipment = "Barbell"
-            ),
-            AvailableExercise(
-                name = "Squat",
-                muscleGroup = "Benen",
-                equipment = "Barbell"
-            ),
-            AvailableExercise(
-                name = "Shoulder Press",
-                muscleGroup = "Schouders",
-                equipment = "Dumbbell"
-            ),
-            AvailableExercise(
-                name = "Bicep Curls",
-                muscleGroup = "Armen",
-                equipment = "Dumbbell"
-            ),
-            AvailableExercise(
-                name = "Lat Pulldown",
-                muscleGroup = "Rug",
-                equipment = "Cable Machine"
-            ),
-            AvailableExercise(
-                name = "Leg Press",
-                muscleGroup = "Benen",
-                equipment = "Machine"
-            ),
-            AvailableExercise(
-                name = "Tricep Pushdown",
-                muscleGroup = "Armen",
-                equipment = "Cable Machine"
-            ),
-            AvailableExercise(
-                name = "Chest Fly",
-                muscleGroup = "Borst",
-                equipment = "Machine"
-            ),
-            AvailableExercise(
-                name = "Leg Extension",
-                muscleGroup = "Benen",
-                equipment = "Machine"
-            )
-        )
     }
 
     // Show exercise selector dialog
     if (showExerciseSelector) {
         ExerciseSelectorDialog(
             availableExercises = availableExercises,
+            isLoading = isLoading,
+            error = error,
             onDismiss = { showExerciseSelector = false },
             onExerciseSelected = { selectedExercise ->
                 // Create a new exercise with just one set
@@ -214,7 +256,8 @@ fun StrengthWorkoutScreen(navController: NavController) {
                     muscleGroup = selectedExercise.muscleGroup,
                     sets = listOf(
                         ExerciseSet(reps = 10, weight = 20.0)
-                    )
+                    ),
+                    caloriesPerRep = selectedExercise.caloriesPerRep
                 )
                 exercises.add(newExercise)
                 showExerciseSelector = false
@@ -339,6 +382,12 @@ fun StrengthWorkoutScreen(navController: NavController) {
                             restTimeRemaining = duration
                             timerActive = true
                         },
+                        onSetCompleted = { reps, wasCompleted -> 
+                            // Only add calories when a set is newly completed (not when unmarking)
+                            if (wasCompleted) {
+                                addCaloriesFromSet(reps, exercise.caloriesPerRep)
+                            }
+                        },
                         activeRestTimer = timerActive && activeRestTimerExercise == exercise.name,
                         activeRestTimerSet = activeRestTimerSetIndex,
                         restTimeRemaining = restTimeRemaining,
@@ -377,6 +426,7 @@ fun StrengthWorkoutScreen(navController: NavController) {
 fun EnhancedExerciseCard(
     exercise: Exercise,
     onStartRest: (Int, String, Int) -> Unit,
+    onSetCompleted: (Int, Boolean) -> Unit,
     activeRestTimer: Boolean,
     activeRestTimerSet: Int,
     restTimeRemaining: Int,
@@ -660,6 +710,11 @@ fun EnhancedExerciseCard(
                                     val restTime = exerciseSets[index].restTime
                                     onStartRest(restTime, exercise.name, index)
                                 }
+
+                                // Only add calories when a set is newly completed (not when unmarking)
+                                if (wasCompleted && !completed) {
+                                    addCaloriesFromSet(reps.toIntOrNull() ?: 0, exercise.caloriesPerRep)
+                                }
                             },
                             modifier = Modifier
                                 .weight(0.4f)
@@ -797,6 +852,8 @@ fun FilterChip(
 @Composable
 fun ExerciseSelectorDialog(
     availableExercises: List<AvailableExercise>,
+    isLoading: Boolean,
+    error: String?,
     onDismiss: () -> Unit,
     onExerciseSelected: (AvailableExercise) -> Unit
 ) {
@@ -864,15 +921,35 @@ fun ExerciseSelectorDialog(
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 // Exercise list
-                LazyColumn(
-                    modifier = Modifier.weight(1f)
-                ) {
-                    items(filteredExercises) { exercise ->
-                        ExerciseItem(
-                            exercise = exercise,
-                            onExerciseClick = { onExerciseSelected(exercise) }
+                if (isLoading) {
+                    Box(
+                        modifier = Modifier.weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                } else if (error != null) {
+                    Box(
+                        modifier = Modifier.weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = error,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(16.dp)
                         )
-                        Divider()
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        items(filteredExercises) { exercise ->
+                            ExerciseItem(
+                                exercise = exercise,
+                                onExerciseClick = { onExerciseSelected(exercise) }
+                            )
+                            Divider()
+                        }
                     }
                 }
             }
