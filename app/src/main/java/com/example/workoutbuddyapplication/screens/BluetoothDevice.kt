@@ -3,54 +3,20 @@ package com.example.workoutbuddyapplication.screens
 import android.Manifest
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Bluetooth
-import androidx.compose.material.icons.filled.BluetoothConnected
-import androidx.compose.material.icons.filled.BluetoothDisabled
-import androidx.compose.material.icons.filled.BluetoothSearching
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -69,32 +35,28 @@ import androidx.core.net.toUri
 @SuppressLint("UseKtx")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BluetoothDevicesScreen(navController: NavController) {
+fun BluetoothDeviceScreen(navController: NavController) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Create BluetoothService
     val bluetoothService = remember { BluetoothService(context) }
 
-    // State from BluetoothService
     val scanningState by bluetoothService.scanningState.collectAsState()
     val discoveredDevices by bluetoothService.discoveredDevices.collectAsState()
     val errorMessage by bluetoothService.errorMessage.collectAsState()
+    val connectedDevice by bluetoothService.connectedDevice.collectAsState()
 
-    // Local state
     var showBluetoothDisabledDialog by remember { mutableStateOf(false) }
     var showPermissionDialog by remember { mutableStateOf(false) }
     var permissionsRequested by remember { mutableStateOf(false) }
 
-    // Permission launcher
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         permissionsRequested = true
         val allGranted = permissions.entries.all { it.value }
-
         if (allGranted) {
             if (bluetoothService.isBluetoothEnabled()) {
                 bluetoothService.startScan()
@@ -106,10 +68,9 @@ fun BluetoothDevicesScreen(navController: NavController) {
         }
     }
 
-    // Bluetooth enable launcher
     val bluetoothEnableLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
+    ) {
         if (bluetoothService.isBluetoothEnabled()) {
             bluetoothService.startScan()
         } else {
@@ -119,16 +80,27 @@ fun BluetoothDevicesScreen(navController: NavController) {
         }
     }
 
-    // Handle lifecycle events
+    LaunchedEffect(Unit) {
+        if (!bluetoothService.hasRequiredPermissions()) {
+            requestPermissions(permissionLauncher)
+        } else if (!bluetoothService.isBluetoothEnabled()) {
+            showBluetoothDisabledDialog = true
+        } else {
+            bluetoothService.startScan()
+        }
+    }
+
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                if (!permissionsRequested) {
-                    requestPermissions(permissionLauncher)
-                } else if (bluetoothService.hasRequiredPermissions()) {
+                if (bluetoothService.hasRequiredPermissions()) {
                     if (!bluetoothService.isBluetoothEnabled()) {
                         showBluetoothDisabledDialog = true
+                    } else if (discoveredDevices.isEmpty()) {
+                        bluetoothService.startScan()
                     }
+                } else if (!permissionsRequested) {
+                    requestPermissions(permissionLauncher)
                 }
             }
         }
@@ -141,14 +113,13 @@ fun BluetoothDevicesScreen(navController: NavController) {
         }
     }
 
-    // Show error messages in snackbar
     LaunchedEffect(errorMessage) {
         errorMessage?.let {
             snackbarHostState.showSnackbar(it)
+            bluetoothService.clearErrorMessage()
         }
     }
 
-    // Bluetooth disabled dialog
     if (showBluetoothDisabledDialog) {
         AlertDialog(
             onDismissRequest = { showBluetoothDisabledDialog = false },
@@ -161,21 +132,16 @@ fun BluetoothDevicesScreen(navController: NavController) {
                         val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
                         bluetoothEnableLauncher.launch(enableBtIntent)
                     }
-                ) {
-                    Text("Inschakelen")
-                }
+                ) { Text("Inschakelen") }
             },
             dismissButton = {
-                TextButton(
-                    onClick = { showBluetoothDisabledDialog = false }
-                ) {
+                TextButton(onClick = { showBluetoothDisabledDialog = false }) {
                     Text("Annuleren")
                 }
             }
         )
     }
 
-    // Permission dialog
     if (showPermissionDialog) {
         AlertDialog(
             onDismissRequest = { showPermissionDialog = false },
@@ -190,14 +156,10 @@ fun BluetoothDevicesScreen(navController: NavController) {
                         }
                         context.startActivity(intent)
                     }
-                ) {
-                    Text("Instellingen")
-                }
+                ) { Text("Instellingen") }
             },
             dismissButton = {
-                TextButton(
-                    onClick = { showPermissionDialog = false }
-                ) {
+                TextButton(onClick = { showPermissionDialog = false }) {
                     Text("Annuleren")
                 }
             }
@@ -223,6 +185,7 @@ fun BluetoothDevicesScreen(navController: NavController) {
                                     showBluetoothDisabledDialog = true
                                 }
                             } else {
+                                permissionsRequested = false
                                 requestPermissions(permissionLauncher)
                             }
                         }
@@ -252,9 +215,7 @@ fun BluetoothDevicesScreen(navController: NavController) {
                         modifier = Modifier.size(24.dp),
                         strokeWidth = 2.dp
                     )
-
                     Spacer(modifier = Modifier.padding(8.dp))
-
                     Text(
                         text = "Zoeken naar apparaten...",
                         style = MaterialTheme.typography.bodyLarge
@@ -314,14 +275,22 @@ fun BluetoothDevicesScreen(navController: NavController) {
                     modifier = Modifier.weight(1f)
                 ) {
                     items(discoveredDevices.size) { index ->
-                        val deviceInfo = discoveredDevices[index]
+                        val device = discoveredDevices[index]
+                        val isConnected = bluetoothService.isDeviceConnected(device)
                         DeviceCard(
-                            deviceInfo = deviceInfo,
+                            device = device,
+                            isConnected = isConnected,
                             onConnectClick = {
                                 scope.launch {
-                                    bluetoothService.connectToDevice(deviceInfo)
+                                    if (isConnected) {
+                                        bluetoothService.disconnectDevice(device)
+                                    } else {
+                                        bluetoothService.connectToDevice(device)
+                                    }
                                 }
-                            }
+                            },
+                            bluetoothService = bluetoothService,
+                            context = context
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                     }
@@ -342,9 +311,24 @@ fun BluetoothDevicesScreen(navController: NavController) {
 
 @Composable
 fun DeviceCard(
-    deviceInfo: BluetoothService.BluetoothDeviceInfo,
-    onConnectClick: () -> Unit
+    device: BluetoothDevice,
+    isConnected: Boolean,
+    onConnectClick: () -> Unit,
+    bluetoothService: BluetoothService,
+    context: Context
 ) {
+    val deviceName = remember(device) {
+        if (bluetoothService.hasRequiredPermissions()) {
+            try {
+                device.name ?: "Onbekend apparaat"
+            } catch (e: SecurityException) {
+                "Toestemming vereist"
+            }
+        } else {
+            "Toestemming vereist"
+        }
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -356,69 +340,50 @@ fun DeviceCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                imageVector = if (deviceInfo.isConnected)
-                    Icons.Default.BluetoothConnected
-                else
-                    Icons.Default.Bluetooth,
+                imageVector = if (isConnected) Icons.Default.BluetoothConnected else Icons.Default.Bluetooth,
                 contentDescription = "Bluetooth",
-                tint = if (deviceInfo.isConnected)
-                    MaterialTheme.colorScheme.primary
-                else
-                    MaterialTheme.colorScheme.onSurface,
+                tint = if (isConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.size(24.dp)
             )
 
             Spacer(modifier = Modifier.padding(8.dp))
 
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = deviceInfo.name ?: "Onbekend apparaat",
+                    text = deviceName,
                     fontWeight = FontWeight.Medium
                 )
-
                 Text(
-                    text = deviceInfo.address,
+                    text = device.address,
                     style = MaterialTheme.typography.bodySmall
-                )
-
-                // Show device type
-                Text(
-                    text = when (deviceInfo.deviceType) {
-                        BluetoothService.DeviceType.HEART_RATE_MONITOR -> "Hartslagmeter"
-                        BluetoothService.DeviceType.SMART_WATCH -> "Smartwatch"
-                        BluetoothService.DeviceType.FITNESS_TRACKER -> "Fitness Tracker"
-                        BluetoothService.DeviceType.UNKNOWN -> "Onbekend apparaat"
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
                 )
             }
 
             Button(
-                onClick = onConnectClick
+                onClick = {
+                    if (bluetoothService.hasRequiredPermissions()) {
+                        onConnectClick()
+                    }
+                }
             ) {
-                Text(if (deviceInfo.isConnected) "Verbreken" else "Verbinden")
+                Text(if (isConnected) "Verbreken" else "Verbinden")
             }
         }
     }
 }
 
-// Helper function to request the necessary permissions
 private fun requestPermissions(permissionLauncher: ActivityResultLauncher<Array<String>>) {
-    val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        arrayOf(
-            Manifest.permission.BLUETOOTH_SCAN,
-            Manifest.permission.BLUETOOTH_CONNECT
-        )
+    val permissions = mutableListOf<String>()
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        permissions.add(Manifest.permission.BLUETOOTH_SCAN)
+        permissions.add(Manifest.permission.BLUETOOTH_CONNECT)
+        permissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
     } else {
-        arrayOf(
-            Manifest.permission.BLUETOOTH,
-            Manifest.permission.BLUETOOTH_ADMIN,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        )
+        permissions.add(Manifest.permission.BLUETOOTH)
+        permissions.add(Manifest.permission.BLUETOOTH_ADMIN)
+        permissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
     }
 
-    permissionLauncher.launch(permissions)
+    permissionLauncher.launch(permissions.toTypedArray())
 }

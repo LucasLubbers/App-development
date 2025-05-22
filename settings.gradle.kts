@@ -1,22 +1,20 @@
 pluginManagement {
     repositories {
-        google {
-            content {
-                includeGroupByRegex("com\\.android.*")
-                includeGroupByRegex("com\\.google.*")
-                includeGroupByRegex("androidx.*")
-            }
-        }
+        google()
         mavenCentral()
         gradlePluginPortal()
+        maven { url = uri("https://maven.pkg.jetbrains.space/public/p/ktor/eap") }
+        maven { url = uri("https://s01.oss.sonatype.org/content/repositories/snapshots/") }
     }
 }
+
 dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositoriesMode.set(RepositoriesMode.PREFER_PROJECT)
     repositories {
         google()
         mavenCentral()
-        maven("https://jitpack.io")
+        maven { url = uri("https://maven.pkg.jetbrains.space/public/p/ktor/eap") }
+        maven { url = uri("https://s01.oss.sonatype.org/content/repositories/snapshots/") }
     }
 }
 

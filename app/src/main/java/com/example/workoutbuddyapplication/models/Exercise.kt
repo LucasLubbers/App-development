@@ -1,6 +1,7 @@
 package com.example.workoutbuddyapplication.models
 
 data class Exercise(
+    val id: String? = null,
     val name: String,
     val force: String = "",
     val level: String,

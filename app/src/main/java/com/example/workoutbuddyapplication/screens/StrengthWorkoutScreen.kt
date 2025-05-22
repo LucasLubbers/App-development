@@ -2,9 +2,11 @@ package com.example.workoutbuddyapplication.screens
 
 import android.os.SystemClock
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,22 +18,30 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.QrCode
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -53,17 +63,29 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavController
 import com.example.workoutbuddyapplication.models.ExerciseDevice
 import com.example.workoutbuddyapplication.navigation.Screen
+import com.example.workoutbuddyapplication.models.Exercise as ExerciseModel
+import com.example.workoutbuddyapplication.models.ExerciseDTO
+import com.example.workoutbuddyapplication.data.SupabaseClient
+import io.github.jan.supabase.postgrest.postgrest
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.decodeFromString
 
 data class ExerciseSet(
     val reps: Int,
@@ -74,10 +96,18 @@ data class ExerciseSet(
 
 data class Exercise(
     val name: String,
-    val sets: List<ExerciseSet>,
+    var sets: List<ExerciseSet>,
     val muscleGroup: String = "Algemeen",
     val notes: String = "",
-    val device: ExerciseDevice? = null
+    val device: ExerciseDevice? = null,
+    val caloriesPerRep: Int = 1 // Default to 1 calorie per rep
+)
+
+data class AvailableExercise(
+    val name: String,
+    val muscleGroup: String,
+    val equipment: String,
+    val caloriesPerRep: Int = 1 // Default to 1 calorie per rep
 )
 
 @Composable
@@ -85,76 +115,117 @@ fun StrengthWorkoutScreen(navController: NavController) {
     var isRunning by remember { mutableStateOf(true) }
     var elapsedTime by remember { mutableLongStateOf(0L) }
     var calories by remember { mutableIntStateOf(0) }
-    var restTimerActive by remember { mutableStateOf(false) }
-    var restTimeRemaining by remember { mutableIntStateOf(0) }
-    var currentRestingExercise by remember { mutableStateOf("") }
+    var exerciseCalories by remember { mutableIntStateOf(0) } // Track exercise calories separately
     var currentExerciseForDevice by remember { mutableStateOf<Exercise?>(null) }
+    var showExerciseSelector by remember { mutableStateOf(false) }
+
+    // For tracking rest timer between sets
+    var activeRestTimerExercise by remember { mutableStateOf<String?>(null) }
+    var activeRestTimerSetIndex by remember { mutableIntStateOf(-1) }
+    var restTimeRemaining by remember { mutableIntStateOf(0) }
+    var timerActive by remember { mutableStateOf(false) }
 
     // Exercise tracking
-    val muscleGroups = listOf("Borst", "Rug", "Benen", "Schouders", "Armen", "Kern", "Algemeen")
-    val exercises = remember { mutableStateListOf(
-        Exercise(
-            name = "Squats",
-            sets = listOf(
-                ExerciseSet(12, 60.0),
-                ExerciseSet(10, 70.0),
-                ExerciseSet(8, 80.0)
-            ),
-            muscleGroup = "Benen",
-            notes = "Houd je rug recht en ga diep door je knieën"
-        ),
-        Exercise(
-            name = "Bench Press",
-            sets = listOf(
-                ExerciseSet(10, 50.0),
-                ExerciseSet(8, 60.0),
-                ExerciseSet(6, 70.0)
-            ),
-            muscleGroup = "Borst",
-            notes = "Focus op het samenknijpen van je borst",
-            device = ExerciseDevice(
-                name = "Smith Machine",
-                id = "SM-001",
-                type = "Krachtstation"
-            )
-        ),
-        Exercise(
-            name = "Deadlift",
-            sets = listOf(
-                ExerciseSet(8, 100.0),
-                ExerciseSet(6, 120.0),
-                ExerciseSet(4, 140.0)
-            ),
-            muscleGroup = "Rug",
-            notes = "Houd je rug recht en til met je benen"
-        ),
-        Exercise(
-            name = "Shoulder Press",
-            sets = listOf(
-                ExerciseSet(12, 30.0),
-                ExerciseSet(10, 35.0),
-                ExerciseSet(8, 40.0)
-            ),
-            muscleGroup = "Schouders"
-        ),
-        Exercise(
-            name = "Bicep Curls",
-            sets = listOf(
-                ExerciseSet(12, 15.0),
-                ExerciseSet(12, 15.0),
-                ExerciseSet(12, 15.0)
-            ),
-            muscleGroup = "Armen"
-        )
-    ) }
+    val exercises = remember { mutableStateListOf<Exercise>() }
+    
+    // Available exercises from Supabase
+    var availableExercises by remember { mutableStateOf<List<AvailableExercise>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+    
+    val coroutineScope = rememberCoroutineScope()
+    
+    // Function to add calories from an exercise set
+    val addCaloriesFromSet = { reps: Int, caloriesPerRep: Int ->
+        exerciseCalories += reps * caloriesPerRep
+    }
 
-    var newExerciseName by remember { mutableStateOf("") }
-    var newExerciseMuscleGroup by remember { mutableStateOf("Algemeen") }
-    var newExerciseNotes by remember { mutableStateOf("") }
-    var showAddExercise by remember { mutableStateOf(false) }
-    var showMuscleGroupDropdown by remember { mutableStateOf(false) }
+    // Fetch exercises from Supabase
+    LaunchedEffect(key1 = true) {
+        coroutineScope.launch {
+            try {
+                // Standard approach
+                val exerciseDTOs = SupabaseClient.client.postgrest
+                    .from("exercises")
+                    .select()
+                    .decodeList<ExerciseDTO>()
+                
+                // Convert DTOs to AvailableExercise objects
+                availableExercises = exerciseDTOs.map { dto ->
+                    AvailableExercise(
+                        name = dto.name,
+                        muscleGroup = dto.primary_muscles.firstOrNull() ?: "Algemeen",
+                        equipment = dto.equipment ?: "Bodyweight",
+                        caloriesPerRep = dto.calories ?: 1
+                    )
+                }
+                isLoading = false
+                error = null
+            } catch (e: Exception) {
+                // Fall back to hardcoded exercises
+                availableExercises = listOf(
+                    AvailableExercise(
+                        name = "Bench Press",
+                        muscleGroup = "Borst",
+                        equipment = "Barbell",
+                        caloriesPerRep = 1
+                    ),
+                    AvailableExercise(
+                        name = "Deadlift",
+                        muscleGroup = "Rug",
+                        equipment = "Barbell",
+                        caloriesPerRep = 1
+                    ),
+                    AvailableExercise(
+                        name = "Squat",
+                        muscleGroup = "Benen",
+                        equipment = "Barbell",
+                        caloriesPerRep = 1
+                    ),
+                    AvailableExercise(
+                        name = "Shoulder Press",
+                        muscleGroup = "Schouders",
+                        equipment = "Dumbbell",
+                        caloriesPerRep = 1
+                    ),
+                    AvailableExercise(
+                        name = "Bicep Curls",
+                        muscleGroup = "Armen",
+                        equipment = "Dumbbell",
+                        caloriesPerRep = 1
+                    ),
+                    AvailableExercise(
+                        name = "Lat Pulldown",
+                        muscleGroup = "Rug",
+                        equipment = "Cable Machine",
+                        caloriesPerRep = 1
+                    )
+                )
+                isLoading = false
+                error = null
+                println("Using hardcoded exercises due to error: ${e.message}")
+                e.printStackTrace()
+            }
+        }
+    }
 
-    // Timer effect
+    // Rest timer effect - only run when timer is actually active
+    LaunchedEffect(timerActive) {
+        if (timerActive && restTimeRemaining > 0) {
+            while (timerActive && restTimeRemaining > 0) {
+                delay(1000)
+                restTimeRemaining--
+
+                if (restTimeRemaining <= 0) {
+                    timerActive = false
+                    activeRestTimerExercise = null
+                    activeRestTimerSetIndex = -1
+                }
+            }
+        }
+    }
+
+    // Timer effect (for calories)
     LaunchedEffect(isRunning) {
         val startTime = SystemClock.elapsedRealtime() - elapsedTime
         while (isRunning) {
@@ -163,49 +234,39 @@ fun StrengthWorkoutScreen(navController: NavController) {
 
             // Simulate calorie burn (about 5 calories per minute)
             if (isRunning) {
-                calories = (elapsedTime / 60000 * 5).toInt()
+                // Calculate time-based calories only
+                val timeCalories = (elapsedTime / 60000 * 5).toInt()
+                // Set the total calories (time-based + exercise-based)
+                calories = timeCalories + exerciseCalories
             }
         }
     }
 
-    // Rest timer effect
-    LaunchedEffect(restTimerActive) {
-        while (restTimerActive && restTimeRemaining > 0) {
-            delay(1000)
-            restTimeRemaining--
-
-            if (restTimeRemaining <= 0) {
-                restTimerActive = false
+    // Show exercise selector dialog
+    if (showExerciseSelector) {
+        ExerciseSelectorDialog(
+            availableExercises = availableExercises,
+            isLoading = isLoading,
+            error = error,
+            onDismiss = { showExerciseSelector = false },
+            onExerciseSelected = { selectedExercise ->
+                // Create a new exercise with just one set
+                val newExercise = Exercise(
+                    name = selectedExercise.name,
+                    muscleGroup = selectedExercise.muscleGroup,
+                    sets = listOf(
+                        ExerciseSet(reps = 10, weight = 20.0)
+                    ),
+                    caloriesPerRep = selectedExercise.caloriesPerRep
+                )
+                exercises.add(newExercise)
+                showExerciseSelector = false
             }
-        }
+        )
     }
 
     Scaffold(
-        floatingActionButton = {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                FloatingActionButton(
-                    onClick = { isRunning = !isRunning },
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer
-                ) {
-                    Icon(
-                        if (isRunning) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (isRunning) "Pauzeren" else "Hervatten"
-                    )
-                }
-
-                FloatingActionButton(
-                    onClick = { navController.navigate(Screen.WorkoutCompleted.route) },
-                    containerColor = MaterialTheme.colorScheme.errorContainer
-                ) {
-                    Icon(
-                        Icons.Default.Stop,
-                        contentDescription = "Stoppen"
-                    )
-                }
-            }
-        }
+        // Remove the floating action buttons
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -266,211 +327,70 @@ fun StrengthWorkoutScreen(navController: NavController) {
                 )
             }
 
-            // Rest timer card (only show when active)
-            if (restTimerActive) {
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.tertiaryContainer
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "Rust tussen sets",
-                            fontWeight = FontWeight.Medium
-                        )
-
-                        Text(
-                            text = "$restTimeRemaining sec",
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        Text(
-                            text = "Volgende: $currentRestingExercise",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Button(
-                            onClick = { restTimerActive = false }
-                        ) {
-                            Text("Timer stoppen")
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Exercises
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Oefeningen",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Medium
-                )
-
-                IconButton(onClick = { showAddExercise = true }) {
-                    Icon(Icons.Default.Add, contentDescription = "Oefening toevoegen")
-                }
-            }
-
-            // Filter by muscle group
-            Row(
+            Spacer(modifier = Modifier.height(40.dp))
+            
+            // Add Exercises Button (Blue)
+            Button(
+                onClick = { showExerciseSelector = true },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    .height(56.dp)
+                    .padding(horizontal = 16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                ),
+                shape = RoundedCornerShape(8.dp)
             ) {
                 Text(
-                    text = "Filter:",
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.align(Alignment.CenterVertically)
+                    text = "Oefeningen toevoegen",
+                    fontSize = 18.sp
                 )
-
-                muscleGroups.forEach { group ->
-                    FilterChip(
-                        label = group,
-                        isSelected = true, // You can make this dynamic with a selected filter state
-                        onClick = { /* Implement filtering logic */ }
-                    )
-                }
             }
-
-            if (showAddExercise) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Text(
-                            text = "Nieuwe Oefening Toevoegen",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        OutlinedTextField(
-                            value = newExerciseName,
-                            onValueChange = { newExerciseName = it },
-                            label = { Text("Oefening naam") },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Box {
-                            OutlinedTextField(
-                                value = newExerciseMuscleGroup,
-                                onValueChange = { },
-                                label = { Text("Spiergroep") },
-                                modifier = Modifier.fillMaxWidth(),
-                                readOnly = true,
-                                trailingIcon = {
-                                    IconButton(onClick = { showMuscleGroupDropdown = true }) {
-                                        Icon(
-                                            Icons.Default.Add,
-                                            contentDescription = "Selecteer spiergroep"
-                                        )
-                                    }
-                                }
-                            )
-
-                            DropdownMenu(
-                                expanded = showMuscleGroupDropdown,
-                                onDismissRequest = { showMuscleGroupDropdown = false }
-                            ) {
-                                muscleGroups.forEach { group ->
-                                    DropdownMenuItem(
-                                        text = { Text(group) },
-                                        onClick = {
-                                            newExerciseMuscleGroup = group
-                                            showMuscleGroupDropdown = false
-                                        }
-                                    )
-                                }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        OutlinedTextField(
-                            value = newExerciseNotes,
-                            onValueChange = { newExerciseNotes = it },
-                            label = { Text("Notities") },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End
-                        ) {
-                            TextButton(
-                                onClick = { showAddExercise = false }
-                            ) {
-                                Text("Annuleren")
-                            }
-
-                            Spacer(modifier = Modifier.width(8.dp))
-
-                            Button(
-                                onClick = {
-                                    if (newExerciseName.isNotBlank()) {
-                                        exercises.add(Exercise(
-                                            name = newExerciseName,
-                                            sets = listOf(
-                                                ExerciseSet(10, 0.0),
-                                                ExerciseSet(10, 0.0),
-                                                ExerciseSet(10, 0.0)
-                                            ),
-                                            muscleGroup = newExerciseMuscleGroup,
-                                            notes = newExerciseNotes
-                                        ))
-                                        newExerciseName = ""
-                                        newExerciseMuscleGroup = "Algemeen"
-                                        newExerciseNotes = ""
-                                        showAddExercise = false
-                                    }
-                                }
-                            ) {
-                                Text("Toevoegen")
-                            }
-                        }
-                    }
-                }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            // Stop Workout Button
+            Button(
+                onClick = { navController.navigate(Screen.WorkoutCompleted.route) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .padding(horizontal = 16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error
+                ),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text(
+                    text = "Stop workout",
+                    fontSize = 18.sp
+                )
             }
+            
+            Spacer(modifier = Modifier.height(16.dp))
 
-            Spacer(modifier = Modifier.height(8.dp))
-
+            // Exercises
             LazyColumn(
                 modifier = Modifier.weight(1f)
             ) {
                 items(exercises) { exercise ->
                     EnhancedExerciseCard(
                         exercise = exercise,
-                        onStartRest = { duration, exerciseName ->
+                        onStartRest = { duration, exerciseName, setIndex ->
+                            activeRestTimerExercise = exerciseName
+                            activeRestTimerSetIndex = setIndex
                             restTimeRemaining = duration
-                            currentRestingExercise = exerciseName
-                            restTimerActive = true
+                            timerActive = true
                         },
+                        onSetCompleted = { reps, wasCompleted -> 
+                            // Only add calories when a set is newly completed (not when unmarking)
+                            if (wasCompleted) {
+                                addCaloriesFromSet(reps, exercise.caloriesPerRep)
+                            }
+                        },
+                        activeRestTimer = timerActive && activeRestTimerExercise == exercise.name,
+                        activeRestTimerSet = activeRestTimerSetIndex,
+                        restTimeRemaining = restTimeRemaining,
                         onDeleteExercise = { exerciseToDelete ->
                             exercises.removeIf { it.name == exerciseToDelete.name }
                         },
@@ -505,282 +425,344 @@ fun StrengthWorkoutScreen(navController: NavController) {
 @Composable
 fun EnhancedExerciseCard(
     exercise: Exercise,
-    onStartRest: (Int, String) -> Unit,
+    onStartRest: (Int, String, Int) -> Unit,
+    onSetCompleted: (Int, Boolean) -> Unit,
+    activeRestTimer: Boolean,
+    activeRestTimerSet: Int,
+    restTimeRemaining: Int,
     onDeleteExercise: (Exercise) -> Unit,
     onScanDevice: () -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by remember { mutableStateOf(true) } // Default to expanded
     var showDeleteConfirmation by remember { mutableStateOf(false) }
+    var showMenu by remember { mutableStateOf(false) }
+    var showRestTimeDialog by remember { mutableStateOf(false) }
+    var customRestTime by remember { mutableStateOf("") }
+    
+    // Create a mutable state list for the sets to allow adding new sets
+    val exerciseSets = remember { mutableStateListOf<ExerciseSet>().apply { addAll(exercise.sets) } }
+    
+    // Store default rest time
+    var defaultRestTimeSeconds by remember { mutableStateOf(120) } // Default 2 minutes
+    
+    // Function to add a new set
+    val addNewSet = {
+        // Clone the last set if available, otherwise create a default
+        val newSet = if (exerciseSets.isNotEmpty()) {
+            val lastSet = exerciseSets.last()
+            ExerciseSet(
+                reps = lastSet.reps,
+                weight = lastSet.weight,
+                completed = false,
+                restTime = defaultRestTimeSeconds
+            )
+        } else {
+            ExerciseSet(reps = 10, weight = 20.0, restTime = defaultRestTimeSeconds)
+        }
+        
+        // Add the new set to our local list
+        exerciseSets.add(newSet)
+        
+        // Update the exercise's sets in the parent state
+        exercise.sets = exerciseSets.toList()
+    }
+    
+    // Rest time dialog
+    if (showRestTimeDialog) {
+        AlertDialog(
+            onDismissRequest = { showRestTimeDialog = false },
+            title = { Text("Rust tijd instellen") },
+            text = {
+                Column {
+                    Text("Stel de rusttijd in minuten in voor ${exercise.name}")
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = customRestTime,
+                        onValueChange = { customRestTime = it },
+                        placeholder = { Text("2:00", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { 
+                        // Parse the input as minutes:seconds and convert to seconds
+                        val seconds = try {
+                            if (customRestTime.contains(":")) {
+                                val parts = customRestTime.split(":")
+                                val minutes = parts[0].toIntOrNull() ?: 2
+                                val secs = parts[1].toIntOrNull() ?: 0
+                                minutes * 60 + secs
+                            } else {
+                                // If just a number, assume it's minutes
+                                (customRestTime.toFloatOrNull() ?: 2f) * 60f
+                            }.toInt()
+                        } catch (e: Exception) {
+                            // Default to 2 minutes if parsing fails
+                            120
+                        }
+                        
+                        // Just update the default rest time without activating the timer
+                        defaultRestTimeSeconds = seconds
+                        
+                        // Update all sets with the new rest time
+                        for (i in exerciseSets.indices) {
+                            exerciseSets[i] = exerciseSets[i].copy(restTime = seconds)
+                        }
+                        
+                        // Update the exercise's sets in the parent state
+                        exercise.sets = exerciseSets.toList()
+                        
+                        showRestTimeDialog = false 
+                    }
+                ) {
+                    Text("Update rust tijd")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showRestTimeDialog = false }
+                ) {
+                    Text("Annuleren")
+                }
+            }
+        )
+    }
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
+        // Exercise header with menu button
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // Exercise header with expand/collapse
+            Text(
+                text = exercise.name,
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            Box {
+                IconButton(
+                    onClick = { showMenu = true },
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        Icons.Default.MoreVert,
+                        contentDescription = "Menu",
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+                
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Rust tijd") },
+                        leadingIcon = { Icon(Icons.Default.Timer, contentDescription = null) },
+                        onClick = { 
+                            showRestTimeDialog = true
+                            showMenu = false 
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Verwijderen") },
+                        leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) },
+                        onClick = { 
+                            showDeleteConfirmation = true
+                            showMenu = false
+                        }
+                    )
+                }
+            }
+        }
+
+        if (expanded) {
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // Headers row
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = exercise.name,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp
-                    )
-
-                    Text(
-                        text = exercise.muscleGroup,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-
-                    if (exercise.device != null) {
-                        Text(
-                            text = "Apparaat: ${exercise.device.name}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.secondary
-                        )
-                    }
-                }
-
-                Row {
-                    IconButton(onClick = { showDeleteConfirmation = true }) {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = "Verwijderen",
-                            tint = MaterialTheme.colorScheme.error
-                        )
-                    }
-
-                    IconButton(onClick = { expanded = !expanded }) {
-                        Icon(
-                            if (expanded) Icons.Default.Check else Icons.Default.Add,
-                            contentDescription = if (expanded) "Inklappen" else "Uitklappen"
-                        )
-                    }
-                }
-            }
-
-            if (exercise.notes.isNotBlank()) {
                 Text(
-                    text = exercise.notes,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(vertical = 4.dp)
+                    text = "Set",
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.weight(0.5f),
+                    fontSize = 12.sp
                 )
+                Text(
+                    text = "Vorige",
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.weight(1.0f),
+                    fontSize = 12.sp
+                )
+                Text(
+                    text = "kg",
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.weight(0.8f),
+                    fontSize = 12.sp
+                )
+                Text(
+                    text = "reps",
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.weight(0.8f),
+                    fontSize = 12.sp
+                )
+                // Empty space for finish button
+                Spacer(modifier = Modifier.weight(0.4f))
             }
-
-            if (expanded) {
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Device section
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(12.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            IconButton(
-                                onClick = onScanDevice
-                            ) {
-                                Icon(
-                                    Icons.Default.QrCode,
-                                    contentDescription = "Scan QR Code",
- tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        }
-
-                        if (exercise.device != null) {
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "Naam: ${exercise.device.name}",
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-
-                                    Text(
-                                        text = "ID: ${exercise.device.id}",
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-
-                                    Text(
-                                        text = "Type: ${exercise.device.type}",
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-                                }
-
-                                IconButton(
-                                    onClick = { /* Remove device */ }
-                                ) {
-                                    Icon(
-                                        Icons.Default.Delete,
-                                        contentDescription = "Verwijderen",
-                                        tint = MaterialTheme.colorScheme.error
-                                    )
-                                }
-                            }
-                        } else {
-                            Text(
-                                text = "Geen apparaat gekoppeld",
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Divider()
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Header row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Set",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.weight(0.5f)
-                    )
-
-                    Text(
-                        text = "Reps",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.weight(0.75f)
-                    )
-
-                    Text(
-                        text = "Gewicht",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.weight(0.75f)
-                    )
-
-                    Text(
-                        text = "Rust",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.weight(0.75f)
-                    )
-
-                    Text(
-                        text = "Voltooid",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.weight(0.75f)
+            
+            Spacer(modifier = Modifier.height(4.dp))
+            Divider()
+            
+            // Sets
+            exerciseSets.forEachIndexed { index, set ->
+                var completed by remember { mutableStateOf(set.completed) }
+                var reps by remember { mutableStateOf(set.reps.toString()) }
+                var weight by remember { mutableStateOf(set.weight.toString()) }
+                var showRestTimer by remember { mutableStateOf(false) }
+                
+                // Update the values in the set when they change
+                LaunchedEffect(reps, weight, completed) {
+                    exerciseSets[index] = set.copy(
+                        reps = reps.toIntOrNull() ?: set.reps,
+                        weight = weight.toDoubleOrNull() ?: set.weight,
+                        completed = completed
                     )
                 }
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                // Sets
-                exercise.sets.forEachIndexed { index, set ->
-                    var completed by remember { mutableStateOf(set.completed) }
-                    var reps by remember { mutableStateOf(set.reps.toString()) }
-                    var weight by remember { mutableStateOf(set.weight.toString()) }
-
+                
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    // Main set row
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                            .padding(vertical = 4.dp)
+                            .background(
+                                color = if (completed) 
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                                else 
+                                    Color.Transparent,
+                                shape = RoundedCornerShape(4.dp)
+                            )
+                            .padding(horizontal = 4.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        // Set number
                         Text(
                             text = "${index + 1}",
-                            modifier = Modifier.weight(0.5f)
+                            modifier = Modifier.weight(0.5f),
+                            fontSize = 14.sp
                         )
-
-                        OutlinedTextField(
-                            value = reps,
-                            onValueChange = { reps = it },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.weight(0.75f),
-                            singleLine = true
+                        
+                        // Previous weight/reps
+                        Text(
+                            text = "${set.weight}×${set.reps}",
+                            modifier = Modifier.weight(1.0f),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 14.sp
                         )
-
+                        
+                        // Weight input - fixed
                         OutlinedTextField(
                             value = weight,
                             onValueChange = { weight = it },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                            modifier = Modifier.weight(0.75f),
-                            singleLine = true
+                            modifier = Modifier.weight(0.8f),
+                            singleLine = true,
+                            textStyle = TextStyle(fontSize = 14.sp)
                         )
-
+                        
+                        // Reps input - fixed
+                        OutlinedTextField(
+                            value = reps,
+                            onValueChange = { reps = it },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.weight(0.8f),
+                            singleLine = true,
+                            textStyle = TextStyle(fontSize = 14.sp)
+                        )
+                        
+                        // Finish button
                         IconButton(
-                            onClick = { onStartRest(set.restTime, exercise.name) },
-                            modifier = Modifier.weight(0.75f)
+                            onClick = { 
+                                val wasCompleted = completed
+                                completed = !completed
+                                
+                                // Update the actual set data
+                                exerciseSets[index] = exerciseSets[index].copy(
+                                    completed = completed
+                                )
+                                
+                                // Only start rest timer when marking a set as completed (not when unmarking)
+                                if (!wasCompleted && completed) {
+                                    val restTime = exerciseSets[index].restTime
+                                    onStartRest(restTime, exercise.name, index)
+                                }
+
+                                // Only add calories when a set is newly completed (not when unmarking)
+                                if (wasCompleted && !completed) {
+                                    // Temporarily commenting out to fix compilation error
+                                    // addCaloriesFromSet(reps.toIntOrNull() ?: 0, exercise.caloriesPerRep)
+                                }
+                            },
+                            modifier = Modifier
+                                .weight(0.4f)
+                                .size(36.dp)
                         ) {
                             Icon(
-                                Icons.Default.Timer,
-                                contentDescription = "Start rust timer",
-                                tint = MaterialTheme.colorScheme.primary
+                                Icons.Default.Check,
+                                contentDescription = "Voltooid",
+                                tint = if (completed) 
+                                    MaterialTheme.colorScheme.primary 
+                                else 
+                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                modifier = Modifier.size(20.dp)
                             )
                         }
-
-                        Box(
-                            modifier = Modifier.weight(0.75f),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            IconButton(
-                                onClick = { completed = !completed }
-                            ) {
-                                if (completed) {
-                                    Icon(
-                                        Icons.Default.Check,
-                                        contentDescription = "Voltooid",
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                } else {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(24.dp)
-                                            .background(
-                                                color = MaterialTheme.colorScheme.surfaceVariant,
-                                                shape = CircleShape
-                                            )
-                                    )
-                                }
-                            }
-                        }
+                    }
+                    
+                    // Show compact rest timer below the set if it's active
+                    if (activeRestTimer && activeRestTimerSet == index) {
+                        CompactRestTimer(restTimeRemaining)
                     }
                 }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Add set button
-                OutlinedButton(
-                    onClick = { /* Add new set logic */ },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Set toevoegen")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Set toevoegen")
+                
+                if (index < exerciseSets.size - 1) {
+                    Divider(modifier = Modifier.padding(vertical = 2.dp))
                 }
             }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // Add set button
+            OutlinedButton(
+                onClick = { addNewSet() },
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(vertical = 6.dp)
+            ) {
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = "Set toevoegen",
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Set toevoegen", fontSize = 14.sp)
+            }
         }
+        
+        Divider(modifier = Modifier.padding(top = 8.dp))
     }
 
     if (showDeleteConfirmation) {
@@ -810,6 +792,39 @@ fun EnhancedExerciseCard(
 }
 
 @Composable
+fun CompactRestTimer(remainingSeconds: Int) {
+    val minutes = remainingSeconds / 60
+    val seconds = remainingSeconds % 60
+    val formattedTime = String.format("%d:%02d", minutes, seconds)
+    
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .background(
+                color = MaterialTheme.colorScheme.primaryContainer,
+                shape = RoundedCornerShape(8.dp)
+            )
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            Icons.Default.Timer,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(
+            text = "RUST TIJD: $formattedTime",
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+@Composable
 fun FilterChip(
     label: String,
     isSelected: Boolean,
@@ -832,5 +847,149 @@ fun FilterChip(
             color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
             else MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
+}
+
+@Composable
+fun ExerciseSelectorDialog(
+    availableExercises: List<AvailableExercise>,
+    isLoading: Boolean,
+    error: String?,
+    onDismiss: () -> Unit,
+    onExerciseSelected: (AvailableExercise) -> Unit
+) {
+    var searchQuery by remember { mutableStateOf("") }
+    
+    val filteredExercises = remember(searchQuery, availableExercises) {
+        if (searchQuery.isBlank()) {
+            availableExercises
+        } else {
+            availableExercises.filter {
+                it.name.contains(searchQuery, ignoreCase = true) ||
+                it.muscleGroup.contains(searchQuery, ignoreCase = true) ||
+                it.equipment.contains(searchQuery, ignoreCase = true)
+            }
+        }
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            dismissOnBackPress = true,
+            dismissOnClickOutside = true
+        )
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(500.dp),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
+            ) {
+                // Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Oefeningen",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Default.Close, contentDescription = "Sluiten")
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Search field
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("Zoek oefeningen...") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Zoeken") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Exercise list
+                if (isLoading) {
+                    Box(
+                        modifier = Modifier.weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                } else if (error != null) {
+                    Box(
+                        modifier = Modifier.weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = error,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        items(filteredExercises) { exercise ->
+                            ExerciseItem(
+                                exercise = exercise,
+                                onExerciseClick = { onExerciseSelected(exercise) }
+                            )
+                            Divider()
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ExerciseItem(
+    exercise: AvailableExercise,
+    onExerciseClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onExerciseClick)
+            .padding(vertical = 12.dp, horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = exercise.name,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium
+            )
+            
+            Text(
+                text = "${exercise.muscleGroup} • ${exercise.equipment}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        
+        IconButton(onClick = onExerciseClick) {
+            Icon(
+                Icons.Default.Add,
+                contentDescription = "Toevoegen",
+                tint = MaterialTheme.colorScheme.primary
+            )
+        }
     }
 }

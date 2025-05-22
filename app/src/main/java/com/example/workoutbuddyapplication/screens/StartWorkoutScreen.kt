@@ -170,7 +170,7 @@ fun StartWorkoutScreen(navController: NavController) {
                             Spacer(modifier = Modifier.height(8.dp))
 
                             Button(
-                                onClick = { navController.navigate(Screen.BluetoothDevices.route) },
+                                onClick = { navController.navigate(Screen.BluetoothDevice.route) },
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Icon(
