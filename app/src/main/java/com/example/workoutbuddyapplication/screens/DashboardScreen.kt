@@ -8,8 +8,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DirectionsRun
-import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.DirectionsRun
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SelfImprovement
@@ -24,6 +25,7 @@ import androidx.navigation.NavController
 import com.example.workoutbuddyapplication.navigation.Screen
 import java.time.format.DateTimeFormatter
 import androidx.compose.material.icons.filled.Timer
+import com.example.workoutbuddyapplication.components.BottomNavBar
 
 @Composable
 fun SummaryCard(workouts: List<Workout> = emptyList()) {
@@ -43,7 +45,7 @@ fun SummaryCard(workouts: List<Workout> = emptyList()) {
         StatCard(
             title = "Afstand",
             value = "${"%.1f".format(totalDistance)} km",
-            icon = Icons.Default.DirectionsRun,
+            icon = Icons.AutoMirrored.Filled.DirectionsRun,
             modifier = Modifier.weight(1f).padding(horizontal = 4.dp)
         )
         StatCard(
@@ -83,7 +85,7 @@ fun DashboardScreen(navController: NavController) {
                 actions = {
                     IconButton(onClick = { navController.navigate(Screen.Login.route) }) {
                         Icon(
-                            imageVector = Icons.Default.ExitToApp,
+                            imageVector = Icons.AutoMirrored.Filled.ExitToApp,
                             contentDescription = "Uitloggen"
                         )
                     }
@@ -91,44 +93,11 @@ fun DashboardScreen(navController: NavController) {
             )
         },
         bottomBar = {
-            NavigationBar {
-                NavigationBarItem(
-                    selected = selectedTabIndex == 0,
-                    onClick = {
-                        selectedTabIndex = 0
-                        navController.navigate(Screen.Dashboard.route)
-                    },
-                    icon = { Icon(Icons.Default.FitnessCenter, contentDescription = "Dashboard") },
-                    label = { Text("Dashboard") }
-                )
-                NavigationBarItem(
-                    selected = selectedTabIndex == 1,
-                    onClick = {
-                        selectedTabIndex = 1
-                        navController.navigate(Screen.History.route)
-                    },
-                    icon = { Icon(Icons.Default.DirectionsRun, contentDescription = "Geschiedenis") },
-                    label = { Text("Geschiedenis") }
-                )
-                NavigationBarItem(
-                    selected = selectedTabIndex == 2,
-                    onClick = {
-                        selectedTabIndex = 2
-                        navController.navigate(Screen.Exercises.route)
-                    },
-                    icon = { Icon(Icons.Default.FitnessCenter, contentDescription = "Oefeningen") },
-                    label = { Text("Oefeningen") }
-                )
-                NavigationBarItem(
-                    selected = selectedTabIndex == 3,
-                    onClick = {
-                        selectedTabIndex = 3
-                        navController.navigate(Screen.Stats.route)
-                    },
-                    icon = { Icon(Icons.Default.SelfImprovement, contentDescription = "Statistieken") },
-                    label = { Text("Statistieken") }
-                )
-            }
+            BottomNavBar(
+                selectedTabIndex = selectedTabIndex,
+                onTabSelected = { selectedTabIndex = it },
+                navController = navController
+            )
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(

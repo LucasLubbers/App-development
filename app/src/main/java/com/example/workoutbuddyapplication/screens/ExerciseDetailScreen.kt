@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.workoutbuddyapplication.models.Exercise
 import com.example.workoutbuddyapplication.BuildConfig
+import com.example.workoutbuddyapplication.components.BottomNavBar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -84,44 +85,11 @@ fun ExerciseDetailScreen(
             )
         },
         bottomBar = {
-            NavigationBar {
-                NavigationBarItem(
-                    selected = selectedTabIndex == 0,
-                    onClick = {
-                        selectedTabIndex = 0
-                        navController.navigate("dashboard")
-                    },
-                    icon = { Icon(Icons.Default.FitnessCenter, contentDescription = "Dashboard") },
-                    label = { Text("Dashboard") }
-                )
-                NavigationBarItem(
-                    selected = selectedTabIndex == 1,
-                    onClick = {
-                        selectedTabIndex = 1
-                        navController.navigate("history")
-                    },
-                    icon = { Icon(Icons.AutoMirrored.Filled.DirectionsRun, contentDescription = "History") },
-                    label = { Text("Geschiedenis") }
-                )
-                NavigationBarItem(
-                    selected = selectedTabIndex == 2,
-                    onClick = {
-                        selectedTabIndex = 2
-                        navController.navigate("exercises")
-                    },
-                    icon = { Icon(Icons.Default.FitnessCenter, contentDescription = "Exercises") },
-                    label = { Text("Oefeningen") }
-                )
-                NavigationBarItem(
-                    selected = selectedTabIndex == 3,
-                    onClick = {
-                        selectedTabIndex = 3
-                        navController.navigate("stats")
-                    },
-                    icon = { Icon(Icons.Default.SelfImprovement, contentDescription = "Stats") },
-                    label = { Text("Statistieken") }
-                )
-            }
+            BottomNavBar(
+                selectedTabIndex = selectedTabIndex,
+                onTabSelected = { selectedTabIndex = it },
+                navController = navController
+            )
         }
     ) { paddingValues ->
         Box(
