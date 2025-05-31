@@ -37,6 +37,7 @@ sealed class Screen(val route: String) {
     object ExerciseDetail : Screen("exercise_detail/{exerciseName}") {
         fun createRoute(exerciseName: String) = "exercise_detail/$exerciseName"
     }
+    object Profile : Screen("profile")
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -87,6 +88,9 @@ fun AppNavigation(navController: NavHostController) {
         }
         composable(Screen.Exercises.route) {
             ExercisesScreen(navController = navController)
+        }
+        composable(Screen.Profile.route) {
+            ProfileScreen(navController = navController)
         }
         composable(
             route = "workoutDetail/{workoutId}/{selectedTabIndex}",

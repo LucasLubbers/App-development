@@ -20,13 +20,16 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import com.example.workoutbuddyapplication.BuildConfig
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
+import com.example.workoutbuddyapplication.R
 
 suspend fun registerUser(email: String, password: String, name: String): Boolean = withContext(Dispatchers.IO) {
     val client = OkHttpClient()
     val json = JSONObject()
     json.put("email", email)
     json.put("password", password)
-    // Optionally, add user metadata
     val userMeta = JSONObject()
     userMeta.put("name", name)
     json.put("data", userMeta)
@@ -42,7 +45,23 @@ suspend fun registerUser(email: String, password: String, name: String): Boolean
     try {
         val response = client.newCall(request).execute()
         val responseBody = response.body?.string()
-        if (!response.isSuccessful) {
+        if (response.isSuccessful) {
+            // Update the name in the existing profile row
+            val updateJson = JSONObject()
+            updateJson.put("name", name)
+            val updateBody = updateJson.toString().toRequestBody("application/json".toMediaType())
+            val updateRequest = Request.Builder()
+                .url("https://attsgwsxdlblbqxnboqx.supabase.co/rest/v1/profiles?email=eq.$email")
+                .patch(updateBody)
+                .addHeader("apikey", BuildConfig.SUPABASE_ANON_KEY)
+                .addHeader("Authorization", "Bearer ${BuildConfig.SUPABASE_ANON_KEY}")
+                .addHeader("Content-Type", "application/json")
+                .build()
+            val updateResponse = client.newCall(updateRequest).execute()
+            if (!updateResponse.isSuccessful) {
+                println("Failed to update profile: ${updateResponse.body?.string()}")
+            }
+        } else {
             println("Supabase signup error: $responseBody")
         }
         response.isSuccessful
@@ -69,6 +88,14 @@ fun SignupScreen(navController: NavController) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        Image(
+            painter = painterResource(id = R.drawable.aktiv_logo),
+            contentDescription = "App Icon",
+            modifier = Modifier.size(140.dp)
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         Text(
             text = "Aktiv",
             fontSize = 30.sp,
