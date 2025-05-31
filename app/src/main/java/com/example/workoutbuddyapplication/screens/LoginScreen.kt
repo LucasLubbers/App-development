@@ -1,41 +1,38 @@
 package com.example.workoutbuddyapplication.screens
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.rememberCoroutineScope
+import android.content.Context
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.workoutbuddyapplication.navigation.Screen
+import com.example.workoutbuddyapplication.R
 import com.example.workoutbuddyapplication.data.SupabaseClient
-import kotlinx.coroutines.launch
+import com.example.workoutbuddyapplication.navigation.Screen
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.gotrue.providers.builtin.Email
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.size
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.dp
-import com.example.workoutbuddyapplication.R
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
+
+val Context.dataStore by preferencesDataStore(name = "user_prefs")
+val USER_ID_KEY = stringPreferencesKey("user_id")
+
+suspend fun saveUserId(context: Context, userId: String) {
+    context.dataStore.edit { prefs ->
+        prefs[USER_ID_KEY] = userId
+    }
+}
 
 @Composable
 fun LoginScreen(navController: NavController) {
@@ -44,6 +41,7 @@ fun LoginScreen(navController: NavController) {
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -79,9 +77,9 @@ fun LoginScreen(navController: NavController) {
 
         OutlinedTextField(
             value = email,
-            onValueChange = { 
+            onValueChange = {
                 email = it
-                errorMessage = null 
+                errorMessage = null
             },
             label = { Text("Email") },
             modifier = Modifier.fillMaxWidth(),
@@ -92,9 +90,9 @@ fun LoginScreen(navController: NavController) {
 
         OutlinedTextField(
             value = password,
-            onValueChange = { 
+            onValueChange = {
                 password = it
-                errorMessage = null 
+                errorMessage = null
             },
             label = { Text("Wachtwoord") },
             visualTransformation = PasswordVisualTransformation(),
@@ -122,7 +120,7 @@ fun LoginScreen(navController: NavController) {
                 } else {
                     isLoading = true
                     errorMessage = null
-                    
+
                     coroutineScope.launch {
                         try {
                             // Authenticate with Supabase
@@ -130,17 +128,21 @@ fun LoginScreen(navController: NavController) {
                                 this.email = email
                                 this.password = password
                             }
-                            
-                            // If we get here, login was successful
+
+                            // Get user ID and save it
+                            val user = SupabaseClient.client.auth.currentUserOrNull()
+                            user?.id?.let { userId ->
+                                saveUserId(context, userId)
+                            }
+
                             navController.navigate(Screen.Dashboard.route) {
                                 popUpTo(Screen.Login.route) { inclusive = true }
                             }
                         } catch (e: Exception) {
-                            // Handle login error
                             errorMessage = when {
-                                e.message?.contains("invalid login credentials", ignoreCase = true) == true -> 
+                                e.message?.contains("invalid login credentials", ignoreCase = true) == true ->
                                     "Ongeldige inloggegevens"
-                                e.message?.contains("network", ignoreCase = true) == true -> 
+                                e.message?.contains("network", ignoreCase = true) == true ->
                                     "Netwerkfout. Controleer je internetverbinding."
                                 else -> "Fout bij inloggen: ${e.message}"
                             }
