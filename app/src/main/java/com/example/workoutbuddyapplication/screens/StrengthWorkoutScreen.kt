@@ -118,6 +118,7 @@ fun StrengthWorkoutScreen(navController: NavController) {
     var exerciseCalories by remember { mutableIntStateOf(0) } // Track exercise calories separately
     var currentExerciseForDevice by remember { mutableStateOf<Exercise?>(null) }
     var showExerciseSelector by remember { mutableStateOf(false) }
+    var showPresetMenu by remember { mutableStateOf(false) }
 
     // For tracking rest timer between sets
     var activeRestTimerExercise by remember { mutableStateOf<String?>(null) }
@@ -265,6 +266,19 @@ fun StrengthWorkoutScreen(navController: NavController) {
         )
     }
 
+    // Show preset menu dialog
+    if (showPresetMenu) {
+        PresetMenuDialog(
+            availableExercises = availableExercises,
+            onDismiss = { showPresetMenu = false },
+            onPresetSelected = { presetExercises ->
+                // Add the selected preset exercises
+                exercises.addAll(presetExercises)
+                showPresetMenu = false
+            }
+        )
+    }
+
     Scaffold(
         // Remove the floating action buttons
     ) { paddingValues ->
@@ -328,6 +342,27 @@ fun StrengthWorkoutScreen(navController: NavController) {
             }
 
             Spacer(modifier = Modifier.height(40.dp))
+            
+            // Preset toevoegen Button (Green)
+            Button(
+                onClick = { showPresetMenu = true },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .padding(horizontal = 16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF4CAF50) // Green color
+                ),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text(
+                    text = "Preset toevoegen",
+                    fontSize = 18.sp,
+                    color = Color.White
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
             
             // Add Exercises Button (Blue)
             Button(
@@ -991,5 +1026,222 @@ fun ExerciseItem(
                 tint = MaterialTheme.colorScheme.primary
             )
         }
+    }
+}
+
+@Composable
+fun PresetMenuDialog(
+    availableExercises: List<AvailableExercise>,
+    onDismiss: () -> Unit,
+    onPresetSelected: (List<Exercise>) -> Unit
+) {
+    // Create dynamic presets based on available exercises
+    val presets = remember(availableExercises) {
+        createWorkoutPresets(availableExercises)
+    }
+    
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            dismissOnBackPress = true,
+            dismissOnClickOutside = true
+        )
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(400.dp),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
+            ) {
+                // Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Workout Presets",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Default.Close, contentDescription = "Sluiten")
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Preset list
+                LazyColumn(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    items(presets) { preset ->
+                        PresetItem(
+                            presetName = preset.name,
+                            exerciseCount = preset.exercises.size,
+                            onPresetClick = { onPresetSelected(preset.exercises) }
+                        )
+                        if (preset != presets.last()) {
+                            Divider()
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+data class WorkoutPreset(
+    val name: String,
+    val exercises: List<Exercise>
+)
+
+// Function to create dynamic presets based on available exercises
+fun createWorkoutPresets(availableExercises: List<AvailableExercise>): List<WorkoutPreset> {
+    val presets = mutableListOf<WorkoutPreset>()
+    
+    // Group exercises by muscle groups
+    val exercisesByMuscle = availableExercises.groupBy { it.muscleGroup.lowercase() }
+    
+    // Push Workout (Chest, Shoulders, Triceps)
+    val pushMuscles = listOf("borst", "chest", "schouders", "shoulders", "armen", "arms", "triceps")
+    val pushExercises = exercisesByMuscle.filterKeys { muscle ->
+        pushMuscles.any { pushMuscle -> muscle.contains(pushMuscle, ignoreCase = true) }
+    }.values.flatten().take(4) // Limit to 4 exercises
+    
+    if (pushExercises.isNotEmpty()) {
+        presets.add(WorkoutPreset(
+            name = "Push Workout",
+            exercises = pushExercises.map { exercise ->
+                Exercise(
+                    name = exercise.name,
+                    muscleGroup = exercise.muscleGroup,
+                    sets = listOf(
+                        ExerciseSet(reps = 10, weight = 20.0),
+                        ExerciseSet(reps = 10, weight = 20.0),
+                        ExerciseSet(reps = 10, weight = 20.0)
+                    ),
+                    caloriesPerRep = exercise.caloriesPerRep
+                )
+            }
+        ))
+    }
+    
+    // Pull Workout (Back, Biceps)
+    val pullMuscles = listOf("rug", "back", "biceps", "bicep")
+    val pullExercises = exercisesByMuscle.filterKeys { muscle ->
+        pullMuscles.any { pullMuscle -> muscle.contains(pullMuscle, ignoreCase = true) }
+    }.values.flatten().take(4)
+    
+    if (pullExercises.isNotEmpty()) {
+        presets.add(WorkoutPreset(
+            name = "Pull Workout",
+            exercises = pullExercises.map { exercise ->
+                Exercise(
+                    name = exercise.name,
+                    muscleGroup = exercise.muscleGroup,
+                    sets = listOf(
+                        ExerciseSet(reps = 12, weight = 15.0),
+                        ExerciseSet(reps = 12, weight = 15.0),
+                        ExerciseSet(reps = 12, weight = 15.0)
+                    ),
+                    caloriesPerRep = exercise.caloriesPerRep
+                )
+            }
+        ))
+    }
+    
+    // Leg Workout
+    val legMuscles = listOf("benen", "legs", "leg", "quadriceps", "hamstring", "calves")
+    val legExercises = exercisesByMuscle.filterKeys { muscle ->
+        legMuscles.any { legMuscle -> muscle.contains(legMuscle, ignoreCase = true) }
+    }.values.flatten().take(4)
+    
+    if (legExercises.isNotEmpty()) {
+        presets.add(WorkoutPreset(
+            name = "Leg Workout",
+            exercises = legExercises.map { exercise ->
+                Exercise(
+                    name = exercise.name,
+                    muscleGroup = exercise.muscleGroup,
+                    sets = listOf(
+                        ExerciseSet(reps = 12, weight = 40.0),
+                        ExerciseSet(reps = 12, weight = 40.0),
+                        ExerciseSet(reps = 10, weight = 40.0)
+                    ),
+                    caloriesPerRep = exercise.caloriesPerRep
+                )
+            }
+        ))
+    }
+    
+    // Full Body Workout (mix from all groups)
+    if (availableExercises.size >= 5) {
+        val fullBodyExercises = availableExercises.shuffled().take(5) // Random selection
+        presets.add(WorkoutPreset(
+            name = "Full Body Workout",
+            exercises = fullBodyExercises.map { exercise ->
+                Exercise(
+                    name = exercise.name,
+                    muscleGroup = exercise.muscleGroup,
+                    sets = listOf(
+                        ExerciseSet(reps = 10, weight = 20.0),
+                        ExerciseSet(reps = 10, weight = 20.0)
+                    ),
+                    caloriesPerRep = exercise.caloriesPerRep
+                )
+            }
+        ))
+    }
+    
+    return presets
+}
+
+@Composable
+fun PresetItem(
+    presetName: String,
+    exerciseCount: Int,
+    onPresetClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onPresetClick)
+            .padding(vertical = 16.dp, horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            Icons.Default.FitnessCenter,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(24.dp)
+        )
+        
+        Spacer(modifier = Modifier.width(16.dp))
+        
+        Text(
+            text = presetName,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.weight(1f)
+        )
+        
+        Text(
+            text = "($exerciseCount oefeningen)",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        
+        Icon(
+            Icons.Default.Add,
+            contentDescription = "Toevoegen",
+            tint = MaterialTheme.colorScheme.primary
+        )
     }
 }
