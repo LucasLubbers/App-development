@@ -20,6 +20,10 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import com.example.workoutbuddyapplication.BuildConfig
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
+import com.example.workoutbuddyapplication.R
 
 suspend fun registerUser(email: String, password: String, name: String): Boolean = withContext(Dispatchers.IO) {
     val client = OkHttpClient()
@@ -84,6 +88,14 @@ fun SignupScreen(navController: NavController) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        Image(
+            painter = painterResource(id = R.drawable.aktiv_logo),
+            contentDescription = "App Icon",
+            modifier = Modifier.size(140.dp)
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         Text(
             text = "Aktiv",
             fontSize = 30.sp,

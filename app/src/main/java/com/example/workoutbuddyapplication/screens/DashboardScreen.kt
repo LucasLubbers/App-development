@@ -79,7 +79,7 @@ fun DashboardScreen(navController: NavController) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("WorkoutBuddy") },
+                title = { Text("Aktiv") },
                 actions = {
                     IconButton(onClick = { navController.navigate(Screen.Login.route) }) {
                         Icon(
@@ -145,7 +145,7 @@ fun DashboardScreen(navController: NavController) {
                 .padding(16.dp)
         ) {
             Text(
-                text = "Welkom bij WorkoutBuddy",
+                text = "Welkom bij Aktiv",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold
             )

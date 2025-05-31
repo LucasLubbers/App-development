@@ -31,6 +31,11 @@ import com.example.workoutbuddyapplication.data.SupabaseClient
 import kotlinx.coroutines.launch
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.gotrue.providers.builtin.Email
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
+import com.example.workoutbuddyapplication.R
 
 @Composable
 fun LoginScreen(navController: NavController) {
@@ -47,6 +52,14 @@ fun LoginScreen(navController: NavController) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        Image(
+            painter = painterResource(id = R.drawable.aktiv_logo),
+            contentDescription = "App Icon",
+            modifier = Modifier.size(140.dp)
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         Text(
             text = "Aktiv",
             fontSize = 30.sp,
