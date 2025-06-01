@@ -1,6 +1,7 @@
 package com.example.workoutbuddyapplication.screens
 
-import Workout
+import com.example.workoutbuddyapplication.models.Workout
+import com.example.workoutbuddyapplication.models.WorkoutType
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
@@ -69,7 +70,7 @@ fun DashboardScreen(navController: NavController) {
     LaunchedEffect(Unit) {
         isLoading = true
         error = null
-        val result = fetchWorkouts()
+        val result: List<Workout> = fetchWorkouts()
         if (result.isNotEmpty()) {
             workouts = result
         } else {
@@ -187,14 +188,14 @@ fun WorkoutItem(workout: Workout, onClick: () -> Unit = {}) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                imageVector = workout.type.icon,
-                contentDescription = workout.type.displayName,
+                imageVector = workout.workoutTypeEnum.icon,
+                contentDescription = workout.workoutTypeEnum.displayName,
                 modifier = Modifier.size(32.dp)
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column {
                 Text(
-                    text = workout.type.displayName,
+                    text = workout.workoutTypeEnum.displayName,
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium)
                 )
                 Text(

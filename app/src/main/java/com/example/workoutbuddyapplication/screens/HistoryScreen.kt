@@ -1,6 +1,7 @@
 package com.example.workoutbuddyapplication.screens
 
-import Workout
+import com.example.workoutbuddyapplication.models.Workout
+import com.example.workoutbuddyapplication.models.WorkoutType
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.*
@@ -20,6 +21,7 @@ import androidx.navigation.NavController
 import com.example.workoutbuddyapplication.navigation.Screen
 import com.example.workoutbuddyapplication.BuildConfig
 import com.example.workoutbuddyapplication.components.BottomNavBar
+import java.time.LocalDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -48,11 +50,12 @@ suspend fun fetchWorkouts(): List<Workout> = withContext(Dispatchers.IO) {
             workouts.add(
                 Workout(
                     id = obj.getInt("id"),
-                    type = WorkoutType.fromString(obj.getString("type")),
-                    date = java.time.LocalDate.parse(obj.getString("date")),
+                    type = obj.getString("type"),
+                    date = obj.getString("date"),
                     duration = obj.getInt("duration"),
                     distance = if (obj.isNull("distance")) null else obj.getDouble("distance"),
-                    notes = if (obj.isNull("notes")) null else obj.getString("notes")
+                    notes = if (obj.isNull("notes")) null else obj.getString("notes"),
+                    profileId = obj.getString("profile_id")
                 )
             )
         }
@@ -84,7 +87,9 @@ fun HistoryScreen(navController: NavController) {
     }
 
     val workoutsByMonth = workouts.groupBy {
-        Month.of(it.date.monthValue).getDisplayName(TextStyle.FULL, Locale.getDefault()) + " " + it.date.year
+        val localDate = LocalDate.parse(it.date)
+        Month.of(localDate.monthValue).getDisplayName(TextStyle.FULL, Locale.getDefault()) + " " + localDate.year
+
     }
 
     Scaffold(
