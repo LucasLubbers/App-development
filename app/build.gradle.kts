@@ -116,6 +116,7 @@ dependencies {
     // Supabase
     implementation("io.github.jan-tennert.supabase:postgrest-kt:2.0.0")
     implementation("io.github.jan-tennert.supabase:gotrue-kt:2.0.0")
+    implementation("io.github.jan-tennert.supabase:storage-kt:2.0.0")
     implementation("io.github.jan-tennert.supabase:compose-auth:2.0.0") {
         exclude(group = "androidx.compose.material3", module = "material3")
     }

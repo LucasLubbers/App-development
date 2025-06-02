@@ -22,8 +22,11 @@ import org.json.JSONObject
 import com.example.workoutbuddyapplication.BuildConfig
 import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.dp
 import com.example.workoutbuddyapplication.R
+import com.example.workoutbuddyapplication.data.SupabaseClient
+import io.github.jan.supabase.gotrue.auth
+import io.github.jan.supabase.gotrue.providers.builtin.Email
+import androidx.compose.ui.platform.LocalContext
 
 suspend fun registerUser(email: String, password: String, name: String): Boolean = withContext(Dispatchers.IO) {
     val client = OkHttpClient()
@@ -80,6 +83,7 @@ fun SignupScreen(navController: NavController) {
     var confirmPassword by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -160,7 +164,19 @@ fun SignupScreen(navController: NavController) {
                 coroutineScope.launch {
                     val success = registerUser(email, password, name)
                     if (success) {
-                        navController.navigate(Screen.Dashboard.route)
+                        try {
+                            SupabaseClient.client.auth.signInWith(Email) {
+                                this.email = email
+                                this.password = password
+                            }
+                            val user = SupabaseClient.client.auth.currentUserOrNull()
+                            user?.id?.let { userId ->
+                                saveUserId(context, userId)
+                            }
+                            navController.navigate(Screen.Dashboard.route)
+                        } catch (e: Exception) {
+                            errorMessage = "Automatisch inloggen mislukt: ${e.message}"
+                        }
                     } else {
                         errorMessage = "Registratie mislukt"
                     }
