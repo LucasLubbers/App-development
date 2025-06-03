@@ -9,6 +9,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -18,6 +19,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.workoutbuddyapplication.navigation.Screen
 import com.example.workoutbuddyapplication.data.SupabaseClient
+import com.example.workoutbuddyapplication.ui.theme.ThemeManager
 import io.github.jan.supabase.gotrue.auth
 import kotlinx.coroutines.launch
 
@@ -27,6 +29,9 @@ fun SettingsScreen(navController: NavController) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     var showLogoutDialog by remember { mutableStateOf(false) }
+    
+    val themeManager = remember { ThemeManager(context) }
+    val isDarkMode by themeManager.isDarkMode.collectAsState(initial = false)
 
     // Logout confirmation dialog
     if (showLogoutDialog) {
@@ -119,6 +124,48 @@ fun SettingsScreen(navController: NavController) {
                     icon = Icons.Default.Straighten,
                     onClick = { /* TODO: Implement unit system settings */ }
                 )
+            }
+
+            item {
+                // Dark Mode Toggle
+                Card(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            if (isDarkMode) Icons.Default.DarkMode else Icons.Default.LightMode,
+                            contentDescription = "Thema",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Donkere modus",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = if (isDarkMode) "Donker thema actief" else "Licht thema actief",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = isDarkMode,
+                            onCheckedChange = { newValue ->
+                                coroutineScope.launch {
+                                    themeManager.setDarkMode(newValue)
+                                }
+                            }
+                        )
+                    }
+                }
             }
 
             item {

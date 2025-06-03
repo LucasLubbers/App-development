@@ -12,20 +12,27 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
 import com.example.workoutbuddyapplication.navigation.AppNavigation
 import com.example.workoutbuddyapplication.navigation.DEBUG_MODE
 import com.example.workoutbuddyapplication.ui.theme.WorkoutBuddyTheme
+import com.example.workoutbuddyapplication.ui.theme.ThemeManager
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            WorkoutBuddyTheme {
+            val context = LocalContext.current
+            val themeManager = remember { ThemeManager(context) }
+            val isDarkMode by themeManager.isDarkMode.collectAsState(initial = false)
+            
+            WorkoutBuddyTheme(darkTheme = isDarkMode) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
