@@ -20,6 +20,7 @@ import androidx.navigation.NavController
 import com.example.workoutbuddyapplication.navigation.Screen
 import com.example.workoutbuddyapplication.data.SupabaseClient
 import com.example.workoutbuddyapplication.ui.theme.ThemeManager
+import com.example.workoutbuddyapplication.ui.theme.UnitSystem
 import io.github.jan.supabase.gotrue.auth
 import kotlinx.coroutines.launch
 
@@ -32,6 +33,7 @@ fun SettingsScreen(navController: NavController) {
     
     val themeManager = remember { ThemeManager(context) }
     val isDarkMode by themeManager.isDarkMode.collectAsState(initial = false)
+    val isImperialUnits by themeManager.isImperialUnits.collectAsState(initial = false)
 
     // Logout confirmation dialog
     if (showLogoutDialog) {
@@ -118,12 +120,45 @@ fun SettingsScreen(navController: NavController) {
             }
 
             item {
-                SettingsItem(
-                    title = "Eenheden",
-                    subtitle = "Metrisch of Imperial systeem",
-                    icon = Icons.Default.Straighten,
-                    onClick = { /* TODO: Implement unit system settings */ }
-                )
+                // Unit System Toggle
+                Card(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Straighten,
+                            contentDescription = "Eenheden",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Eenheden",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = if (isImperialUnits) "Imperial (lbs, mi)" else "Metrisch (kg, km)",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = isImperialUnits,
+                            onCheckedChange = { newValue ->
+                                coroutineScope.launch {
+                                    themeManager.setImperialUnits(newValue)
+                                }
+                            }
+                        )
+                    }
+                }
             }
 
             item {

@@ -27,9 +27,14 @@ import com.example.workoutbuddyapplication.navigation.Screen
 import java.time.format.DateTimeFormatter
 import androidx.compose.material.icons.filled.Timer
 import com.example.workoutbuddyapplication.components.BottomNavBar
+import com.example.workoutbuddyapplication.ui.theme.ThemeManager
+import com.example.workoutbuddyapplication.ui.theme.UnitSystem
+import com.example.workoutbuddyapplication.utils.UnitConverter
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.platform.LocalContext
 
 @Composable
-fun SummaryCard(workouts: List<Workout> = emptyList()) {
+fun SummaryCard(workouts: List<Workout> = emptyList(), unitSystem: UnitSystem = UnitSystem.METRIC) {
     val totalWorkouts = workouts.size
     val totalDistance = workouts.mapNotNull { it.distance }.sum()
     val totalDuration = workouts.sumOf { it.duration }
@@ -45,7 +50,7 @@ fun SummaryCard(workouts: List<Workout> = emptyList()) {
         )
         StatCard(
             title = "Afstand",
-            value = "${"%.1f".format(totalDistance)} km",
+            value = UnitConverter.formatDistance(totalDistance, unitSystem),
             icon = Icons.AutoMirrored.Filled.DirectionsRun,
             modifier = Modifier.weight(1f).padding(horizontal = 4.dp)
         )
@@ -62,6 +67,10 @@ fun SummaryCard(workouts: List<Workout> = emptyList()) {
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun DashboardScreen(navController: NavController) {
+    val context = LocalContext.current
+    val themeManager = remember { ThemeManager(context) }
+    val unitSystem by themeManager.unitSystem.collectAsState(initial = UnitSystem.METRIC)
+    
     var workouts by remember { mutableStateOf<List<Workout>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -122,7 +131,7 @@ fun DashboardScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            SummaryCard(workouts)
+            SummaryCard(workouts, unitSystem)
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -161,6 +170,7 @@ fun DashboardScreen(navController: NavController) {
                         items(workouts.sortedByDescending { it.date }.take(5)) { workout ->
                             WorkoutItem(
                                 workout = workout,
+                                unitSystem = unitSystem,
                                 onClick = { navController.navigate("workoutDetail/${workout.id}/0") }
                             )
                             Spacer(modifier = Modifier.height(8.dp))
@@ -174,7 +184,7 @@ fun DashboardScreen(navController: NavController) {
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun WorkoutItem(workout: Workout, onClick: () -> Unit = {}) {
+fun WorkoutItem(workout: Workout, unitSystem: UnitSystem = UnitSystem.METRIC, onClick: () -> Unit = {}) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -204,7 +214,7 @@ fun WorkoutItem(workout: Workout, onClick: () -> Unit = {}) {
                 )
                 Text(
                     text = "${workout.duration} minuten" +
-                            (workout.distance?.let { " | ${it} km" } ?: ""),
+                            (workout.distance?.let { " | ${UnitConverter.formatDistance(it, unitSystem)}" } ?: ""),
                     style = MaterialTheme.typography.bodySmall
                 )
                 if (!workout.notes.isNullOrBlank()) {

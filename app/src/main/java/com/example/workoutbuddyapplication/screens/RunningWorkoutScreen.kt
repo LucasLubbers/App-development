@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DirectionsRun
@@ -38,8 +39,10 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -65,6 +68,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -73,21 +77,31 @@ import kotlinx.coroutines.delay
 import kotlin.math.cos
 import kotlin.math.sin
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.example.workoutbuddyapplication.ui.theme.ThemeManager
+import com.example.workoutbuddyapplication.ui.theme.UnitSystem
+import com.example.workoutbuddyapplication.utils.UnitConverter
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.collectAsState
 
 @Composable
 fun RunningWorkoutScreen(navController: NavController) {
     val context = LocalContext.current
+    val themeManager = remember { ThemeManager(context) }
+    val unitSystem by themeManager.unitSystem.collectAsState(initial = UnitSystem.METRIC)
+    
     var isRunning by remember { mutableStateOf(true) }
+    var distance by remember { mutableStateOf(0.0) }
+    var pace by remember { mutableStateOf(0.0) }
+    var heartRate by remember { mutableIntStateOf(75) }
     var elapsedTime by remember { mutableLongStateOf(0L) }
-    var distance by remember { mutableFloatStateOf(0f) }
-    var pace by remember { mutableFloatStateOf(0f) }
-    var heartRate by remember { mutableStateOf("--") }
+    var targetDistance by remember { mutableStateOf(0.0) }
+    var targetTime by remember { mutableIntStateOf(0) }
+    var showGoalDialog by remember { mutableStateOf(false) }
+    var targetDistanceInput by remember { mutableStateOf("") }
+    var targetTimeInput by remember { mutableStateOf("") }
     var steps by remember { mutableStateOf(0) }
     var calories by remember { mutableStateOf(0) }
     var selectedTab by remember { mutableIntStateOf(0) }
-    var showGoalDialog by remember { mutableStateOf(false) }
-    var targetDistance by remember { mutableFloatStateOf(5.0f) }
-    var targetTime by remember { mutableIntStateOf(30) } // in minutes
     var useHeartRateZones by remember { mutableStateOf(false) }
     var targetHeartRateZone by remember { mutableIntStateOf(2) } // Zone 1-5
 
@@ -178,11 +192,11 @@ fun RunningWorkoutScreen(navController: NavController) {
 
                 // Simulate heart rate (between 120-150 bpm)
                 val newHeartRate = (120 + (Math.random() * 30).toInt())
-                heartRate = newHeartRate.toString()
+                heartRate = newHeartRate
                 heartRateData.add(newHeartRate)
 
                 // Simulate pace data
-                paceData.add(pace)
+                paceData.add(pace.toFloat())
 
                 // Simulate elevation (between 0-50m)
                 val newElevation = (Math.random() * 50).toFloat()
@@ -209,13 +223,13 @@ fun RunningWorkoutScreen(navController: NavController) {
             text = {
                 Column {
                     Text("Afstand (km)")
-                    Slider(
-                        value = targetDistance,
-                        onValueChange = { targetDistance = it },
-                        valueRange = 1f..42f,
-                        steps = 41
+                    OutlinedTextField(
+                        value = targetDistanceInput,
+                        onValueChange = { targetDistanceInput = it },
+                        label = { Text("Doel afstand (${UnitConverter.getDistanceUnit(unitSystem)})") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth()
                     )
-                    Text("${targetDistance.toInt()} km")
 
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -276,7 +290,16 @@ fun RunningWorkoutScreen(navController: NavController) {
             },
             confirmButton = {
                 Button(
-                    onClick = { showGoalDialog = false }
+                    onClick = {
+                        // Convert input to km for storage
+                        val distanceInKm = UnitConverter.distanceToKm(
+                            targetDistanceInput.toDoubleOrNull() ?: 5.0,
+                            unitSystem
+                        )
+                        targetDistance = distanceInKm
+                        targetTime = targetTimeInput.toIntOrNull() ?: 30
+                        showGoalDialog = false
+                    }
                 ) {
                     Text("Bevestigen")
                 }
@@ -356,7 +379,7 @@ fun RunningWorkoutScreen(navController: NavController) {
 
                     if (targetDistance > 0) {
                         Text(
-                            text = "Doel: ${targetDistance.toInt()} km in ${targetTime} min",
+                            text = "Doel: ${UnitConverter.formatDistance(targetDistance, unitSystem)} in ${targetTime} min",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -388,7 +411,7 @@ fun RunningWorkoutScreen(navController: NavController) {
 
                 StatCard(
                     title = "Afstand",
-                    value = String.format("%.2f km", distance),
+                    value = UnitConverter.formatDistance(distance, unitSystem),
                     icon = Icons.Default.LocationOn,
                     modifier = Modifier.weight(1f)
                 )
@@ -402,7 +425,10 @@ fun RunningWorkoutScreen(navController: NavController) {
             ) {
                 StatCard(
                     title = "Tempo",
-                    value = if (pace > 0) String.format("%.1f min/km", pace) else "--:--",
+                    value = if (pace > 0) {
+                        val paceUnit = if (unitSystem == UnitSystem.IMPERIAL) "min/mi" else "min/km"
+                        String.format("%.1f %s", pace, paceUnit)
+                    } else "--:--",
                     icon = Icons.Default.Speed,
                     modifier = Modifier.weight(1f)
                 )
@@ -436,7 +462,7 @@ fun RunningWorkoutScreen(navController: NavController) {
                         Spacer(modifier = Modifier.height(8.dp))
 
                         LinearProgressIndicator(
-                            progress = (distance / targetDistance).coerceIn(0f, 1f),
+                            progress = { (distance / targetDistance).coerceIn(0.0, 1.0).toFloat() },
                             modifier = Modifier.fillMaxWidth()
                         )
 
@@ -447,17 +473,17 @@ fun RunningWorkoutScreen(navController: NavController) {
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = "${String.format("%.1f", distance)} km",
+                                text = "${UnitConverter.formatDistance(distance, unitSystem)}",
                                 style = MaterialTheme.typography.bodySmall
                             )
 
                             Text(
-                                text = "${targetDistance.toInt()} km",
+                                text = "${UnitConverter.formatDistance(targetDistance, unitSystem)}",
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
 
-                        if (useHeartRateZones && heartRate != "--") {
+                        if (useHeartRateZones && heartRate != 75) {
                             Spacer(modifier = Modifier.height(16.dp))
 
                             Text(
@@ -467,7 +493,7 @@ fun RunningWorkoutScreen(navController: NavController) {
 
                             Spacer(modifier = Modifier.height(8.dp))
 
-                            val currentZone = when (heartRate.toInt()) {
+                            val currentZone = when (heartRate) {
                                 in 0..120 -> 1
                                 in 121..140 -> 2
                                 in 141..160 -> 3
@@ -551,7 +577,10 @@ fun RunningWorkoutScreen(navController: NavController) {
 
                 SecondaryStatCard(
                     title = "Gem. Tempo",
-                    value = if (pace > 0) String.format("%.1f min/km", pace) else "--:--",
+                    value = if (pace > 0) {
+                        val paceUnit = if (unitSystem == UnitSystem.IMPERIAL) "min/mi" else "min/km"
+                        String.format("%.1f %s", pace, paceUnit)
+                    } else "--:--",
                     modifier = Modifier.weight(1f)
                 )
             }
