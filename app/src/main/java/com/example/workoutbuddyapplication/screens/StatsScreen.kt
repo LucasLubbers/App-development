@@ -18,54 +18,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.workoutbuddyapplication.components.BottomNavBar
 import com.example.workoutbuddyapplication.navigation.Screen
 
 @Composable
 fun StatsScreen(navController: NavController) {
-    var selectedTabIndex by remember { mutableStateOf(2) }
+    var selectedTabIndex by remember { mutableStateOf(3) }
     var selectedTimeRange by remember { mutableStateOf(0) }
     val timeRanges = listOf("Week", "Maand", "Jaar")
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
-                NavigationBarItem(
-                    selected = selectedTabIndex == 0,
-                    onClick = {
-                        selectedTabIndex = 0
-                        navController.navigate(Screen.Dashboard.route)
-                    },
-                    icon = { Icon(Icons.Default.FitnessCenter, contentDescription = "Dashboard") },
-                    label = { Text("Dashboard") }
-                )
-                NavigationBarItem(
-                    selected = selectedTabIndex == 1,
-                    onClick = {
-                        selectedTabIndex = 1
-                        navController.navigate(Screen.History.route)
-                    },
-                    icon = { Icon(Icons.Default.DirectionsRun, contentDescription = "Geschiedenis") },
-                    label = { Text("Geschiedenis") }
-                )
-                NavigationBarItem(
-                    selected = selectedTabIndex == 2,
-                    onClick = {
-                        selectedTabIndex = 2
-                        navController.navigate(Screen.Exercises.route)
-                    },
-                    icon = { Icon(Icons.Default.FitnessCenter, contentDescription = "Oefeningen") },
-                    label = { Text("Oefeningen") }
-                )
-                NavigationBarItem(
-                    selected = selectedTabIndex == 3,
-                    onClick = {
-                        selectedTabIndex = 3
-                        navController.navigate(Screen.Stats.route)
-                    },
-                    icon = { Icon(Icons.Default.SelfImprovement, contentDescription = "Statistieken") },
-                    label = { Text("Statistieken") }
-                )
-            }
+            BottomNavBar(
+                selectedTabIndex = selectedTabIndex,
+                onTabSelected = { selectedTabIndex = it },
+                navController = navController
+            )
         }
     ) { paddingValues ->
         Column(
