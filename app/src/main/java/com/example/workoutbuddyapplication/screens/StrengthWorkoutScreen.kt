@@ -64,10 +64,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.TextStyle
@@ -81,6 +83,10 @@ import com.example.workoutbuddyapplication.navigation.Screen
 import com.example.workoutbuddyapplication.models.Exercise as ExerciseModel
 import com.example.workoutbuddyapplication.models.ExerciseDTO
 import com.example.workoutbuddyapplication.data.SupabaseClient
+import com.example.workoutbuddyapplication.ui.theme.UserPreferencesManager
+import com.example.workoutbuddyapplication.ui.theme.UnitSystem
+import com.example.workoutbuddyapplication.ui.theme.toUnitSystem
+import com.example.workoutbuddyapplication.utils.UnitConverter
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
@@ -112,6 +118,11 @@ data class AvailableExercise(
 
 @Composable
 fun StrengthWorkoutScreen(navController: NavController) {
+    val context = LocalContext.current
+    val preferencesManager = remember { UserPreferencesManager(context) }
+    val selectedUnitSystem by preferencesManager.selectedUnitSystem.collectAsState(initial = "metric")
+    val unitSystem = selectedUnitSystem.toUnitSystem()
+    
     var isRunning by remember { mutableStateOf(true) }
     var elapsedTime by remember { mutableLongStateOf(0L) }
     var calories by remember { mutableIntStateOf(0) }
@@ -252,11 +263,12 @@ fun StrengthWorkoutScreen(navController: NavController) {
             onDismiss = { showExerciseSelector = false },
             onExerciseSelected = { selectedExercise ->
                 // Create a new exercise with just one set
+                val defaultWeight = if (unitSystem == UnitSystem.IMPERIAL) 45.0 else 20.0 // 45 lbs ≈ 20 kg
                 val newExercise = Exercise(
                     name = selectedExercise.name,
                     muscleGroup = selectedExercise.muscleGroup,
                     sets = listOf(
-                        ExerciseSet(reps = 10, weight = 20.0)
+                        ExerciseSet(reps = 10, weight = defaultWeight)
                     ),
                     caloriesPerRep = selectedExercise.caloriesPerRep
                 )
@@ -270,6 +282,7 @@ fun StrengthWorkoutScreen(navController: NavController) {
     if (showPresetMenu) {
         PresetMenuDialog(
             availableExercises = availableExercises,
+            unitSystem = unitSystem,
             onDismiss = { showPresetMenu = false },
             onPresetSelected = { presetExercises ->
                 // Add the selected preset exercises
@@ -411,6 +424,7 @@ fun StrengthWorkoutScreen(navController: NavController) {
                 items(exercises) { exercise ->
                     EnhancedExerciseCard(
                         exercise = exercise,
+                        unitSystem = unitSystem,
                         onStartRest = { duration, exerciseName, setIndex ->
                             activeRestTimerExercise = exerciseName
                             activeRestTimerSetIndex = setIndex
@@ -460,6 +474,7 @@ fun StrengthWorkoutScreen(navController: NavController) {
 @Composable
 fun EnhancedExerciseCard(
     exercise: Exercise,
+    unitSystem: UnitSystem,
     onStartRest: (Int, String, Int) -> Unit,
     onSetCompleted: (Int, Boolean) -> Unit,
     activeRestTimer: Boolean,
@@ -642,7 +657,7 @@ fun EnhancedExerciseCard(
                     fontSize = 12.sp
                 )
                 Text(
-                    text = "kg",
+                    text = UnitConverter.getWeightUnit(unitSystem),
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.weight(0.8f),
                     fontSize = 12.sp
@@ -664,16 +679,28 @@ fun EnhancedExerciseCard(
             exerciseSets.forEachIndexed { index, set ->
                 var completed by remember { mutableStateOf(set.completed) }
                 var reps by remember { mutableStateOf(set.reps.toString()) }
-                var weight by remember { mutableStateOf(set.weight.toString()) }
+                // Convert weight from kg storage to display unit
+                var weight by remember { 
+                    mutableStateOf(UnitConverter.weightFromKg(set.weight, unitSystem).toString()) 
+                }
                 var showRestTimer by remember { mutableStateOf(false) }
                 
                 // Update the values in the set when they change
                 LaunchedEffect(reps, weight, completed) {
+                    val weightInKg = UnitConverter.weightToKg(
+                        weight.toDoubleOrNull() ?: set.weight, 
+                        unitSystem
+                    )
                     exerciseSets[index] = set.copy(
                         reps = reps.toIntOrNull() ?: set.reps,
-                        weight = weight.toDoubleOrNull() ?: set.weight,
+                        weight = weightInKg,
                         completed = completed
                     )
+                }
+
+                // Update weight display when unit system changes
+                LaunchedEffect(unitSystem) {
+                    weight = UnitConverter.weightFromKg(set.weight, unitSystem).toString()
                 }
                 
                 Column(
@@ -703,7 +730,7 @@ fun EnhancedExerciseCard(
                         
                         // Previous weight/reps
                         Text(
-                            text = "${set.weight}×${set.reps}",
+                            text = "${UnitConverter.formatWeight(set.weight, unitSystem)}×${set.reps}",
                             modifier = Modifier.weight(1.0f),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 14.sp
@@ -1032,12 +1059,13 @@ fun ExerciseItem(
 @Composable
 fun PresetMenuDialog(
     availableExercises: List<AvailableExercise>,
+    unitSystem: UnitSystem,
     onDismiss: () -> Unit,
     onPresetSelected: (List<Exercise>) -> Unit
 ) {
     // Create dynamic presets based on available exercises
-    val presets = remember(availableExercises) {
-        createWorkoutPresets(availableExercises)
+    val presets = remember(availableExercises, unitSystem) {
+        createWorkoutPresets(availableExercises, unitSystem)
     }
     
     Dialog(
@@ -1103,11 +1131,16 @@ data class WorkoutPreset(
 )
 
 // Function to create dynamic presets based on available exercises
-fun createWorkoutPresets(availableExercises: List<AvailableExercise>): List<WorkoutPreset> {
+fun createWorkoutPresets(availableExercises: List<AvailableExercise>, unitSystem: UnitSystem): List<WorkoutPreset> {
     val presets = mutableListOf<WorkoutPreset>()
     
     // Group exercises by muscle groups
     val exercisesByMuscle = availableExercises.groupBy { it.muscleGroup.lowercase() }
+    
+    // Default weights based on unit system
+    val lightWeight = if (unitSystem == UnitSystem.IMPERIAL) 33.0 else 15.0 // 33 lbs ≈ 15 kg
+    val mediumWeight = if (unitSystem == UnitSystem.IMPERIAL) 44.0 else 20.0 // 44 lbs ≈ 20 kg  
+    val heavyWeight = if (unitSystem == UnitSystem.IMPERIAL) 88.0 else 40.0 // 88 lbs ≈ 40 kg
     
     // Push Workout (Chest, Shoulders, Triceps)
     val pushMuscles = listOf("borst", "chest", "schouders", "shoulders", "armen", "arms", "triceps")
@@ -1123,9 +1156,9 @@ fun createWorkoutPresets(availableExercises: List<AvailableExercise>): List<Work
                     name = exercise.name,
                     muscleGroup = exercise.muscleGroup,
                     sets = listOf(
-                        ExerciseSet(reps = 10, weight = 20.0),
-                        ExerciseSet(reps = 10, weight = 20.0),
-                        ExerciseSet(reps = 10, weight = 20.0)
+                        ExerciseSet(reps = 10, weight = mediumWeight),
+                        ExerciseSet(reps = 10, weight = mediumWeight),
+                        ExerciseSet(reps = 10, weight = mediumWeight)
                     ),
                     caloriesPerRep = exercise.caloriesPerRep
                 )
@@ -1147,9 +1180,9 @@ fun createWorkoutPresets(availableExercises: List<AvailableExercise>): List<Work
                     name = exercise.name,
                     muscleGroup = exercise.muscleGroup,
                     sets = listOf(
-                        ExerciseSet(reps = 12, weight = 15.0),
-                        ExerciseSet(reps = 12, weight = 15.0),
-                        ExerciseSet(reps = 12, weight = 15.0)
+                        ExerciseSet(reps = 12, weight = lightWeight),
+                        ExerciseSet(reps = 12, weight = lightWeight),
+                        ExerciseSet(reps = 12, weight = lightWeight)
                     ),
                     caloriesPerRep = exercise.caloriesPerRep
                 )
@@ -1171,9 +1204,9 @@ fun createWorkoutPresets(availableExercises: List<AvailableExercise>): List<Work
                     name = exercise.name,
                     muscleGroup = exercise.muscleGroup,
                     sets = listOf(
-                        ExerciseSet(reps = 12, weight = 40.0),
-                        ExerciseSet(reps = 12, weight = 40.0),
-                        ExerciseSet(reps = 10, weight = 40.0)
+                        ExerciseSet(reps = 12, weight = heavyWeight),
+                        ExerciseSet(reps = 12, weight = heavyWeight),
+                        ExerciseSet(reps = 10, weight = heavyWeight)
                     ),
                     caloriesPerRep = exercise.caloriesPerRep
                 )
@@ -1191,8 +1224,8 @@ fun createWorkoutPresets(availableExercises: List<AvailableExercise>): List<Work
                     name = exercise.name,
                     muscleGroup = exercise.muscleGroup,
                     sets = listOf(
-                        ExerciseSet(reps = 10, weight = 20.0),
-                        ExerciseSet(reps = 10, weight = 20.0)
+                        ExerciseSet(reps = 10, weight = mediumWeight),
+                        ExerciseSet(reps = 10, weight = mediumWeight)
                     ),
                     caloriesPerRep = exercise.caloriesPerRep
                 )
