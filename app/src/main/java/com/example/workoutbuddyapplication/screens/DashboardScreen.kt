@@ -36,6 +36,15 @@ import androidx.compose.ui.platform.LocalContext
 import com.example.workoutbuddyapplication.ui.theme.strings
 import com.example.workoutbuddyapplication.ui.theme.UserPreferencesManager
 import com.example.workoutbuddyapplication.ui.theme.toUnitSystem
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.json.JSONArray
+import com.example.workoutbuddyapplication.BuildConfig
+import androidx.datastore.preferences.core.stringPreferencesKey
+import kotlinx.coroutines.flow.first
+import com.example.workoutbuddyapplication.ui.theme.dataStore
 
 @Composable
 fun SummaryCard(workouts: List<Workout> = emptyList(), unitSystem: UnitSystem = UnitSystem.METRIC) {
