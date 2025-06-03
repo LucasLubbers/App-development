@@ -36,11 +36,6 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.storage.storage
 
-suspend fun getUserId(context: Context): String? {
-    val prefs = context.dataStore.data.first()
-    return prefs[USER_ID_KEY]
-}
-
 @Serializable
 data class UserProfile(
     val name: String?,
