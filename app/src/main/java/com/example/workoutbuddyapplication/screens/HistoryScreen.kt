@@ -1,7 +1,7 @@
 package com.example.workoutbuddyapplication.screens
 
-import Workout
-import WorkoutType
+import com.example.workoutbuddyapplication.models.Workout
+import com.example.workoutbuddyapplication.models.WorkoutType
 import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.workoutbuddyapplication.BuildConfig
 import com.example.workoutbuddyapplication.components.BottomNavBar
+import java.time.LocalDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -46,11 +47,12 @@ suspend fun fetchWorkouts(userId: String): List<Workout> = withContext(Dispatche
             workouts.add(
                 Workout(
                     id = obj.getInt("id"),
-                    type = WorkoutType.fromString(obj.getString("type")),
-                    date = java.time.LocalDate.parse(obj.getString("date")),
+                    type = obj.getString("type"),
+                    date = obj.getString("date"),
                     duration = obj.getInt("duration"),
                     distance = if (obj.isNull("distance")) null else obj.getDouble("distance"),
-                    notes = if (obj.isNull("notes")) null else obj.getString("notes")
+                    notes = if (obj.isNull("notes")) null else obj.getString("notes"),
+                    profileId = obj.getString("profile_id")
                 )
             )
         }
@@ -91,13 +93,14 @@ fun HistoryScreen(navController: NavController) {
         isLoading = false
     }
 
+    val workoutsByMonth = workouts.groupBy {
+        val localDate = LocalDate.parse(it.date)
+        Month.of(localDate.monthValue).getDisplayName(TextStyle.FULL, Locale.getDefault()) + " " + localDate.year
+
     // Filter workouts by selected type
     val filteredWorkouts = selectedType?.let { type ->
         workouts.filter { it.type == type }
     } ?: workouts
-
-    val workoutsByMonth = filteredWorkouts.groupBy {
-        Month.of(it.date.monthValue).getDisplayName(TextStyle.FULL, Locale.getDefault()) + " " + it.date.year
     }
 
     Scaffold(

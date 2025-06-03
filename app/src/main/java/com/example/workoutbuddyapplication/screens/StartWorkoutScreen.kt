@@ -1,6 +1,6 @@
 package com.example.workoutbuddyapplication.screens
 
-import WorkoutType
+import com.example.workoutbuddyapplication.models.WorkoutType
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
