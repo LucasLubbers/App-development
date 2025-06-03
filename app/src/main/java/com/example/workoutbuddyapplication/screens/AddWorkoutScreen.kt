@@ -1,50 +1,41 @@
 package com.example.workoutbuddyapplication.screens
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.workoutbuddyapplication.data.SupabaseClient
 import com.example.workoutbuddyapplication.navigation.Screen
+import com.example.workoutbuddyapplication.models.Workout
+import com.example.workoutbuddyapplication.models.WorkoutType
+import io.github.jan.supabase.gotrue.auth
+import io.github.jan.supabase.postgrest.postgrest
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddWorkoutScreen(navController: NavController) {
     var selectedWorkoutType by remember { mutableStateOf(WorkoutType.RUNNING) }
+    var customTypeName by remember { mutableStateOf("") }
     var date by remember { mutableStateOf("2023-05-11") }
     var duration by remember { mutableStateOf("30") }
     var distance by remember { mutableStateOf("5.0") }
     var notes by remember { mutableStateOf("") }
+    var isSaving by remember { mutableStateOf(false) }
+    var saveError by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
         topBar = {
@@ -66,24 +57,19 @@ fun AddWorkoutScreen(navController: NavController) {
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(
-                text = "Workout Type",
-                fontWeight = FontWeight.Medium
-            )
+            Text("Workout Type", fontWeight = FontWeight.Medium)
 
-            Column(
-                modifier = Modifier.selectableGroup()
-            ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
                 WorkoutType.values().forEach { workoutType ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .padding(vertical = 8.dp)
                             .selectable(
                                 selected = (workoutType == selectedWorkoutType),
                                 onClick = { selectedWorkoutType = workoutType },
-                                role = Role.RadioButton
-                            )
-                            .padding(vertical = 8.dp),
+                                role = androidx.compose.ui.semantics.Role.RadioButton
+                            ),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
@@ -96,6 +82,15 @@ fun AddWorkoutScreen(navController: NavController) {
                         )
                     }
                 }
+            }
+
+            if (selectedWorkoutType == WorkoutType.OTHER) {
+                OutlinedTextField(
+                    value = customTypeName,
+                    onValueChange = { customTypeName = it },
+                    label = { Text("Type naam") },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
 
             OutlinedTextField(
@@ -128,16 +123,63 @@ fun AddWorkoutScreen(navController: NavController) {
                 value = notes,
                 onValueChange = { notes = it },
                 label = { Text("Notities") },
-                modifier = Modifier.fillMaxWidth().height(120.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp)
             )
+
+            if (saveError != null) {
+                Text("Fout bij opslaan: $saveError", color = MaterialTheme.colorScheme.error)
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             Button(
-                onClick = { navController.navigate(Screen.Dashboard.route) },
-                modifier = Modifier.fillMaxWidth()
+                onClick = {
+                    isSaving = true
+                    saveError = null
+
+                    CoroutineScope(Dispatchers.IO).launch {
+                        try {
+                            val user = SupabaseClient.client.auth.currentUserOrNull()
+                            if (user == null) {
+                                withContext(Dispatchers.Main) {
+                                    saveError = "Geen gebruiker ingelogd"
+                                    isSaving = false
+                                }
+                                return@launch
+                            }
+
+                            val workout = Workout(
+                                type = if (selectedWorkoutType == WorkoutType.OTHER && customTypeName.isNotBlank())
+                                    customTypeName
+                                else
+                                    selectedWorkoutType.name,
+                                date = date,
+                                duration = duration.toIntOrNull() ?: 0,
+                                distance = distance.toDoubleOrNull(),
+                                notes = notes.takeIf { it.isNotBlank() },
+                                profileId = user.id
+                            )
+
+                            SupabaseClient.client.postgrest.from("workouts")
+                                .insert(workout)
+                            
+                            withContext(Dispatchers.Main) {
+                                navController.navigate(Screen.Dashboard.route)
+                            }
+                        } catch (e: Exception) {
+                            withContext(Dispatchers.Main) {
+                                saveError = e.message
+                                isSaving = false
+                            }
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isSaving
             ) {
-                Text("Workout Opslaan")
+                Text(if (isSaving) "Bezig met opslaan..." else "Workout Opslaan")
             }
         }
     }

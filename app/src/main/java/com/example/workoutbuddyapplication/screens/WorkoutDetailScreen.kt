@@ -1,6 +1,7 @@
 package com.example.workoutbuddyapplication.screens
 
-import Workout
+import com.example.workoutbuddyapplication.models.Workout
+import com.example.workoutbuddyapplication.models.WorkoutType
 import androidx.compose.foundation.clickable
 import androidx.compose.runtime.*
 import androidx.compose.material3.*
@@ -21,6 +22,7 @@ import kotlinx.coroutines.Dispatchers
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONArray
+import java.time.LocalDate
 import com.example.workoutbuddyapplication.models.Exercise
 import androidx.compose.ui.Alignment
 import com.example.workoutbuddyapplication.components.BottomNavBar
@@ -41,11 +43,12 @@ suspend fun fetchWorkoutById(workoutId: Int): Workout? = withContext(Dispatchers
     val obj = jsonArray.getJSONObject(0)
     Workout(
         id = obj.getInt("id"),
-        type = WorkoutType.fromString(obj.getString("type")),
-        date = java.time.LocalDate.parse(obj.getString("date")),
+        type = obj.getString("type"),
+        date = obj.getString("date"),
         duration = obj.getInt("duration"),
         distance = if (obj.isNull("distance")) null else obj.getDouble("distance"),
-        notes = if (obj.isNull("notes")) null else obj.getString("notes")
+        notes = if (obj.isNull("notes")) null else obj.getString("notes"),
+        profileId = obj.getString("profileId")
     )
 }
 
@@ -161,14 +164,14 @@ fun WorkoutDetailScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                imageVector = workout!!.type.icon,
-                                contentDescription = workout!!.type.displayName,
+                                imageVector = workout!!.workoutTypeEnum.icon,
+                                contentDescription = workout!!.workoutTypeEnum.displayName,
                                 modifier = Modifier.size(40.dp)
                             )
                             Spacer(modifier = Modifier.width(16.dp))
                             Column {
                                 Text(
-                                    text = workout!!.type.displayName,
+                                    text = workout!!.workoutTypeEnum.displayName,
                                     style = MaterialTheme.typography.titleLarge
                                 )
                                 Text("Datum: ${workout!!.date}")
