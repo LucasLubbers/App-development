@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SelfImprovement
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -83,10 +84,10 @@ fun DashboardScreen(navController: NavController) {
             TopAppBar(
                 title = { Text("Aktiv") },
                 actions = {
-                    IconButton(onClick = { navController.navigate(Screen.Login.route) }) {
+                    IconButton(onClick = { navController.navigate(Screen.Settings.route) }) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                            contentDescription = "Uitloggen"
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Instellingen"
                         )
                     }
                 }
