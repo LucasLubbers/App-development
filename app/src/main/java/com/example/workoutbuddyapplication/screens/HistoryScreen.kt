@@ -93,14 +93,13 @@ fun HistoryScreen(navController: NavController) {
         isLoading = false
     }
 
-    val workoutsByMonth = workouts.groupBy {
+    val filteredWorkouts = selectedType?.let { type ->
+        workouts.filter { it.workoutTypeEnum == type }
+    } ?: workouts
+
+    val workoutsByMonth = filteredWorkouts.groupBy {
         val localDate = LocalDate.parse(it.date)
         Month.of(localDate.monthValue).getDisplayName(TextStyle.FULL, Locale.getDefault()) + " " + localDate.year
-
-    // Filter workouts by selected type
-    val filteredWorkouts = selectedType?.let { type ->
-        workouts.filter { it.type == type }
-    } ?: workouts
     }
 
     Scaffold(

@@ -29,13 +29,16 @@ data class Workout(
 
 enum class WorkoutType(val displayName: String, val icon: ImageVector) {
     RUNNING("Hardlopen", Icons.AutoMirrored.Filled.DirectionsRun),
-    CYCLING("Fietsen", Icons.Filled.DirectionsBike),
-    STRENGTH("Kracht", Icons.Filled.FitnessCenter),
+    CYCLING("Fietsen", Icons.AutoMirrored.Filled.DirectionsBike),
+    STRENGTH("Krachttraining", Icons.Filled.FitnessCenter),
     YOGA("Yoga", Icons.Filled.SelfImprovement),
     OTHER("Anders", Icons.Filled.QuestionMark);
 
     companion object {
         fun fromString(type: String): WorkoutType =
-            values().firstOrNull { it.name.equals(type, ignoreCase = true) } ?: OTHER
+            values().firstOrNull {
+                it.name.equals(type, ignoreCase = true) ||
+                        it.displayName.equals(type, ignoreCase = true)
+            } ?: OTHER
     }
 }
