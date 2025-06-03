@@ -46,7 +46,10 @@ data class UserProfile(
     val name: String?,
     val email: String,
     @SerialName("picture")
-    val pictureUrl: String?
+    val pictureUrl: String?,
+    val language: String? = "nl", // Default to Dutch
+    @SerialName("unit_system")
+    val unitSystem: String? = "metric" // Default to metric
 )
 
 fun getProfileImageUrl(url: String?, version: Int): String? {
@@ -56,7 +59,7 @@ fun getProfileImageUrl(url: String?, version: Int): String? {
 suspend fun fetchUserProfile(userId: String): UserProfile? {
     return SupabaseClient.client
         .from("profiles")
-        .select(Columns.list("name", "email", "picture")) {
+        .select(Columns.list("name", "email", "picture", "language", "unit_system")) {
             filter {
                 eq("id", userId)
             }
@@ -72,6 +75,34 @@ suspend fun updateUserProfile(userId: String, name: String, pictureUrl: String? 
         SupabaseClient.client
             .from("profiles")
             .update(updateMap) {
+                filter { eq("id", userId) }
+            }
+        true
+    } catch (e: Exception) {
+        e.printStackTrace()
+        false
+    }
+}
+
+suspend fun updateUserLanguage(userId: String, language: String): Boolean {
+    return try {
+        SupabaseClient.client
+            .from("profiles")
+            .update(mapOf("language" to language)) {
+                filter { eq("id", userId) }
+            }
+        true
+    } catch (e: Exception) {
+        e.printStackTrace()
+        false
+    }
+}
+
+suspend fun updateUserUnitSystem(userId: String, unitSystem: String): Boolean {
+    return try {
+        SupabaseClient.client
+            .from("profiles")
+            .update(mapOf("unit_system" to unitSystem)) {
                 filter { eq("id", userId) }
             }
         true

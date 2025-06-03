@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.workoutbuddyapplication.navigation.Screen
+import com.example.workoutbuddyapplication.ui.theme.strings
 
 @Composable
 fun BottomNavBar(
@@ -17,6 +18,8 @@ fun BottomNavBar(
     onTabSelected: (Int) -> Unit,
     navController: NavController
 ) {
+    val strings = strings()
+    
     NavigationBar {
         NavigationBarItem(
             selected = selectedTabIndex == 0,
@@ -24,8 +27,8 @@ fun BottomNavBar(
                 onTabSelected(0)
                 navController.navigate(Screen.Dashboard.route)
             },
-            icon = { Icon(Icons.Default.FitnessCenter, contentDescription = "Dashboard") },
-            label = { Text("Dashboard", fontSize = 9.sp) }
+            icon = { Icon(Icons.Default.FitnessCenter, contentDescription = strings.dashboard) },
+            label = { Text(strings.dashboard, fontSize = 9.sp) }
         )
         NavigationBarItem(
             selected = selectedTabIndex == 1,
@@ -33,8 +36,8 @@ fun BottomNavBar(
                 onTabSelected(1)
                 navController.navigate(Screen.History.route)
             },
-            icon = { Icon(Icons.AutoMirrored.Filled.DirectionsRun, contentDescription = "Geschiedenis") },
-            label = { Text("Geschiedenis", fontSize = 9.sp) }
+            icon = { Icon(Icons.AutoMirrored.Filled.DirectionsRun, contentDescription = strings.history) },
+            label = { Text(strings.history, fontSize = 9.sp) }
         )
         NavigationBarItem(
             selected = selectedTabIndex == 2,
@@ -42,8 +45,8 @@ fun BottomNavBar(
                 onTabSelected(2)
                 navController.navigate(Screen.Exercises.route)
             },
-            icon = { Icon(Icons.Default.FitnessCenter, contentDescription = "Oefeningen") },
-            label = { Text("Oefeningen", fontSize = 9.sp) }
+            icon = { Icon(Icons.Default.FitnessCenter, contentDescription = strings.exercises) },
+            label = { Text(strings.exercises, fontSize = 9.sp) }
         )
         NavigationBarItem(
             selected = selectedTabIndex == 3,
@@ -51,8 +54,8 @@ fun BottomNavBar(
                 onTabSelected(3)
                 navController.navigate(Screen.Stats.route)
             },
-            icon = { Icon(Icons.Default.SelfImprovement, contentDescription = "Statistieken") },
-            label = { Text("Statistieken", fontSize = 9.sp) }
+            icon = { Icon(Icons.Default.SelfImprovement, contentDescription = strings.statistics) },
+            label = { Text(strings.statistics, fontSize = 9.sp) }
         )
         NavigationBarItem(
             selected = selectedTabIndex == 4,
@@ -60,8 +63,8 @@ fun BottomNavBar(
                 onTabSelected(4)
                 navController.navigate(Screen.Profile.route)
             },
-            icon = { Icon(Icons.Default.AccountCircle, contentDescription = "Profiel") },
-            label = { Text("Profiel", fontSize = 9.sp) }
+            icon = { Icon(Icons.Default.AccountCircle, contentDescription = strings.profile) },
+            label = { Text(strings.profile, fontSize = 9.sp) }
         )
     }
 }

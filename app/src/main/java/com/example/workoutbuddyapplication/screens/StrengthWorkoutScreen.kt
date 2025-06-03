@@ -83,8 +83,9 @@ import com.example.workoutbuddyapplication.navigation.Screen
 import com.example.workoutbuddyapplication.models.Exercise as ExerciseModel
 import com.example.workoutbuddyapplication.models.ExerciseDTO
 import com.example.workoutbuddyapplication.data.SupabaseClient
-import com.example.workoutbuddyapplication.ui.theme.ThemeManager
+import com.example.workoutbuddyapplication.ui.theme.UserPreferencesManager
 import com.example.workoutbuddyapplication.ui.theme.UnitSystem
+import com.example.workoutbuddyapplication.ui.theme.toUnitSystem
 import com.example.workoutbuddyapplication.utils.UnitConverter
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.launch
@@ -118,8 +119,9 @@ data class AvailableExercise(
 @Composable
 fun StrengthWorkoutScreen(navController: NavController) {
     val context = LocalContext.current
-    val themeManager = remember { ThemeManager(context) }
-    val unitSystem by themeManager.unitSystem.collectAsState(initial = UnitSystem.METRIC)
+    val preferencesManager = remember { UserPreferencesManager(context) }
+    val selectedUnitSystem by preferencesManager.selectedUnitSystem.collectAsState(initial = "metric")
+    val unitSystem = selectedUnitSystem.toUnitSystem()
     
     var isRunning by remember { mutableStateOf(true) }
     var elapsedTime by remember { mutableLongStateOf(0L) }

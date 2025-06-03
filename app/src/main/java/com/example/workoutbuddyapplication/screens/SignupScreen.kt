@@ -27,6 +27,8 @@ import com.example.workoutbuddyapplication.data.SupabaseClient
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.gotrue.providers.builtin.Email
 import androidx.compose.ui.platform.LocalContext
+import com.example.workoutbuddyapplication.ui.theme.strings
+import com.example.workoutbuddyapplication.ui.theme.dutchStrings
 
 suspend fun registerUser(email: String, password: String, name: String): Boolean = withContext(Dispatchers.IO) {
     val client = OkHttpClient()
@@ -49,9 +51,11 @@ suspend fun registerUser(email: String, password: String, name: String): Boolean
         val response = client.newCall(request).execute()
         val responseBody = response.body?.string()
         if (response.isSuccessful) {
-            // Update the name in the existing profile row
+            // Update the profile with name, language, and unit preferences
             val updateJson = JSONObject()
             updateJson.put("name", name)
+            updateJson.put("language", "nl") // Default to Dutch
+            updateJson.put("unit_system", "metric") // Default to metric
             val updateBody = updateJson.toString().toRequestBody("application/json".toMediaType())
             val updateRequest = Request.Builder()
                 .url("https://attsgwsxdlblbqxnboqx.supabase.co/rest/v1/profiles?email=eq.$email")
@@ -82,8 +86,10 @@ fun SignupScreen(navController: NavController) {
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var isLoading by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
+    val strings = strings()
 
     Column(
         modifier = Modifier
@@ -101,7 +107,7 @@ fun SignupScreen(navController: NavController) {
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Aktiv",
+            text = strings.appName,
             fontSize = 30.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
@@ -110,7 +116,7 @@ fun SignupScreen(navController: NavController) {
         Spacer(modifier = Modifier.height(40.dp))
 
         Text(
-            text = "Account Aanmaken",
+            text = strings.createAccount,
             fontSize = 24.sp,
             fontWeight = FontWeight.Medium
         )
@@ -120,7 +126,7 @@ fun SignupScreen(navController: NavController) {
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
-            label = { Text("Naam") },
+            label = { Text(strings.name) },
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -129,7 +135,7 @@ fun SignupScreen(navController: NavController) {
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
-            label = { Text("Email") },
+            label = { Text(strings.email) },
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -138,7 +144,7 @@ fun SignupScreen(navController: NavController) {
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
-            label = { Text("Wachtwoord") },
+            label = { Text(strings.password) },
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth()
         )
@@ -182,9 +188,18 @@ fun SignupScreen(navController: NavController) {
                     }
                 }
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isLoading
         ) {
-            Text("Registreren")
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.height(24.dp),
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Text(strings.createAccount)
+            }
         }
 
         errorMessage?.let {
@@ -194,8 +209,11 @@ fun SignupScreen(navController: NavController) {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        TextButton(onClick = { navController.navigate(Screen.Login.route) }) {
-            Text("Al een account? Log hier in")
+        TextButton(
+            onClick = { navController.navigate(Screen.Login.route) },
+            enabled = !isLoading
+        ) {
+            Text(if (strings === dutchStrings) "Al een account? Log hier in" else "Already have an account? Login here")
         }
     }
 }

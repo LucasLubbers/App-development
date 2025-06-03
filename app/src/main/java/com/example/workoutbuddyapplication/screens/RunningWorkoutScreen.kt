@@ -82,12 +82,15 @@ import com.example.workoutbuddyapplication.ui.theme.UnitSystem
 import com.example.workoutbuddyapplication.utils.UnitConverter
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.collectAsState
+import com.example.workoutbuddyapplication.ui.theme.UserPreferencesManager
+import com.example.workoutbuddyapplication.ui.theme.toUnitSystem
 
 @Composable
 fun RunningWorkoutScreen(navController: NavController) {
     val context = LocalContext.current
-    val themeManager = remember { ThemeManager(context) }
-    val unitSystem by themeManager.unitSystem.collectAsState(initial = UnitSystem.METRIC)
+    val preferencesManager = remember { UserPreferencesManager(context) }
+    val selectedUnitSystem by preferencesManager.selectedUnitSystem.collectAsState(initial = "metric")
+    val unitSystem = selectedUnitSystem.toUnitSystem()
     
     var isRunning by remember { mutableStateOf(true) }
     var distance by remember { mutableStateOf(0.0) }

@@ -16,6 +16,9 @@ import androidx.navigation.NavController
 import com.example.workoutbuddyapplication.R
 import com.example.workoutbuddyapplication.data.SupabaseClient
 import com.example.workoutbuddyapplication.navigation.Screen
+import com.example.workoutbuddyapplication.ui.theme.strings
+import com.example.workoutbuddyapplication.ui.theme.dutchStrings
+import com.example.workoutbuddyapplication.ui.theme.englishStrings
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.gotrue.providers.builtin.Email
 import kotlinx.coroutines.launch
@@ -42,6 +45,7 @@ fun LoginScreen(navController: NavController) {
     var isLoading by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
+    val strings = strings()
 
     Column(
         modifier = Modifier
@@ -59,7 +63,7 @@ fun LoginScreen(navController: NavController) {
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Aktiv",
+            text = strings.appName,
             fontSize = 30.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
@@ -68,7 +72,7 @@ fun LoginScreen(navController: NavController) {
         Spacer(modifier = Modifier.height(40.dp))
 
         Text(
-            text = "Inloggen",
+            text = strings.login,
             fontSize = 24.sp,
             fontWeight = FontWeight.Medium
         )
@@ -81,7 +85,7 @@ fun LoginScreen(navController: NavController) {
                 email = it
                 errorMessage = null
             },
-            label = { Text("Email") },
+            label = { Text(strings.email) },
             modifier = Modifier.fillMaxWidth(),
             isError = errorMessage != null
         )
@@ -94,7 +98,7 @@ fun LoginScreen(navController: NavController) {
                 password = it
                 errorMessage = null
             },
-            label = { Text("Wachtwoord") },
+            label = { Text(strings.password) },
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(),
             isError = errorMessage != null
@@ -114,9 +118,9 @@ fun LoginScreen(navController: NavController) {
         Button(
             onClick = {
                 if (email.isBlank() || password.isBlank()) {
-                    errorMessage = "Vul alle velden in"
+                    errorMessage = if (strings === dutchStrings) "Vul alle velden in" else "Fill in all fields"
                 } else if (!isValidEmail(email)) {
-                    errorMessage = "Ongeldig e-mailadres"
+                    errorMessage = if (strings === dutchStrings) "Ongeldig e-mailadres" else "Invalid email address"
                 } else {
                     isLoading = true
                     errorMessage = null
@@ -141,10 +145,10 @@ fun LoginScreen(navController: NavController) {
                         } catch (e: Exception) {
                             errorMessage = when {
                                 e.message?.contains("invalid login credentials", ignoreCase = true) == true ->
-                                    "Ongeldige inloggegevens"
+                                    if (strings === dutchStrings) "Ongeldige inloggegevens" else "Invalid login credentials"
                                 e.message?.contains("network", ignoreCase = true) == true ->
-                                    "Netwerkfout. Controleer je internetverbinding."
-                                else -> "Fout bij inloggen: ${e.message}"
+                                    if (strings === dutchStrings) "Netwerkfout. Controleer je internetverbinding." else "Network error. Check your internet connection."
+                                else -> if (strings === dutchStrings) "Fout bij inloggen: ${e.message}" else "Login error: ${e.message}"
                             }
                         } finally {
                             isLoading = false
@@ -162,7 +166,7 @@ fun LoginScreen(navController: NavController) {
                     strokeWidth = 2.dp
                 )
             } else {
-                Text("Inloggen")
+                Text(strings.login)
             }
         }
 
@@ -172,7 +176,7 @@ fun LoginScreen(navController: NavController) {
             onClick = { navController.navigate(Screen.Signup.route) },
             enabled = !isLoading
         ) {
-            Text("Nog geen account? Registreer hier")
+            Text(if (strings === dutchStrings) "Nog geen account? Registreer hier" else "Don't have an account? Register here")
         }
     }
 }

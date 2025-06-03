@@ -18,7 +18,6 @@ enum class UnitSystem {
 class ThemeManager(private val context: Context) {
     companion object {
         val DARK_MODE_KEY = booleanPreferencesKey("dark_mode")
-        val IMPERIAL_UNITS_KEY = booleanPreferencesKey("imperial_units")
     }
 
     val isDarkMode: Flow<Boolean> = context.dataStore.data
@@ -26,24 +25,17 @@ class ThemeManager(private val context: Context) {
             preferences[DARK_MODE_KEY] ?: false
         }
 
-    val isImperialUnits: Flow<Boolean> = context.dataStore.data
-        .map { preferences ->
-            preferences[IMPERIAL_UNITS_KEY] ?: false
-        }
-
-    val unitSystem: Flow<UnitSystem> = isImperialUnits.map { isImperial ->
-        if (isImperial) UnitSystem.IMPERIAL else UnitSystem.METRIC
-    }
-
     suspend fun setDarkMode(isDark: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[DARK_MODE_KEY] = isDark
         }
     }
+}
 
-    suspend fun setImperialUnits(useImperial: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[IMPERIAL_UNITS_KEY] = useImperial
-        }
+// Extension function to get UnitSystem from string
+fun String?.toUnitSystem(): UnitSystem {
+    return when (this) {
+        "imperial" -> UnitSystem.IMPERIAL
+        else -> UnitSystem.METRIC
     }
 } 

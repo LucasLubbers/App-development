@@ -20,9 +20,15 @@ import androidx.navigation.NavController
 import com.example.workoutbuddyapplication.navigation.Screen
 import com.example.workoutbuddyapplication.data.SupabaseClient
 import com.example.workoutbuddyapplication.ui.theme.ThemeManager
+import com.example.workoutbuddyapplication.ui.theme.LanguageManager
+import com.example.workoutbuddyapplication.ui.theme.LocalStringResources
+import com.example.workoutbuddyapplication.ui.theme.dutchStrings
+import com.example.workoutbuddyapplication.ui.theme.englishStrings
+import com.example.workoutbuddyapplication.ui.theme.strings
 import com.example.workoutbuddyapplication.ui.theme.UnitSystem
 import io.github.jan.supabase.gotrue.auth
 import kotlinx.coroutines.launch
+import com.example.workoutbuddyapplication.ui.theme.UserPreferencesManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,15 +38,18 @@ fun SettingsScreen(navController: NavController) {
     var showLogoutDialog by remember { mutableStateOf(false) }
     
     val themeManager = remember { ThemeManager(context) }
+    val preferencesManager = remember { UserPreferencesManager(context) }
     val isDarkMode by themeManager.isDarkMode.collectAsState(initial = false)
-    val isImperialUnits by themeManager.isImperialUnits.collectAsState(initial = false)
+    val selectedLanguage by preferencesManager.selectedLanguage.collectAsState(initial = "nl")
+    val selectedUnitSystem by preferencesManager.selectedUnitSystem.collectAsState(initial = "metric")
+    val strings = strings()
 
     // Logout confirmation dialog
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
-            title = { Text("Uitloggen") },
-            text = { Text("Weet je zeker dat je wilt uitloggen?") },
+            title = { Text(strings.logout) },
+            text = { Text(strings.logoutConfirm) },
             confirmButton = {
                 Button(
                     onClick = {
@@ -51,7 +60,6 @@ fun SettingsScreen(navController: NavController) {
                                     popUpTo(0) { inclusive = true }
                                 }
                             } catch (e: Exception) {
-                                // Handle logout error
                                 navController.navigate(Screen.Login.route) {
                                     popUpTo(0) { inclusive = true }
                                 }
@@ -60,14 +68,14 @@ fun SettingsScreen(navController: NavController) {
                         showLogoutDialog = false
                     }
                 ) {
-                    Text("Uitloggen")
+                    Text(strings.logout)
                 }
             },
             dismissButton = {
                 TextButton(
                     onClick = { showLogoutDialog = false }
                 ) {
-                    Text("Annuleren")
+                    Text(strings.cancel)
                 }
             }
         )
@@ -76,10 +84,10 @@ fun SettingsScreen(navController: NavController) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Instellingen") },
+                title = { Text(strings.settings) },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Terug")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.back)
                     }
                 }
             )
@@ -94,8 +102,8 @@ fun SettingsScreen(navController: NavController) {
         ) {
             item {
                 SettingsItem(
-                    title = "Profiel bewerken",
-                    subtitle = "Pas je profielgegevens aan",
+                    title = strings.editProfile,
+                    subtitle = strings.editProfileSubtitle,
                     icon = Icons.Default.Person,
                     onClick = { navController.navigate(Screen.Profile.route) }
                 )
@@ -103,62 +111,121 @@ fun SettingsScreen(navController: NavController) {
 
             item {
                 SettingsItem(
-                    title = "Notificaties",
-                    subtitle = "Beheer je notificatie-instellingen",
+                    title = strings.notifications,
+                    subtitle = strings.notificationsSubtitle,
                     icon = Icons.Default.Notifications,
                     onClick = { /* TODO: Implement notifications settings */ }
                 )
             }
 
             item {
+                var showLanguageDialog by remember { mutableStateOf(false) }
+
+                if (showLanguageDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showLanguageDialog = false },
+                        title = { Text(strings.chooseLanguage) },
+                        text = {
+                            Column {
+                                ListItem(
+                                    headlineContent = { Text("Nederlands") },
+                                    leadingContent = {
+                                        RadioButton(
+                                            selected = selectedLanguage == "nl",
+                                            onClick = {
+                                                coroutineScope.launch {
+                                                    preferencesManager.setLanguage("nl")
+                                                }
+                                                showLanguageDialog = false
+                                            }
+                                        )
+                                    }
+                                )
+                                ListItem(
+                                    headlineContent = { Text("English") },
+                                    leadingContent = {
+                                        RadioButton(
+                                            selected = selectedLanguage == "en",
+                                            onClick = {
+                                                coroutineScope.launch {
+                                                    preferencesManager.setLanguage("en")
+                                                }
+                                                showLanguageDialog = false
+                                            }
+                                        )
+                                    }
+                                )
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(onClick = { showLanguageDialog = false }) {
+                                Text(strings.close)
+                            }
+                        }
+                    )
+                }
+
                 SettingsItem(
-                    title = "Taal",
-                    subtitle = "Kies je taal voorkeur",
+                    title = strings.language,
+                    subtitle = if (selectedLanguage == "nl") "Nederlands" else "English",
                     icon = Icons.Default.Language,
-                    onClick = { /* TODO: Implement language settings */ }
+                    onClick = { showLanguageDialog = true }
                 )
             }
 
             item {
-                // Unit System Toggle
-                Card(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            Icons.Default.Straighten,
-                            contentDescription = "Eenheden",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Eenheden",
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = if (isImperialUnits) "Imperial (lbs, mi)" else "Metrisch (kg, km)",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = isImperialUnits,
-                            onCheckedChange = { newValue ->
-                                coroutineScope.launch {
-                                    themeManager.setImperialUnits(newValue)
-                                }
+                var showUnitsDialog by remember { mutableStateOf(false) }
+
+                if (showUnitsDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showUnitsDialog = false },
+                        title = { Text(strings.units) },
+                        text = {
+                            Column {
+                                ListItem(
+                                    headlineContent = { Text(strings.metric) },
+                                    leadingContent = {
+                                        RadioButton(
+                                            selected = selectedUnitSystem == "metric",
+                                            onClick = {
+                                                coroutineScope.launch {
+                                                    preferencesManager.setUnitSystem("metric")
+                                                }
+                                                showUnitsDialog = false
+                                            }
+                                        )
+                                    }
+                                )
+                                ListItem(
+                                    headlineContent = { Text(strings.imperial) },
+                                    leadingContent = {
+                                        RadioButton(
+                                            selected = selectedUnitSystem == "imperial",
+                                            onClick = {
+                                                coroutineScope.launch {
+                                                    preferencesManager.setUnitSystem("imperial")
+                                                }
+                                                showUnitsDialog = false
+                                            }
+                                        )
+                                    }
+                                )
                             }
-                        )
-                    }
+                        },
+                        confirmButton = {
+                            TextButton(onClick = { showUnitsDialog = false }) {
+                                Text(strings.close)
+                            }
+                        }
+                    )
                 }
+
+                SettingsItem(
+                    title = strings.units,
+                    subtitle = if (selectedUnitSystem == "imperial") strings.imperial else strings.metric,
+                    icon = Icons.Default.Straighten,
+                    onClick = { showUnitsDialog = true }
+                )
             }
 
             item {
@@ -174,19 +241,19 @@ fun SettingsScreen(navController: NavController) {
                     ) {
                         Icon(
                             if (isDarkMode) Icons.Default.DarkMode else Icons.Default.LightMode,
-                            contentDescription = "Thema",
+                            contentDescription = strings.darkMode,
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.width(16.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Donkere modus",
+                                text = strings.darkMode,
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Medium
                             )
                             Text(
-                                text = if (isDarkMode) "Donker thema actief" else "Licht thema actief",
+                                text = if (isDarkMode) strings.darkModeEnabled else strings.lightModeEnabled,
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -221,20 +288,20 @@ fun SettingsScreen(navController: NavController) {
                     ) {
                         Icon(
                             Icons.AutoMirrored.Filled.ExitToApp,
-                            contentDescription = "Uitloggen",
+                            contentDescription = strings.logout,
                             tint = MaterialTheme.colorScheme.onErrorContainer,
                             modifier = Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.width(16.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Uitloggen",
+                                text = strings.logout,
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Medium,
                                 color = MaterialTheme.colorScheme.onErrorContainer
                             )
                             Text(
-                                text = "Log uit van je account",
+                                text = strings.logoutSubtitle,
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.7f)
                             )
@@ -244,7 +311,7 @@ fun SettingsScreen(navController: NavController) {
                         ) {
                             Icon(
                                 Icons.AutoMirrored.Filled.ExitToApp,
-                                contentDescription = "Uitloggen",
+                                contentDescription = strings.logout,
                                 tint = MaterialTheme.colorScheme.onErrorContainer
                             )
                         }
