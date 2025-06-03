@@ -24,6 +24,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.flow.first
 
 val Context.dataStore by preferencesDataStore(name = "user_prefs")
 val USER_ID_KEY = stringPreferencesKey("user_id")
@@ -32,6 +33,11 @@ suspend fun saveUserId(context: Context, userId: String) {
     context.dataStore.edit { prefs ->
         prefs[USER_ID_KEY] = userId
     }
+}
+
+suspend fun getUserId(context: Context): String? {
+    val prefs = context.dataStore.data.first()
+    return prefs[USER_ID_KEY]
 }
 
 @Composable
