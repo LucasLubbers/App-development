@@ -81,6 +81,7 @@ dependencies {
 
     // Hilt for DI
     implementation(libs.hilt.android)
+    implementation(libs.places)
     annotationProcessor(libs.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose.v110)
 

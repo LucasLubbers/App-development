@@ -1,6 +1,8 @@
 package com.example.workoutbuddyapplication.screens
 
-import Workout
+import com.example.workoutbuddyapplication.models.Workout
+import com.example.workoutbuddyapplication.models.WorkoutType
+import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
@@ -10,7 +12,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsRun
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SelfImprovement
@@ -86,11 +87,16 @@ fun DashboardScreen(navController: NavController) {
     LaunchedEffect(Unit) {
         isLoading = true
         error = null
-        val result = fetchWorkouts()
-        if (result.isNotEmpty()) {
-            workouts = result
+        val userId = getUserId(context)
+        if (userId != null) {
+            val result = fetchWorkouts(userId)
+            if (result.isNotEmpty()) {
+                workouts = result
+            } else {
+                error = "No workouts found or failed to fetch."
+            }
         } else {
-            error = "No workouts found or failed to fetch."
+            error = "User not logged in."
         }
         isLoading = false
     }
@@ -206,14 +212,14 @@ fun WorkoutItem(workout: Workout, unitSystem: UnitSystem = UnitSystem.METRIC, on
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                imageVector = workout.type.icon,
-                contentDescription = workout.type.displayName,
+                imageVector = workout.workoutTypeEnum.icon,
+                contentDescription = workout.workoutTypeEnum.displayName,
                 modifier = Modifier.size(32.dp)
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column {
                 Text(
-                    text = workout.type.displayName,
+                    text = workout.workoutTypeEnum.displayName,
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium)
                 )
                 Text(
