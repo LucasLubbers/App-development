@@ -2,6 +2,7 @@ package com.example.workoutbuddyapplication.screens
 
 import com.example.workoutbuddyapplication.models.Workout
 import com.example.workoutbuddyapplication.models.WorkoutType
+import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
@@ -11,10 +12,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsRun
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.SelfImprovement
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,6 +26,7 @@ import com.example.workoutbuddyapplication.navigation.Screen
 import java.time.format.DateTimeFormatter
 import androidx.compose.material.icons.filled.Timer
 import com.example.workoutbuddyapplication.components.BottomNavBar
+import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun SummaryCard(workouts: List<Workout> = emptyList()) {
@@ -62,6 +62,7 @@ fun SummaryCard(workouts: List<Workout> = emptyList()) {
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun DashboardScreen(navController: NavController) {
+    val context = LocalContext.current
     var workouts by remember { mutableStateOf<List<Workout>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -70,11 +71,16 @@ fun DashboardScreen(navController: NavController) {
     LaunchedEffect(Unit) {
         isLoading = true
         error = null
-        val result: List<Workout> = fetchWorkouts()
-        if (result.isNotEmpty()) {
-            workouts = result
+        val userId = getUserId(context)
+        if (userId != null) {
+            val result = fetchWorkouts(userId)
+            if (result.isNotEmpty()) {
+                workouts = result
+            } else {
+                error = "No workouts found or failed to fetch."
+            }
         } else {
-            error = "No workouts found or failed to fetch."
+            error = "User not logged in."
         }
         isLoading = false
     }
