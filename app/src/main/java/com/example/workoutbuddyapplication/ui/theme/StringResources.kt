@@ -56,6 +56,15 @@ data class StringResources(
     val noWorkoutsFound: String,
     val minutes: String,
     
+    // Workout Details
+    val workoutDetails: String,
+    val date: String,
+    val notes: String,
+    val workoutNotFound: String,
+    val failedToLoadWorkoutDetails: String,
+    val sets: String,
+    val weight: String,
+    
     // Profile
     val profile: String,
     val changePassword: String,
@@ -188,6 +197,15 @@ val dutchStrings = StringResources(
     noWorkoutsFound = "Geen workouts gevonden",
     minutes = "minuten",
     
+    // Workout Details
+    workoutDetails = "Workout Details",
+    date = "Datum",
+    notes = "Notities",
+    workoutNotFound = "Workout Niet Gevonden",
+    failedToLoadWorkoutDetails = "Fout bij het laden van workout details",
+    sets = "Sets",
+    weight = "Gewicht",
+    
     // Profile
     profile = "Profiel",
     changePassword = "Verander Wachtwoord",
@@ -315,6 +333,15 @@ val englishStrings = StringResources(
     addManually = "Add Manually",
     noWorkoutsFound = "No workouts found",
     minutes = "minutes",
+    
+    // Workout Details
+    workoutDetails = "Workout Details",
+    date = "Date",
+    notes = "Notes",
+    workoutNotFound = "Workout Not Found",
+    failedToLoadWorkoutDetails = "Failed to load workout details",
+    sets = "Sets",
+    weight = "Weight",
     
     // Profile
     profile = "Profile",

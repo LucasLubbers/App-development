@@ -21,7 +21,7 @@ data class Workout(
     val distance: Double? = null,
     val notes: String? = null,
     @SerialName("profile_id")
-    val profileId: String,
+    val profileId: String? = null,
 ) {
     val workoutTypeEnum: WorkoutType
         get() = WorkoutType.fromString(type)
