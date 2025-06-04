@@ -2,7 +2,6 @@ package com.example.workoutbuddyapplication.screens
 
 import com.example.workoutbuddyapplication.models.Workout
 import com.example.workoutbuddyapplication.models.WorkoutType
-import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.*
@@ -65,7 +64,7 @@ suspend fun fetchWorkouts(userId: String): List<Workout> = withContext(Dispatche
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun HistoryScreen(navController: NavController) {
+fun HistoryScreen(navController: NavController, selectedLanguage: String) {
     val context = LocalContext.current
     var workouts by remember { mutableStateOf<List<Workout>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -74,7 +73,7 @@ fun HistoryScreen(navController: NavController) {
 
     // Filter state
     var expanded by remember { mutableStateOf(false) }
-    var selectedType by remember { mutableStateOf<  WorkoutType?>(null) }
+    var selectedType by remember { mutableStateOf<WorkoutType?>(null) }
 
     LaunchedEffect(Unit) {
         isLoading = true
@@ -97,10 +96,17 @@ fun HistoryScreen(navController: NavController) {
         workouts.filter { it.workoutTypeEnum == type }
     } ?: workouts
 
-    val workoutsByMonth = filteredWorkouts.groupBy {
+    val sortedWorkouts = filteredWorkouts.sortedByDescending { it.date }
+
+    val workoutsByMonth = sortedWorkouts.groupBy {
         val localDate = LocalDate.parse(it.date)
-        Month.of(localDate.monthValue).getDisplayName(TextStyle.FULL, Locale.getDefault()) + " " + localDate.year
+        Pair(localDate.year, localDate.monthValue)
     }
+
+    val monthsOrdered = workoutsByMonth.keys.sortedByDescending {
+        (year, month) -> year * 100 + month
+    }
+
 
     Scaffold(
         bottomBar = {
@@ -169,15 +175,19 @@ fun HistoryScreen(navController: NavController) {
                     LazyColumn(
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        workoutsByMonth.forEach { (month, workouts) ->
+                        monthsOrdered.forEach { (year, month) ->
+                            val monthLocale = Locale(selectedLanguage)
+                            val monthName = Month.of(month).getDisplayName(TextStyle.FULL, monthLocale)
+                            val header = "$monthName $year"
+                            val monthWorkouts = workoutsByMonth[Pair(year, month)] ?: emptyList()
                             item {
                                 Text(
-                                    text = month,
+                                    text = header,
                                     style = MaterialTheme.typography.titleMedium,
                                     modifier = Modifier.padding(vertical = 8.dp)
                                 )
                             }
-                            items(workouts.sortedByDescending { it.date }) { workout ->
+                            items(monthWorkouts) { workout ->
                                 WorkoutItem(
                                     workout = workout,
                                     onClick = { navController.navigate("workoutDetail/${workout.id}/1") }

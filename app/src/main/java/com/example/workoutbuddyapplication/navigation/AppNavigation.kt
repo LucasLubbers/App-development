@@ -1,9 +1,9 @@
 package com.example.workoutbuddyapplication.navigation
 
-import android.bluetooth.BluetoothDevice
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -13,7 +13,9 @@ import androidx.navigation.navArgument
 import androidx.compose.ui.platform.LocalContext
 import com.example.workoutbuddyapplication.models.Exercise
 import com.example.workoutbuddyapplication.screens.*
+import com.example.workoutbuddyapplication.ui.theme.UserPreferencesManager
 import org.json.JSONObject
+import androidx.compose.runtime.getValue
 
 // Debug mode flag - set to true to bypass login
 val DEBUG_MODE = false
@@ -45,6 +47,9 @@ sealed class Screen(val route: String) {
 @Composable
 fun AppNavigation(navController: NavHostController) {
     val context = LocalContext.current
+    val preferencesManager = remember { UserPreferencesManager(context) }
+    val selectedLanguage by preferencesManager.selectedLanguage.collectAsState(initial = "nl")
+
 
     NavHost(navController = navController, startDestination = Screen.Login.route) {
 
@@ -61,7 +66,7 @@ fun AppNavigation(navController: NavHostController) {
             AddWorkoutScreen(navController = navController)
         }
         composable(Screen.History.route) {
-            HistoryScreen(navController = navController)
+            HistoryScreen(navController = navController, selectedLanguage = selectedLanguage)
         }
         composable(Screen.Stats.route) {
             StatsScreen(navController = navController)
