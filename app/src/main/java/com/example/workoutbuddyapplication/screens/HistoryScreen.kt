@@ -2,7 +2,6 @@ package com.example.workoutbuddyapplication.screens
 
 import com.example.workoutbuddyapplication.models.Workout
 import com.example.workoutbuddyapplication.models.WorkoutType
-import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.*
@@ -74,7 +73,7 @@ fun HistoryScreen(navController: NavController) {
 
     // Filter state
     var expanded by remember { mutableStateOf(false) }
-    var selectedType by remember { mutableStateOf<  WorkoutType?>(null) }
+    var selectedType by remember { mutableStateOf<WorkoutType?>(null) }
 
     LaunchedEffect(Unit) {
         isLoading = true
@@ -93,13 +92,25 @@ fun HistoryScreen(navController: NavController) {
         isLoading = false
     }
 
+    // Filter and sort workouts by date descending
     val filteredWorkouts = selectedType?.let { type ->
         workouts.filter { it.workoutTypeEnum == type }
     } ?: workouts
 
-    val workoutsByMonth = filteredWorkouts.groupBy {
+    val sortedWorkouts = filteredWorkouts.sortedByDescending { it.date }
+
+    // Group by month string
+    val workoutsByMonth = sortedWorkouts.groupBy {
         val localDate = LocalDate.parse(it.date)
         Month.of(localDate.monthValue).getDisplayName(TextStyle.FULL, Locale.getDefault()) + " " + localDate.year
+    }
+
+    // Order months descending (most recent first)
+    val monthsOrdered = workoutsByMonth.keys.sortedByDescending { key ->
+        val parts = key.split(" ")
+        val month = Month.valueOf(parts[0].uppercase(Locale.getDefault()))
+        val year = parts[1].toInt()
+        year * 100 + month.value
     }
 
     Scaffold(
@@ -169,7 +180,8 @@ fun HistoryScreen(navController: NavController) {
                     LazyColumn(
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        workoutsByMonth.forEach { (month, workouts) ->
+                        monthsOrdered.forEach { month ->
+                            val monthWorkouts = workoutsByMonth[month] ?: emptyList()
                             item {
                                 Text(
                                     text = month,
@@ -177,7 +189,7 @@ fun HistoryScreen(navController: NavController) {
                                     modifier = Modifier.padding(vertical = 8.dp)
                                 )
                             }
-                            items(workouts.sortedByDescending { it.date }) { workout ->
+                            items(monthWorkouts) { workout ->
                                 WorkoutItem(
                                     workout = workout,
                                     onClick = { navController.navigate("workoutDetail/${workout.id}/1") }

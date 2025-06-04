@@ -1,69 +1,148 @@
 package com.example.workoutbuddyapplication.screens
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.workoutbuddyapplication.BuildConfig
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.json.JSONArray
+import androidx.compose.ui.platform.LocalContext
 import com.example.workoutbuddyapplication.models.Goal
+import com.example.workoutbuddyapplication.models.GoalType
+import com.example.workoutbuddyapplication.models.WorkoutType
+
+suspend fun fetchGoals(userId: String): List<Goal> = withContext(Dispatchers.IO) {
+    val client = OkHttpClient()
+    val request = Request.Builder()
+        .url("https://attsgwsxdlblbqxnboqx.supabase.co/rest/v1/goals?profile_id=eq.$userId&select=*")
+        .addHeader("apikey", BuildConfig.SUPABASE_ANON_KEY)
+        .addHeader("Authorization", "Bearer ${BuildConfig.SUPABASE_ANON_KEY}")
+        .build()
+    try {
+        val response = client.newCall(request).execute()
+        val responseBody = response.body?.string()
+        if (!response.isSuccessful || responseBody == null) return@withContext emptyList()
+        val jsonArray = JSONArray(responseBody)
+        val goals = mutableListOf<Goal>()
+        for (i in 0 until jsonArray.length()) {
+            val obj = jsonArray.getJSONObject(i)
+            goals.add(
+                Goal(
+                    id = obj.getInt("id"),
+                    profileId = obj.getString("profile_id"),
+                    title = obj.getString("title"),
+                    workoutType = WorkoutType.fromString(obj.getString("workout_type")),
+                    goalType = GoalType.fromString(obj.getString("goal_type")),
+                    target = obj.getDouble("target_value"),
+                    unit = obj.getString("unit"),
+                    startDate = obj.optString("start_date", null),
+                    endDate = obj.optString("end_date", null),
+                    createdAt = obj.optString("created_at", null),
+                    description = obj.optString("description", ""),
+                    current = obj.optDouble("current_value", 0.0)
+                )
+            )
+        }
+        goals
+    } catch (e: Exception) {
+        e.printStackTrace()
+        emptyList()
+    }
+}
+
+@Composable
+fun GoalCard(goal: Goal) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .animateContentSize()
+            .clickable { expanded = !expanded },
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (expanded) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column {
+                    Text(goal.title, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    Text(
+                        "Doel: ${goal.target} ${goal.unit}",
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+                Icon(
+                    imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = if (expanded) "Minder info" else "Meer info"
+                )
+            }
+            Text("Voortgang: ${goal.current} ${goal.unit}")
+
+            if (expanded) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Divider()
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Workout type: ${goal.workoutType.displayName}")
+                Text("Type doel: ${goal.goalType.displayName}")
+                if (goal.description.isNotBlank()) {
+                    Text("Beschrijving: ${goal.description}")
+                }
+                if (!goal.startDate.isNullOrBlank()) {
+                    Text("Startdatum: ${goal.startDate}")
+                }
+                if (!goal.endDate.isNullOrBlank()) {
+                    Text("Einddatum: ${goal.endDate}")
+                }
+                Text("Aangemaakt op: ${goal.createdAt}")
+            }
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GoalsScreen(navController: NavController) {
-    val sampleGoals = remember {
-        listOf(
-            Goal(
-                id = 1,
-                title = "3x per week trainen",
-                description = "Minimaal drie keer per week een workout doen",
-                target = 3.0,
-                current = 2.0,
-                unit = "workouts"
-            ),
-            Goal(
-                id = 2,
-                title = "10 km hardlopen per week",
-                description = "Minimaal 10 kilometer hardlopen per week",
-                target = 10.0,
-                current = 7.5,
-                unit = "km"
-            ),
-            Goal(
-                id = 3,
-                title = "Yoga routine",
-                description = "2x per week yoga doen voor flexibiliteit",
-                target = 2.0,
-                current = 1.0,
-                unit = "sessies"
-            )
-        )
+    val context = LocalContext.current
+    var goals by remember { mutableStateOf<List<Goal>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        isLoading = true
+        error = null
+        val userId = getUserId(context)
+        if (userId != null) {
+            val result = fetchGoals(userId)
+            goals = result
+        } else {
+            error = "User not logged in."
+        }
+        isLoading = false
     }
 
     Scaffold(
@@ -99,11 +178,14 @@ fun GoalsScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(sampleGoals) { goal ->
-                    GoalCard(goal = goal)
+            when {
+                isLoading -> CircularProgressIndicator()
+                error != null -> Text(error!!, color = MaterialTheme.colorScheme.error)
+                goals.isEmpty() -> Text("Geen doelen gevonden.")
+                else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(goals) { goal ->
+                        GoalCard(goal = goal)
+                    }
                 }
             }
 
@@ -114,55 +196,6 @@ fun GoalsScreen(navController: NavController) {
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Doelsuggesties Bekijken")
-            }
-        }
-    }
-}
-
-@Composable
-fun GoalCard(goal: Goal) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Text(
-                text = goal.title,
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = goal.description,
-                style = MaterialTheme.typography.bodyMedium
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            LinearProgressIndicator(
-                progress = (goal.current / goal.target).toFloat(),
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "${goal.current} ${goal.unit}",
-                    style = MaterialTheme.typography.bodySmall
-                )
-
-                Text(
-                    text = "${goal.target} ${goal.unit}",
-                    style = MaterialTheme.typography.bodySmall
-                )
             }
         }
     }
