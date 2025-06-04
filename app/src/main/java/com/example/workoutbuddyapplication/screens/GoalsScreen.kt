@@ -1,5 +1,6 @@
 package com.example.workoutbuddyapplication.screens
 
+import android.annotation.SuppressLint
 import android.app.DatePickerDialog
 import android.os.Build
 import androidx.annotation.RequiresApi
@@ -17,7 +18,6 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.*
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
@@ -42,6 +42,7 @@ import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Delete
+import okhttp3.RequestBody.Companion.toRequestBody
 
 @RequiresApi(Build.VERSION_CODES.O)
 fun calculateGoalProgress(goal: Goal, workouts: List<Workout>): Double {
@@ -87,11 +88,11 @@ suspend fun fetchGoals(userId: String): List<Goal> = withContext(Dispatchers.IO)
                     goalType = GoalType.fromString(obj.getString("goal_type")),
                     target = obj.getDouble("target_value"),
                     unit = obj.getString("unit"),
-                    startDate = obj.optString("start_date", null),
-                    endDate = obj.optString("end_date", null),
-                    createdAt = obj.optString("created_at", null),
+                    startDate = obj.optString("start_date"),
+                    endDate = obj.optString("end_date"),
+                    createdAt = obj.optString("created_at"),
                     description = obj.optString("description", ""),
-                    current = 0.0 // Always set to 0, will be calculated locally
+                    current = 0.0
                 )
             )
         }
@@ -139,13 +140,8 @@ fun EditGoalDialog(
     var error by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
 
-    val isFormValid = title.isNotBlank()
-            && target.toDoubleOrNull() != null
-            && unit.isNotBlank()
-            && selectedWorkoutType != null
-            && selectedGoalType != null
-            && startDate.isNotBlank()
-            && endDate.isNotBlank()
+    val isFormValid = title.isNotBlank() && target.toDoubleOrNull() != null && unit.isNotBlank() &&
+            startDate.isNotBlank() && endDate.isNotBlank()
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -161,7 +157,7 @@ fun EditGoalDialog(
                 Spacer(Modifier.height(8.dp))
                 ExposedDropdownMenuBoxDisplayName(
                     label = "Workout Type",
-                    options = WorkoutType.values().toList(),
+                    options = WorkoutType.entries,
                     selected = selectedWorkoutType,
                     displayName = { it.displayName },
                     placeholder = "Selecteer workout type",
@@ -170,7 +166,7 @@ fun EditGoalDialog(
                 Spacer(Modifier.height(8.dp))
                 ExposedDropdownMenuBoxDisplayName(
                     label = "Doel Type",
-                    options = GoalType.values().toList(),
+                    options = GoalType.entries,
                     selected = selectedGoalType,
                     displayName = { it.displayName },
                     placeholder = "Selecteer doel type",
@@ -258,7 +254,7 @@ fun EditGoalDialog(
                     error = null
                     coroutineScope.launch {
                         val success = updateGoal(
-                            goal.id!!, title, selectedWorkoutType!!, selectedGoalType!!,
+                            goal.id!!, title, selectedWorkoutType, selectedGoalType,
                             target.toDouble(), unit, startDate, endDate
                         )
                         isLoading = false
@@ -301,9 +297,8 @@ suspend fun updateGoal(
         if (!endDate.isNullOrBlank()) append(",\"end_date\":\"$endDate\"")
         append("}")
     }
-    val body = okhttp3.RequestBody.create(
-        "application/json".toMediaTypeOrNull(), json
-    )
+    val body = json
+        .toRequestBody("application/json".toMediaTypeOrNull())
     val request = Request.Builder()
         .url("https://attsgwsxdlblbqxnboqx.supabase.co/rest/v1/goals?id=eq.$goalId")
         .addHeader("apikey", BuildConfig.SUPABASE_ANON_KEY)
@@ -362,7 +357,7 @@ fun AddGoalDialog(
                 Spacer(Modifier.height(8.dp))
                 ExposedDropdownMenuBoxDisplayName(
                     label = "Workout Type",
-                    options = WorkoutType.values().toList(),
+                    options = WorkoutType.entries,
                     selected = selectedWorkoutType,
                     displayName = { it.displayName },
                     placeholder = "Selecteer workout type",
@@ -371,7 +366,7 @@ fun AddGoalDialog(
                 Spacer(Modifier.height(8.dp))
                 ExposedDropdownMenuBoxDisplayName(
                     label = "Doel Type",
-                    options = GoalType.values().toList(),
+                    options = GoalType.entries,
                     selected = selectedGoalType,
                     displayName = { it.displayName },
                     placeholder = "Selecteer doel type",
@@ -569,7 +564,7 @@ suspend fun createGoal(
     endDate: String?
 ): Boolean = withContext(Dispatchers.IO) {
     val client = OkHttpClient()
-    val now = java.time.LocalDate.now().toString()
+    val now = LocalDate.now().toString()
     val json = buildString {
         append("{")
         append("\"profile_id\":\"$userId\",")
@@ -583,9 +578,8 @@ suspend fun createGoal(
         if (!endDate.isNullOrBlank()) append(",\"end_date\":\"$endDate\"")
         append("}")
     }
-    val body = okhttp3.RequestBody.create(
-        "application/json".toMediaTypeOrNull(), json
-    )
+    val body = json
+        .toRequestBody("application/json".toMediaTypeOrNull())
     val request = Request.Builder()
         .url("https://attsgwsxdlblbqxnboqx.supabase.co/rest/v1/goals")
         .addHeader("apikey", BuildConfig.SUPABASE_ANON_KEY)
@@ -724,6 +718,7 @@ fun GoalCard(
     }
 }
 
+@SuppressLint("AutoboxingStateCreation")
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -733,7 +728,7 @@ fun GoalsScreen(navController: NavController) {
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var showAddGoalDialog by remember { mutableStateOf(false) }
-    var refreshTrigger by remember { mutableStateOf(0) }
+    var refreshTrigger by remember { mutableIntStateOf(0) }
     var goalToEdit by remember { mutableStateOf<Goal?>(null) }
     var goalToDelete by remember { mutableStateOf<Goal?>(null) }
 
