@@ -64,7 +64,7 @@ suspend fun fetchWorkouts(userId: String): List<Workout> = withContext(Dispatche
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun HistoryScreen(navController: NavController) {
+fun HistoryScreen(navController: NavController, selectedLanguage: String) {
     val context = LocalContext.current
     var workouts by remember { mutableStateOf<List<Workout>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -92,26 +92,21 @@ fun HistoryScreen(navController: NavController) {
         isLoading = false
     }
 
-    // Filter and sort workouts by date descending
     val filteredWorkouts = selectedType?.let { type ->
         workouts.filter { it.workoutTypeEnum == type }
     } ?: workouts
 
     val sortedWorkouts = filteredWorkouts.sortedByDescending { it.date }
 
-    // Group by month string
     val workoutsByMonth = sortedWorkouts.groupBy {
         val localDate = LocalDate.parse(it.date)
-        Month.of(localDate.monthValue).getDisplayName(TextStyle.FULL, Locale.getDefault()) + " " + localDate.year
+        Pair(localDate.year, localDate.monthValue)
     }
 
-    // Order months descending (most recent first)
-    val monthsOrdered = workoutsByMonth.keys.sortedByDescending { key ->
-        val parts = key.split(" ")
-        val month = Month.valueOf(parts[0].uppercase(Locale.getDefault()))
-        val year = parts[1].toInt()
-        year * 100 + month.value
+    val monthsOrdered = workoutsByMonth.keys.sortedByDescending {
+        (year, month) -> year * 100 + month
     }
+
 
     Scaffold(
         bottomBar = {
@@ -180,11 +175,14 @@ fun HistoryScreen(navController: NavController) {
                     LazyColumn(
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        monthsOrdered.forEach { month ->
-                            val monthWorkouts = workoutsByMonth[month] ?: emptyList()
+                        monthsOrdered.forEach { (year, month) ->
+                            val monthLocale = Locale(selectedLanguage)
+                            val monthName = Month.of(month).getDisplayName(TextStyle.FULL, monthLocale)
+                            val header = "$monthName $year"
+                            val monthWorkouts = workoutsByMonth[Pair(year, month)] ?: emptyList()
                             item {
                                 Text(
-                                    text = month,
+                                    text = header,
                                     style = MaterialTheme.typography.titleMedium,
                                     modifier = Modifier.padding(vertical = 8.dp)
                                 )
