@@ -14,6 +14,8 @@ import androidx.compose.ui.platform.LocalContext
 import com.example.workoutbuddyapplication.models.Exercise
 import com.example.workoutbuddyapplication.screens.*
 import com.example.workoutbuddyapplication.ui.theme.UserPreferencesManager
+import com.example.workoutbuddyapplication.data.SupabaseClient
+import io.github.jan.supabase.gotrue.auth
 import org.json.JSONObject
 import androidx.compose.runtime.getValue
 
@@ -75,7 +77,8 @@ fun AppNavigation(navController: NavHostController) {
             StatsScreen(navController = navController)
         }
         composable(Screen.Goals.route) {
-            GoalsScreen(navController = navController)
+            val userId = SupabaseClient.client.auth.currentUserOrNull()?.id ?: ""
+            GoalsScreen(navController = navController, userId = userId)
         }
         composable(Screen.StartWorkout.route) {
             StartWorkoutScreen(navController = navController)
@@ -106,7 +109,7 @@ fun AppNavigation(navController: NavHostController) {
             WorkoutCompletedScreen(
                 navController = navController,
                 duration = duration,
-                distance = distance,
+                workoutDistance = distance,
                 calories = calories,
                 steps = steps
             )
