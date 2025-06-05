@@ -29,7 +29,13 @@ import androidx.navigation.NavController
 import com.example.workoutbuddyapplication.navigation.Screen
 
 @Composable
-fun WorkoutCompletedScreen(navController: NavController) {
+fun WorkoutCompletedScreen(
+    navController: NavController,
+    duration: String,
+    distance: String,
+    calories: Int,
+    steps: Int
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -82,35 +88,53 @@ fun WorkoutCompletedScreen(navController: NavController) {
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "Duur",
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
-                            text = "45:30",
+                            text = duration,
                             fontWeight = FontWeight.Bold
                         )
                     }
 
-                    Column {
-                        Text(
-                            text = "Calorieën",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            text = "320 kcal",
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "Afstand",
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
-                            text = "5.2 km",
+                            text = distance,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Calorieën",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = "$calories kcal",
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Stappen",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = "$steps",
                             fontWeight = FontWeight.Bold
                         )
                     }

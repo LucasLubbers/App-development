@@ -467,7 +467,18 @@ fun RunningWorkoutScreen(navController: NavController) {
                 }
 
                 FloatingActionButton(
-                    onClick = { navController.navigate(Screen.WorkoutCompleted.route) },
+                    onClick = { 
+                        val formattedDuration = formatTime(elapsedTime)
+                        val formattedDistance = UnitConverter.formatDistance(distance, unitSystem)
+                        navController.navigate(
+                            Screen.WorkoutCompleted.createRoute(
+                                duration = formattedDuration,
+                                distance = formattedDistance,
+                                calories = calories,
+                                steps = steps
+                            )
+                        )
+                    },
                     containerColor = MaterialTheme.colorScheme.errorContainer
                 ) {
                     Icon(

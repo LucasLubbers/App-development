@@ -239,7 +239,17 @@ fun YogaWorkoutScreen(navController: NavController) {
                 }
 
                 FloatingActionButton(
-                    onClick = { navController.navigate(Screen.WorkoutCompleted.route) },
+                    onClick = { 
+                        val formattedDuration = formatTime(elapsedTime)
+                        navController.navigate(
+                            Screen.WorkoutCompleted.createRoute(
+                                duration = formattedDuration,
+                                distance = "0.00 km",
+                                calories = calories,
+                                steps = 0
+                            )
+                        )
+                    },
                     containerColor = MaterialTheme.colorScheme.errorContainer
                 ) {
                     Icon(

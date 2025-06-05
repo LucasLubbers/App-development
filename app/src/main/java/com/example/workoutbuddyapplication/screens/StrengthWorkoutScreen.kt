@@ -399,7 +399,17 @@ fun StrengthWorkoutScreen(navController: NavController) {
             
             // Stop Workout Button
             Button(
-                onClick = { navController.navigate(Screen.WorkoutCompleted.route) },
+                onClick = { 
+                    val formattedDuration = formatTime(elapsedTime)
+                    navController.navigate(
+                        Screen.WorkoutCompleted.createRoute(
+                            duration = formattedDuration,
+                            distance = "0.00 km",
+                            calories = calories,
+                            steps = 0
+                        )
+                    )
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
