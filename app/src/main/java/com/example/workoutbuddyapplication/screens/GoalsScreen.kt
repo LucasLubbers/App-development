@@ -135,9 +135,8 @@ fun EditGoalDialog(
 ) {
     var title by remember { mutableStateOf(goal.title) }
     var target by remember { mutableStateOf(goal.target.toString()) }
-    var unit by remember { mutableStateOf(goal.unit) }
     var selectedWorkoutType by remember { mutableStateOf(goal.workoutType) }
-    var selectedGoalType by remember { mutableStateOf(goal.goalType) }
+    var selectedGoalType by remember { mutableStateOf<GoalType?>(goal.goalType) }
     var startDate by remember { mutableStateOf(goal.startDate ?: "") }
     var endDate by remember { mutableStateOf(goal.endDate ?: "") }
     var isStartDatePickerOpen by remember { mutableStateOf(false) }
@@ -146,12 +145,29 @@ fun EditGoalDialog(
     var error by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
 
-    val isFormValid = title.isNotBlank() && target.toDoubleOrNull() != null && unit.isNotBlank() &&
+    // Filter goal types based on workout type
+    val availableGoalTypes = when (selectedWorkoutType) {
+        null -> emptyList()
+        WorkoutType.STRENGTH, WorkoutType.YOGA -> listOf(GoalType.COUNT, GoalType.TIME)
+        else -> listOf(GoalType.COUNT, GoalType.DISTANCE, GoalType.TIME, GoalType.CALORIES)
+    }
+
+    // Auto-fill unit based on goal type
+    val unit = when (selectedGoalType) {
+        GoalType.TIME -> "min"
+        GoalType.DISTANCE -> "km"
+        GoalType.COUNT -> "workouts"
+        GoalType.CALORIES -> "kcal"
+        else -> ""
+    }
+
+    val isFormValid = title.isNotBlank() && target.toDoubleOrNull() != null &&
+            selectedWorkoutType != null && selectedGoalType != null &&
             startDate.isNotBlank() && endDate.isNotBlank()
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Doel Bewerken") },
+        title = { Text("Nieuw Doel") },
         text = {
             Column {
                 OutlinedTextField(
@@ -161,22 +177,28 @@ fun EditGoalDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(8.dp))
+                // Workout type selection
                 ExposedDropdownMenuBoxDisplayName(
                     label = "Workout Type",
                     options = WorkoutType.entries,
                     selected = selectedWorkoutType,
                     displayName = { it.displayName },
                     placeholder = "Selecteer workout type",
-                    onSelected = { selectedWorkoutType = it }
+                    onSelected = {
+                        selectedWorkoutType = it
+                        selectedGoalType = null
+                    }
                 )
                 Spacer(Modifier.height(8.dp))
+                // Goal type selection, disabled if no workout type
                 ExposedDropdownMenuBoxDisplayName(
                     label = "Doel Type",
-                    options = GoalType.entries,
+                    options = availableGoalTypes,
                     selected = selectedGoalType,
                     displayName = { it.displayName },
-                    placeholder = "Selecteer doel type",
-                    onSelected = { selectedGoalType = it }
+                    placeholder = if (selectedWorkoutType == null) "Eerst workout type kiezen" else "Selecteer doel type",
+                    onSelected = { selectedGoalType = it },
+                    enabled = selectedWorkoutType != null
                 )
                 Spacer(Modifier.height(8.dp))
                 Row(
@@ -187,13 +209,16 @@ fun EditGoalDialog(
                         value = target,
                         onValueChange = { target = it },
                         label = { Text("Waarde") },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        enabled = selectedGoalType != null
                     )
                     OutlinedTextField(
                         value = unit,
-                        onValueChange = { unit = it },
+                        onValueChange = {},
                         label = { Text("Eenheid") },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        readOnly = true,
+                        enabled = false
                     )
                 }
                 Spacer(Modifier.height(8.dp))
@@ -259,8 +284,8 @@ fun EditGoalDialog(
                     isLoading = true
                     error = null
                     coroutineScope.launch {
-                        val success = updateGoal(
-                            goal.id!!, title, selectedWorkoutType, selectedGoalType,
+                        val success = createGoal(
+                            userId, title, selectedWorkoutType!!, selectedGoalType!!,
                             target.toDouble(), unit, startDate, endDate
                         )
                         isLoading = false
@@ -329,7 +354,6 @@ fun AddGoalDialog(
 ) {
     var title by remember { mutableStateOf("") }
     var target by remember { mutableStateOf("") }
-    var unit by remember { mutableStateOf("") }
     var selectedWorkoutType by remember { mutableStateOf<WorkoutType?>(null) }
     var selectedGoalType by remember { mutableStateOf<GoalType?>(null) }
     var startDate by remember { mutableStateOf("") }
@@ -340,10 +364,24 @@ fun AddGoalDialog(
     var error by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
 
-    // Validation: all fields must be filled and target must be a valid number
+    // Filter goal types based on workout type
+    val availableGoalTypes = when (selectedWorkoutType) {
+        null -> emptyList()
+        WorkoutType.STRENGTH, WorkoutType.YOGA -> listOf(GoalType.COUNT, GoalType.TIME)
+        else -> listOf(GoalType.COUNT, GoalType.DISTANCE, GoalType.TIME, GoalType.CALORIES)
+    }
+
+    // Auto-fill unit based on goal type
+    val unit = when (selectedGoalType) {
+        GoalType.TIME -> "min"
+        GoalType.DISTANCE -> "km"
+        GoalType.COUNT -> "workouts"
+        GoalType.CALORIES -> "kcal"
+        else -> ""
+    }
+
     val isFormValid = title.isNotBlank()
             && target.toDoubleOrNull() != null
-            && unit.isNotBlank()
             && selectedWorkoutType != null
             && selectedGoalType != null
             && startDate.isNotBlank()
@@ -361,22 +399,28 @@ fun AddGoalDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(8.dp))
+                // Workout type selection
                 ExposedDropdownMenuBoxDisplayName(
                     label = "Workout Type",
                     options = WorkoutType.entries,
                     selected = selectedWorkoutType,
                     displayName = { it.displayName },
                     placeholder = "Selecteer workout type",
-                    onSelected = { selectedWorkoutType = it }
+                    onSelected = {
+                        selectedWorkoutType = it
+                        selectedGoalType = null // Reset goal type when workout type changes
+                    }
                 )
                 Spacer(Modifier.height(8.dp))
+                // Goal type selection, disabled if no workout type
                 ExposedDropdownMenuBoxDisplayName(
                     label = "Doel Type",
-                    options = GoalType.entries,
+                    options = availableGoalTypes,
                     selected = selectedGoalType,
                     displayName = { it.displayName },
-                    placeholder = "Selecteer doel type",
-                    onSelected = { selectedGoalType = it }
+                    placeholder = if (selectedWorkoutType == null) "Eerst workout type kiezen" else "Selecteer doel type",
+                    onSelected = { selectedGoalType = it },
+                    enabled = selectedWorkoutType != null
                 )
                 Spacer(Modifier.height(8.dp))
                 Row(
@@ -387,13 +431,16 @@ fun AddGoalDialog(
                         value = target,
                         onValueChange = { target = it },
                         label = { Text("Waarde") },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        enabled = selectedGoalType != null
                     )
                     OutlinedTextField(
                         value = unit,
-                        onValueChange = { unit = it },
+                        onValueChange = {},
                         label = { Text("Eenheid") },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        readOnly = true,
+                        enabled = false
                     )
                 }
                 Spacer(Modifier.height(8.dp))
@@ -408,8 +455,7 @@ fun AddGoalDialog(
                             label = { Text("Startdatum") },
                             readOnly = true,
                             trailingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = null) },
-                            modifier = Modifier
-                                .fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth()
                         )
                         Box(
                             modifier = Modifier
@@ -424,8 +470,7 @@ fun AddGoalDialog(
                             label = { Text("Einddatum") },
                             readOnly = true,
                             trailingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = null) },
-                            modifier = Modifier
-                                .fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth()
                         )
                         Box(
                             modifier = Modifier
@@ -491,7 +536,8 @@ fun <T> ExposedDropdownMenuBoxDisplayName(
     selected: T?,
     displayName: (T) -> String,
     placeholder: String,
-    onSelected: (T) -> Unit
+    onSelected: (T) -> Unit,
+    enabled: Boolean = true // <-- Add this line
 ) {
     var expanded by remember { mutableStateOf(false) }
     ExposedDropdownMenuBox(
@@ -507,7 +553,8 @@ fun <T> ExposedDropdownMenuBoxDisplayName(
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier
                 .menuAnchor()
-                .fillMaxWidth()
+                .fillMaxWidth(),
+            enabled = enabled // <-- Use it here
         )
         ExposedDropdownMenu(
             expanded = expanded,
