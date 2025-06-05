@@ -27,9 +27,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.workoutbuddyapplication.navigation.Screen
+import com.example.workoutbuddyapplication.ui.theme.strings
 
 @Composable
-fun WorkoutCompletedScreen(navController: NavController) {
+fun WorkoutCompletedScreen(
+    navController: NavController,
+    duration: String,
+    workoutDistance: String,
+    calories: Int,
+    steps: Int
+) {
+    val strings = strings()
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -39,7 +47,7 @@ fun WorkoutCompletedScreen(navController: NavController) {
     ) {
         Icon(
             Icons.Default.Celebration,
-            contentDescription = "Gefeliciteerd",
+            contentDescription = strings.congratulations,
             modifier = Modifier.size(100.dp),
             tint = MaterialTheme.colorScheme.primary
         )
@@ -47,7 +55,7 @@ fun WorkoutCompletedScreen(navController: NavController) {
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "Workout Voltooid!",
+            text = strings.workoutCompleted,
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold
         )
@@ -55,7 +63,7 @@ fun WorkoutCompletedScreen(navController: NavController) {
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Goed gedaan! Je hebt je workout succesvol afgerond.",
+            text = strings.wellDone,
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.padding(horizontal = 32.dp)
         )
@@ -71,7 +79,7 @@ fun WorkoutCompletedScreen(navController: NavController) {
                 modifier = Modifier.padding(16.dp)
             ) {
                 Text(
-                    text = "Workout Samenvatting",
+                    text = strings.workoutSummary,
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp
                 )
@@ -82,35 +90,53 @@ fun WorkoutCompletedScreen(navController: NavController) {
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Duur",
+                            text = strings.duration,
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
-                            text = "45:30",
+                            text = duration,
                             fontWeight = FontWeight.Bold
                         )
                     }
 
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Calorieën",
+                            text = strings.distance,
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
-                            text = "320 kcal",
+                            text = workoutDistance,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = strings.calories,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = "$calories kcal",
                             fontWeight = FontWeight.Bold
                         )
                     }
 
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Afstand",
+                            text = strings.steps,
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
-                            text = "5.2 km",
+                            text = "$steps",
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -124,7 +150,7 @@ fun WorkoutCompletedScreen(navController: NavController) {
             onClick = { navController.navigate(Screen.Dashboard.route) },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Terug naar Dashboard")
+            Text(strings.backToDashboard)
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -135,10 +161,10 @@ fun WorkoutCompletedScreen(navController: NavController) {
         ) {
             Icon(
                 Icons.Default.Share,
-                contentDescription = "Delen"
+                contentDescription = strings.share
             )
             Spacer(modifier = Modifier.padding(4.dp))
-            Text("Deel je prestatie")
+            Text(strings.sharePerformance)
         }
     }
 }

@@ -3,6 +3,7 @@ package com.example.workoutbuddyapplication.ui.theme
 import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import com.example.workoutbuddyapplication.screens.getUserId
 import com.example.workoutbuddyapplication.screens.updateUserLanguage
 import com.example.workoutbuddyapplication.screens.updateUserUnitSystem
@@ -16,6 +17,7 @@ class UserPreferencesManager(private val context: Context) {
     companion object {
         private val LANGUAGE_KEY = stringPreferencesKey("user_language")
         private val UNIT_SYSTEM_KEY = stringPreferencesKey("user_unit_system")
+        private val DEBUG_MODE_KEY = booleanPreferencesKey("debug_mode")
     }
 
     val selectedLanguage: Flow<String> = context.dataStore.data.map { preferences ->
@@ -24,6 +26,10 @@ class UserPreferencesManager(private val context: Context) {
 
     val selectedUnitSystem: Flow<String> = context.dataStore.data.map { preferences ->
         preferences[UNIT_SYSTEM_KEY] ?: "metric"
+    }
+
+    val debugMode: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[DEBUG_MODE_KEY] ?: false
     }
 
     suspend fun setLanguage(language: String) {
@@ -75,6 +81,12 @@ class UserPreferencesManager(private val context: Context) {
             }
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+    }
+
+    suspend fun setDebugMode(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[DEBUG_MODE_KEY] = enabled
         }
     }
 } 

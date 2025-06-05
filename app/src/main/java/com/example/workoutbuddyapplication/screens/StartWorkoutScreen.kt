@@ -43,22 +43,22 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.workoutbuddyapplication.navigation.Screen
+import com.example.workoutbuddyapplication.ui.theme.strings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StartWorkoutScreen(navController: NavController) {
+    val strings = strings()
     var selectedWorkoutType by remember { mutableStateOf(WorkoutType.RUNNING) }
-    var useGPS by remember { mutableStateOf(true) }
-    var useAccelerometer by remember { mutableStateOf(true) }
     var useBluetooth by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Workout Starten") },
+                title = { Text(strings.startWorkoutTitle) },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Terug")
+                        Icon(Icons.Default.ArrowBack, contentDescription = strings.back)
                     }
                 }
             )
@@ -73,7 +73,7 @@ fun StartWorkoutScreen(navController: NavController) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Kies je workout type",
+                text = strings.chooseWorkoutType,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Medium
             )
@@ -118,30 +118,12 @@ fun StartWorkoutScreen(navController: NavController) {
                         modifier = Modifier.padding(16.dp)
                     ) {
                         Text(
-                            text = "Tracking Opties",
+                            text = strings.trackingOptions,
                             fontWeight = FontWeight.Medium,
                             fontSize = 18.sp
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
-
-                        TrackingOption(
-                            title = "GPS-tracking",
-                            description = "Route en afstand automatisch vastleggen",
-                            isEnabled = useGPS,
-                            onToggle = { useGPS = it }
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        TrackingOption(
-                            title = "Accelerometer",
-                            description = "Nauwkeurige tracking van tempo en beweging",
-                            isEnabled = useAccelerometer,
-                            onToggle = { useAccelerometer = it }
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -150,12 +132,12 @@ fun StartWorkoutScreen(navController: NavController) {
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Bluetooth-apparaten",
+                                    text = strings.bluetoothDevices,
                                     fontWeight = FontWeight.Medium
                                 )
 
                                 Text(
-                                    text = "Verbind met smartwatch of sporthorloge",
+                                    text = strings.connectSmartwatch,
                                     style = MaterialTheme.typography.bodySmall
                                 )
                             }
@@ -178,7 +160,7 @@ fun StartWorkoutScreen(navController: NavController) {
                                     contentDescription = "Bluetooth"
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Apparaat koppelen")
+                                Text(strings.pairDevice)
                             }
                         }
                     }
@@ -198,7 +180,13 @@ fun StartWorkoutScreen(navController: NavController) {
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Start ${selectedWorkoutType.displayName}")
+                val workoutTypeName = when (selectedWorkoutType) {
+                    WorkoutType.RUNNING -> strings.running
+                    WorkoutType.STRENGTH -> strings.strengthTraining
+                    WorkoutType.YOGA -> strings.yoga
+                    else -> strings.running
+                }
+                Text("${strings.startWorkout.split(" ")[0]} $workoutTypeName")
             }
         }
     }
@@ -211,6 +199,8 @@ fun WorkoutTypeCard(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
+    val strings = strings()
+    
     Card(
         modifier = Modifier
             .size(100.dp)
@@ -237,8 +227,15 @@ fun WorkoutTypeCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            val workoutTypeName = when (type) {
+                WorkoutType.RUNNING -> strings.running
+                WorkoutType.STRENGTH -> strings.strengthTraining
+                WorkoutType.YOGA -> strings.yoga
+                else -> type.displayName
+            }
+
             Text(
-                text = type.displayName,
+                text = workoutTypeName,
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
             )

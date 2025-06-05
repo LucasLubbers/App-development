@@ -42,6 +42,7 @@ fun SettingsScreen(navController: NavController) {
     val isDarkMode by themeManager.isDarkMode.collectAsState(initial = false)
     val selectedLanguage by preferencesManager.selectedLanguage.collectAsState(initial = "nl")
     val selectedUnitSystem by preferencesManager.selectedUnitSystem.collectAsState(initial = "metric")
+    val debugMode by preferencesManager.debugMode.collectAsState(initial = false)
     val strings = strings()
 
     // Logout confirmation dialog
@@ -263,6 +264,48 @@ fun SettingsScreen(navController: NavController) {
                             onCheckedChange = { newValue ->
                                 coroutineScope.launch {
                                     themeManager.setDarkMode(newValue)
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+
+            item {
+                // Debug Mode Toggle
+                Card(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.BugReport,
+                            contentDescription = "Debug Mode",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Debug Mode",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = if (debugMode) "Mock GPS data voor testen" else "Gebruik echte GPS data",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = debugMode,
+                            onCheckedChange = { newValue ->
+                                coroutineScope.launch {
+                                    preferencesManager.setDebugMode(newValue)
                                 }
                             }
                         )
