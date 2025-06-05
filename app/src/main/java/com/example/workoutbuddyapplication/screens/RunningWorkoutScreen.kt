@@ -84,6 +84,17 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.collectAsState
 import com.example.workoutbuddyapplication.ui.theme.UserPreferencesManager
 import com.example.workoutbuddyapplication.ui.theme.toUnitSystem
+import com.example.workoutbuddyapplication.utils.LocationManager
+import com.example.workoutbuddyapplication.utils.LatLng
+import com.example.workoutbuddyapplication.components.OpenStreetMapView
+import com.example.workoutbuddyapplication.components.CartoMapStyle
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.mutableStateListOf
+import kotlinx.coroutines.launch
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 
 @Composable
 fun RunningWorkoutScreen(navController: NavController) {
@@ -91,6 +102,31 @@ fun RunningWorkoutScreen(navController: NavController) {
     val preferencesManager = remember { UserPreferencesManager(context) }
     val selectedUnitSystem by preferencesManager.selectedUnitSystem.collectAsState(initial = "metric")
     val unitSystem = selectedUnitSystem.toUnitSystem()
+    val debugMode by preferencesManager.debugMode.collectAsState(initial = false)
+    val coroutineScope = rememberCoroutineScope()
+    
+    // Permission handling
+    var hasLocationPermission by remember { 
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(
+                context, 
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        )
+    }
+    
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        hasLocationPermission = isGranted
+    }
+    
+    // Request permission on first load
+    LaunchedEffect(Unit) {
+        if (!hasLocationPermission) {
+            locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+    }
     
     var isRunning by remember { mutableStateOf(true) }
     var distance by remember { mutableStateOf(0.0) }
@@ -108,8 +144,16 @@ fun RunningWorkoutScreen(navController: NavController) {
     var useHeartRateZones by remember { mutableStateOf(false) }
     var targetHeartRateZone by remember { mutableIntStateOf(2) } // Zone 1-5
 
-    // Simulated route points for the map
-    val routePoints = remember { mutableListOf<Offset>() }
+    // Real location tracking variables
+    var currentLocation by remember { mutableStateOf<LatLng?>(null) }
+    val routePoints = remember { mutableStateListOf<LatLng>() }
+    var totalDistanceFromGPS by remember { mutableStateOf(0.0) }
+    
+    // Location manager
+    val locationManager = remember { LocationManager(context) }
+
+    // Simulated route points for the map (keeping as fallback)
+    val simulatedRoutePoints = remember { mutableListOf<Offset>() }
 
     // Simulated elevation data
     val elevationData = remember { mutableListOf<Float>() }
@@ -177,6 +221,49 @@ fun RunningWorkoutScreen(navController: NavController) {
         }
     }
 
+    // Location tracking effect
+    LaunchedEffect(isRunning, hasLocationPermission, debugMode) {
+        if (isRunning && hasLocationPermission && !debugMode) { // Only use real GPS if not in debug mode
+            locationManager.startLocationUpdates()
+            
+            // Collect location updates
+            launch {
+                locationManager.locationUpdates.collect { newLocation ->
+                    currentLocation = newLocation
+                    
+                    if (routePoints.isNotEmpty()) {
+                        val lastPoint = routePoints.last()
+                        val distanceToAdd = LocationManager.calculateDistance(lastPoint, newLocation) / 1000.0 // Convert to km
+                        totalDistanceFromGPS += distanceToAdd
+                        
+                        // Update distance with real GPS data
+                        distance = totalDistanceFromGPS
+                    }
+                    
+                    routePoints.add(newLocation)
+                }
+            }
+        } else {
+            locationManager.stopLocationUpdates()
+        }
+    }
+    
+    // Get initial location
+    LaunchedEffect(hasLocationPermission, debugMode) {
+        if (debugMode) {
+            // Use mock location for testing (Amsterdam coordinates)
+            val mockLocation = LatLng(52.3676, 4.9041)
+            currentLocation = mockLocation
+            routePoints.add(mockLocation)
+        } else if (hasLocationPermission) {
+            val initialLocation = locationManager.getCurrentLocation()
+            initialLocation?.let { 
+                currentLocation = it
+                routePoints.add(it)
+            }
+        }
+    }
+
     // Timer effect
     LaunchedEffect(isRunning) {
         val startTime = SystemClock.elapsedRealtime() - elapsedTime
@@ -184,38 +271,85 @@ fun RunningWorkoutScreen(navController: NavController) {
             elapsedTime = SystemClock.elapsedRealtime() - startTime
             delay(1000)
 
-            // Simulate distance increase (about 3 km/h)
-            if (isRunning) {
+            // Use real GPS distance if available, otherwise simulate
+            if (debugMode && currentLocation != null) {
+                // Debug mode: Simulate movement around mock location (stay near Amsterdam)
                 distance += 0.0008f
-
-                // Calculate pace (min/km)
-                if (distance > 0) {
-                    pace = elapsedTime / 60000f / distance
+                
+                val lastLocation = routePoints.lastOrNull() ?: currentLocation!!
+                
+                // Make smaller, more controlled movements (about 1-2 meters per second)
+                val angle = Math.random() * 2 * Math.PI
+                val movementDistance = 0.00001 + Math.random() * 0.00001 // Very small movement in degrees
+                val newLat = lastLocation.latitude + (cos(angle) * movementDistance)
+                val newLng = lastLocation.longitude + (sin(angle) * movementDistance)
+                
+                // Ensure we stay near Amsterdam (52.3676, 4.9041) - within ~1km radius
+                val amsterdamLat = 52.3676
+                val amsterdamLng = 4.9041
+                val maxDistance = 0.01 // About 1km in degrees
+                
+                val finalLat = if (kotlin.math.abs(newLat - amsterdamLat) > maxDistance) {
+                    amsterdamLat + (if (newLat > amsterdamLat) maxDistance else -maxDistance)
+                } else newLat
+                
+                val finalLng = if (kotlin.math.abs(newLng - amsterdamLng) > maxDistance) {
+                    amsterdamLng + (if (newLng > amsterdamLng) maxDistance else -maxDistance)
+                } else newLng
+                
+                val newLocation = LatLng(finalLat, finalLng)
+                currentLocation = newLocation
+                routePoints.add(newLocation)
+                
+                // Simulate realistic steps for running (about 160-180 steps per minute)
+                val stepsPerSecond = (160 + Math.random() * 20) / 60 // 160-180 steps per minute
+                steps += (2 + Math.random() * 2).toInt() // 2-4 steps per second
+                
+                // Simulate realistic calories for running (about 10-15 kcal per minute for average person)
+                val minutesElapsed = elapsedTime / 60000.0
+                val expectedCalories = (minutesElapsed * (12 + Math.random() * 3)).toInt() // 12-15 kcal/min
+                if (calories < expectedCalories) {
+                    calories = expectedCalories
                 }
-
-                // Simulate heart rate (between 120-150 bpm)
-                val newHeartRate = (120 + (Math.random() * 30).toInt())
-                heartRate = newHeartRate
-                heartRateData.add(newHeartRate)
-
-                // Simulate pace data
-                paceData.add(pace.toFloat())
-
-                // Simulate elevation (between 0-50m)
-                val newElevation = (Math.random() * 50).toFloat()
-                elevationData.add(newElevation)
-
-                // Add a new point to the route (simulated GPS data)
-                if (routePoints.isEmpty()) {
-                    routePoints.add(Offset(500f, 500f))
+            } else if (!hasLocationPermission || (routePoints.isEmpty() && !debugMode)) {
+                // Simulate distance increase (about 3 km/h) when no GPS
+                distance += 0.0008f
+                
+                // Add simulated points for fallback (only if no real GPS data)
+                if (simulatedRoutePoints.isEmpty()) {
+                    simulatedRoutePoints.add(Offset(500f, 500f))
                 } else {
-                    val lastPoint = routePoints.last()
+                    val lastPoint = simulatedRoutePoints.last()
                     val angle = Math.random() * 2 * Math.PI
                     val newX = lastPoint.x + (cos(angle) * 10).toFloat()
                     val newY = lastPoint.y + (sin(angle) * 10).toFloat()
-                    routePoints.add(Offset(newX, newY))
+                    simulatedRoutePoints.add(Offset(newX, newY))
                 }
             }
+
+            // Calculate pace (min/km)
+            if (distance > 0) {
+                pace = elapsedTime / 60000f / distance
+            }
+
+            // Simulate heart rate (between 120-150 bpm)
+            val newHeartRate = (120 + (Math.random() * 30).toInt())
+            heartRate = newHeartRate
+            heartRateData.add(newHeartRate)
+
+            // Simulate pace data
+            paceData.add(pace.toFloat())
+
+            // Simulate elevation (between 0-50m)
+            val newElevation = (Math.random() * 50).toFloat()
+            elevationData.add(newElevation)
+        }
+    }
+    
+    // Stop location updates when screen is disposed
+    DisposableEffect(Unit) {
+        onDispose {
+            locationManager.stopLocationUpdates()
         }
     }
 
@@ -629,40 +763,68 @@ fun RunningWorkoutScreen(navController: NavController) {
                 ) {
                     when (selectedTab) {
                         0 -> {
-                            // Route map
-                            Canvas(modifier = Modifier.fillMaxSize()) {
-                                if (routePoints.size > 1) {
-                                    val path = Path()
-                                    path.moveTo(routePoints[0].x, routePoints[0].y)
-
-                                    for (i in 1 until routePoints.size) {
-                                        path.lineTo(routePoints[i].x, routePoints[i].y)
+                            // OpenStreetMap with real location tracking
+                            if (hasLocationPermission) {
+                                OpenStreetMapView(
+                                    modifier = Modifier.fillMaxSize(),
+                                    currentLocation = currentLocation,
+                                    routePoints = routePoints.toList(),
+                                    mapStyle = CartoMapStyle.POSITRON // Clean, light style perfect for running
+                                )
+                            } else {
+                                // Show fallback or request permission
+                                Column(
+                                    modifier = Modifier.fillMaxSize(),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Text("Locatie toegang nodig voor kaart")
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Button(
+                                        onClick = { 
+                                            locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                                        }
+                                    ) {
+                                        Text("Toegang verlenen")
                                     }
+                                    
+                                    // Show simulated route as fallback
+                                    if (simulatedRoutePoints.isNotEmpty()) {
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                        Text("Gesimuleerde route:")
+                                        
+                                        Canvas(modifier = Modifier.size(200.dp)) {
+                                            if (simulatedRoutePoints.size > 1) {
+                                                val path = Path()
+                                                path.moveTo(simulatedRoutePoints[0].x, simulatedRoutePoints[0].y)
 
-                                    drawPath(
-                                        path = path,
-                                        color = Color.Blue,
-                                        style = Stroke(width = 5f)
-                                    )
+                                                for (i in 1 until simulatedRoutePoints.size) {
+                                                    path.lineTo(simulatedRoutePoints[i].x, simulatedRoutePoints[i].y)
+                                                }
 
-                                    // Draw start point
-                                    drawCircle(
-                                        color = Color.Green,
-                                        radius = 10f,
-                                        center = routePoints.first()
-                                    )
+                                                drawPath(
+                                                    path = path,
+                                                    color = Color.Blue,
+                                                    style = Stroke(width = 5f)
+                                                )
 
-                                    // Draw current position
-                                    drawCircle(
-                                        color = Color.Red,
-                                        radius = 10f,
-                                        center = routePoints.last()
-                                    )
+                                                // Draw start point
+                                                drawCircle(
+                                                    color = Color.Green,
+                                                    radius = 10f,
+                                                    center = simulatedRoutePoints.first()
+                                                )
+
+                                                // Draw current position
+                                                drawCircle(
+                                                    color = Color.Red,
+                                                    radius = 10f,
+                                                    center = simulatedRoutePoints.last()
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
-                            }
-
-                            if (routePoints.isEmpty()) {
-                                Text("GPS-signaal zoeken...")
                             }
                         }
                         1 -> {

@@ -55,8 +55,8 @@ object UnitConverter {
      */
     fun formatDistance(distanceInKm: Double, unitSystem: UnitSystem): String {
         return when (unitSystem) {
-            UnitSystem.METRIC -> "${distanceInKm} km"
-            UnitSystem.IMPERIAL -> "${kmToMiles(distanceInKm)} mi"
+            UnitSystem.METRIC -> String.format("%.2f km", distanceInKm)
+            UnitSystem.IMPERIAL -> String.format("%.2f mi", kmToMiles(distanceInKm))
         }
     }
 

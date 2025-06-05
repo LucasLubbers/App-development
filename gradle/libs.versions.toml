@@ -33,6 +33,7 @@ roomRuntimeAndroid = "2.7.1"
 transportRuntime = "4.0.0"
 datastoreCoreAndroid = "1.1.5"
 playServicesLocation = "21.3.0"
+osmdroid = "6.1.18"
 cameraCore = "1.4.2"
 cameraLifecycle = "1.4.2"
 cameraView = "1.4.2"
@@ -79,6 +80,7 @@ hilt-compiler = { module = "com.google.dagger:hilt-android-compiler", version = 
 androidx-datastore-core-android = { group = "androidx.datastore", name = "datastore-core-android", version.ref = "datastoreCoreAndroid" }
 compose-ui = { module = "androidx.compose.ui:ui", version.ref = "compose" }
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
+osmdroid-android = { group = "org.osmdroid", name = "osmdroid-android", version.ref = "osmdroid" }
 androidx-camera-core = { group = "androidx.camera", name = "camera-core", version.ref = "cameraCore" }
 androidx-camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "cameraLifecycle" }
 androidx-camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "cameraView" }

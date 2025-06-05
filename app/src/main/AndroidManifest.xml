@@ -12,6 +12,9 @@
 
     <!-- Needed for Android 12+ -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    
+    <!-- Internet permission for OpenStreetMap tiles -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:allowBackup="true"
