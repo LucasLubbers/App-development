@@ -114,7 +114,7 @@ fun SettingsScreen(navController: NavController) {
                     title = strings.notifications,
                     subtitle = strings.notificationsSubtitle,
                     icon = Icons.Default.Notifications,
-                    onClick = { /* TODO: Implement notifications settings */ }
+                    onClick = { navController.navigate(Screen.NotificationSettings.route) }
                 )
             }
 
@@ -365,4 +365,4 @@ fun SettingsItem(
             )
         }
     }
-} 
+}
