@@ -31,6 +31,7 @@ sealed class Screen(val route: String) {
     object Stats : Screen("stats")
     object Goals : Screen("goals")
     object Settings : Screen("settings")
+    object NotificationSettings : Screen("notification_settings")
     object StartWorkout : Screen("start_workout")
     object RunningWorkout : Screen("running_workout")
     object StrengthWorkout : Screen("strength_workout")
@@ -125,6 +126,9 @@ fun AppNavigation(navController: NavHostController) {
         }
         composable(Screen.Settings.route) {
             SettingsScreen(navController = navController)
+        }
+        composable(Screen.NotificationSettings.route) {
+            NotificationSettingsScreen(navController = navController)
         }
         composable(
             route = "workoutDetail/{workoutId}/{selectedTabIndex}",

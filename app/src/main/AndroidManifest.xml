@@ -16,6 +16,9 @@
     <!-- Internet permission for OpenStreetMap tiles -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Notification permission -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"

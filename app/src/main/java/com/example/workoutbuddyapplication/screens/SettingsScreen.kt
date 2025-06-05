@@ -111,7 +111,7 @@ fun SettingsScreen(navController: NavController) {
                     title = stringResource(R.string.notifications),
                     subtitle = stringResource(R.string.notifications_subtitle),
                     icon = Icons.Default.Notifications,
-                    onClick = { /* Navigate to notifications settings */ }
+                    onClick = { navController.navigate(Screen.NotificationSettings.route) }
                 )
             }
 
@@ -408,4 +408,4 @@ fun SettingsItem(
             )
         }
     }
-} 
+}
