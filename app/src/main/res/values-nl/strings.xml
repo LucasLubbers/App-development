@@ -258,6 +258,8 @@
     <string name="edit_profile">Profiel bewerken</string>
     <string name="edit_profile_subtitle">Pas je profielgegevens aan</string>
     <string name="notifications">Notificaties</string>
+    <string name="enable_notifications">Notificaties inschakelen</string>
+    <string name="test_notification">Test Notificatie</string>
     <string name="notifications_subtitle">Beheer je notificatie-instellingen</string>
     <string name="units">Eenheden</string>
     <string name="metric">Metrisch (kg, km)</string>

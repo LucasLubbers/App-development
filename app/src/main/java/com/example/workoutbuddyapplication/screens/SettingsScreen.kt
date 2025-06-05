@@ -321,7 +321,8 @@ fun SettingsScreen(navController: NavController) {
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.errorContainer
-                    )
+                    ),
+                    onClick = { showLogoutDialog = true }
                 ) {
                     Row(
                         modifier = Modifier
@@ -349,15 +350,11 @@ fun SettingsScreen(navController: NavController) {
                                 color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.7f)
                             )
                         }
-                        IconButton(
-                            onClick = { showLogoutDialog = true }
-                        ) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.ExitToApp,
-                                contentDescription = stringResource(R.string.logout),
-                                tint = MaterialTheme.colorScheme.onErrorContainer
-                            )
-                        }
+                        Icon(
+                            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onErrorContainer
+                        )
                     }
                 }
             }

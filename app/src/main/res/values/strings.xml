@@ -265,6 +265,8 @@
     <string name="edit_profile">Edit Profile</string>
     <string name="edit_profile_subtitle">Update your profile information</string>
     <string name="notifications">Notifications</string>
+    <string name="enable_notifications">Enable Notifications</string>
+    <string name="test_notification">Test Notification</string>
     <string name="notifications_subtitle">Manage your notification settings</string>
     <string name="units">Units</string>
     <string name="metric">Metric (kg, km)</string>

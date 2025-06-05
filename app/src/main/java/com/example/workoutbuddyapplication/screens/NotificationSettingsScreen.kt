@@ -13,11 +13,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
+import com.example.workoutbuddyapplication.R
 import com.example.workoutbuddyapplication.services.NotificationService
-import com.example.workoutbuddyapplication.ui.theme.strings
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -29,7 +30,6 @@ private val NOTIFICATIONS_ENABLED_KEY = booleanPreferencesKey("notifications_ena
 @Composable
 fun NotificationSettingsScreen(navController: NavController) {
     val context = LocalContext.current
-    val strings = strings()
     val coroutineScope = rememberCoroutineScope()
     var notificationsEnabled by remember { mutableStateOf(true) }
 
@@ -59,10 +59,10 @@ fun NotificationSettingsScreen(navController: NavController) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(strings.notifications) },
+                title = { Text(stringResource(R.string.notifications)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.back)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
@@ -80,7 +80,7 @@ fun NotificationSettingsScreen(navController: NavController) {
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "Enable Notifications",
+                    text = stringResource(R.string.enable_notifications),
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.weight(1f)
                 )
@@ -109,7 +109,7 @@ fun NotificationSettingsScreen(navController: NavController) {
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Test Notificatie")
+                Text(stringResource(R.string.test_notification))
             }
         }
     }
