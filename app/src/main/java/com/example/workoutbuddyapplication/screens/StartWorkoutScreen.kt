@@ -48,8 +48,6 @@ import com.example.workoutbuddyapplication.navigation.Screen
 @Composable
 fun StartWorkoutScreen(navController: NavController) {
     var selectedWorkoutType by remember { mutableStateOf(WorkoutType.RUNNING) }
-    var useGPS by remember { mutableStateOf(true) }
-    var useAccelerometer by remember { mutableStateOf(true) }
     var useBluetooth by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -124,24 +122,6 @@ fun StartWorkoutScreen(navController: NavController) {
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
-
-                        TrackingOption(
-                            title = "GPS-tracking",
-                            description = "Route en afstand automatisch vastleggen",
-                            isEnabled = useGPS,
-                            onToggle = { useGPS = it }
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        TrackingOption(
-                            title = "Accelerometer",
-                            description = "Nauwkeurige tracking van tempo en beweging",
-                            isEnabled = useAccelerometer,
-                            onToggle = { useAccelerometer = it }
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
