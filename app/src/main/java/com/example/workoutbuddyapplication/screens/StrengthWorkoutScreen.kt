@@ -92,6 +92,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.decodeFromString
+import com.example.workoutbuddyapplication.ui.theme.strings
+import com.example.workoutbuddyapplication.ui.theme.StringResources
+import com.example.workoutbuddyapplication.screens.StatCard
 
 data class ExerciseSet(
     val reps: Int,
@@ -118,6 +121,7 @@ data class AvailableExercise(
 
 @Composable
 fun StrengthWorkoutScreen(navController: NavController) {
+    val strings = strings()
     val context = LocalContext.current
     val preferencesManager = remember { UserPreferencesManager(context) }
     val selectedUnitSystem by preferencesManager.selectedUnitSystem.collectAsState(initial = "metric")
@@ -315,7 +319,7 @@ fun StrengthWorkoutScreen(navController: NavController) {
                 ) {
                     Icon(
                         Icons.Default.FitnessCenter,
-                        contentDescription = "Krachttraining",
+                        contentDescription = strings.strengthWorkoutTitle,
                         tint = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.size(24.dp)
                     )
@@ -324,7 +328,7 @@ fun StrengthWorkoutScreen(navController: NavController) {
                 Spacer(modifier = Modifier.padding(8.dp))
 
                 Text(
-                    text = "Krachttraining",
+                    text = strings.strengthWorkoutTitle,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -338,7 +342,7 @@ fun StrengthWorkoutScreen(navController: NavController) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 StatCard(
-                    title = "Tijd",
+                    title = strings.time,
                     value = formatTime(elapsedTime),
                     icon = Icons.Default.Timer,
                     modifier = Modifier.weight(1f)
@@ -347,7 +351,7 @@ fun StrengthWorkoutScreen(navController: NavController) {
                 Spacer(modifier = Modifier.padding(4.dp))
 
                 StatCard(
-                    title = "Calorieën",
+                    title = strings.calories,
                     value = "$calories kcal",
                     icon = Icons.Default.LocalFireDepartment,
                     modifier = Modifier.weight(1f)
@@ -369,7 +373,7 @@ fun StrengthWorkoutScreen(navController: NavController) {
                 shape = RoundedCornerShape(8.dp)
             ) {
                 Text(
-                    text = "Preset toevoegen",
+                    text = strings.addPreset,
                     fontSize = 18.sp,
                     color = Color.White
                 )
@@ -390,7 +394,7 @@ fun StrengthWorkoutScreen(navController: NavController) {
                 shape = RoundedCornerShape(8.dp)
             ) {
                 Text(
-                    text = "Oefeningen toevoegen",
+                    text = strings.addExercises,
                     fontSize = 18.sp
                 )
             }
@@ -399,7 +403,17 @@ fun StrengthWorkoutScreen(navController: NavController) {
             
             // Stop Workout Button
             Button(
-                onClick = { navController.navigate(Screen.WorkoutCompleted.route) },
+                onClick = { 
+                    val formattedDuration = formatTime(elapsedTime)
+                    navController.navigate(
+                        Screen.WorkoutCompleted.createRoute(
+                            duration = formattedDuration,
+                            distance = "0.00 km",
+                            calories = calories,
+                            steps = 0
+                        )
+                    )
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
@@ -410,7 +424,7 @@ fun StrengthWorkoutScreen(navController: NavController) {
                 shape = RoundedCornerShape(8.dp)
             ) {
                 Text(
-                    text = "Stop workout",
+                    text = strings.stopWorkout,
                     fontSize = 18.sp
                 )
             }
@@ -483,7 +497,8 @@ fun EnhancedExerciseCard(
     onDeleteExercise: (Exercise) -> Unit,
     onScanDevice: () -> Unit
 ) {
-    var expanded by remember { mutableStateOf(true) } // Default to expanded
+    val strings = strings()
+    var expanded by remember { mutableStateOf(true) }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
     var showRestTimeDialog by remember { mutableStateOf(false) }
@@ -521,10 +536,10 @@ fun EnhancedExerciseCard(
     if (showRestTimeDialog) {
         AlertDialog(
             onDismissRequest = { showRestTimeDialog = false },
-            title = { Text("Rust tijd instellen") },
+            title = { Text(strings.setRestTime) },
             text = {
                 Column {
-                    Text("Stel de rusttijd in minuten in voor ${exercise.name}")
+                    Text("${strings.setRestTimeFor} ${exercise.name}")
                     Spacer(modifier = Modifier.height(16.dp))
                     OutlinedTextField(
                         value = customRestTime,
@@ -539,7 +554,6 @@ fun EnhancedExerciseCard(
             confirmButton = {
                 Button(
                     onClick = { 
-                        // Parse the input as minutes:seconds and convert to seconds
                         val seconds = try {
                             if (customRestTime.contains(":")) {
                                 val parts = customRestTime.split(":")
@@ -547,36 +561,31 @@ fun EnhancedExerciseCard(
                                 val secs = parts[1].toIntOrNull() ?: 0
                                 minutes * 60 + secs
                             } else {
-                                // If just a number, assume it's minutes
                                 (customRestTime.toFloatOrNull() ?: 2f) * 60f
                             }.toInt()
                         } catch (e: Exception) {
-                            // Default to 2 minutes if parsing fails
                             120
                         }
                         
-                        // Just update the default rest time without activating the timer
                         defaultRestTimeSeconds = seconds
                         
-                        // Update all sets with the new rest time
                         for (i in exerciseSets.indices) {
                             exerciseSets[i] = exerciseSets[i].copy(restTime = seconds)
                         }
                         
-                        // Update the exercise's sets in the parent state
                         exercise.sets = exerciseSets.toList()
                         
                         showRestTimeDialog = false 
                     }
                 ) {
-                    Text("Update rust tijd")
+                    Text(strings.updateRestTime)
                 }
             },
             dismissButton = {
                 TextButton(
                     onClick = { showRestTimeDialog = false }
                 ) {
-                    Text("Annuleren")
+                    Text(strings.cancel)
                 }
             }
         )
@@ -607,7 +616,7 @@ fun EnhancedExerciseCard(
                 ) {
                     Icon(
                         Icons.Default.MoreVert,
-                        contentDescription = "Menu",
+                        contentDescription = strings.menu,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -617,7 +626,7 @@ fun EnhancedExerciseCard(
                     onDismissRequest = { showMenu = false }
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Rust tijd") },
+                        text = { Text(strings.restTime) },
                         leadingIcon = { Icon(Icons.Default.Timer, contentDescription = null) },
                         onClick = { 
                             showRestTimeDialog = true
@@ -625,7 +634,7 @@ fun EnhancedExerciseCard(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Verwijderen") },
+                        text = { Text(strings.delete) },
                         leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) },
                         onClick = { 
                             showDeleteConfirmation = true
@@ -645,13 +654,13 @@ fun EnhancedExerciseCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Set",
+                    text = strings.set,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.weight(0.5f),
                     fontSize = 12.sp
                 )
                 Text(
-                    text = "Vorige",
+                    text = strings.previous,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.weight(1.0f),
                     fontSize = 12.sp
@@ -663,7 +672,7 @@ fun EnhancedExerciseCard(
                     fontSize = 12.sp
                 )
                 Text(
-                    text = "reps",
+                    text = strings.reps,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.weight(0.8f),
                     fontSize = 12.sp
@@ -785,7 +794,7 @@ fun EnhancedExerciseCard(
                         ) {
                             Icon(
                                 Icons.Default.Check,
-                                contentDescription = "Voltooid",
+                                contentDescription = strings.completed,
                                 tint = if (completed) 
                                     MaterialTheme.colorScheme.primary 
                                 else 
@@ -816,11 +825,11 @@ fun EnhancedExerciseCard(
             ) {
                 Icon(
                     Icons.Default.Add,
-                    contentDescription = "Set toevoegen",
+                    contentDescription = strings.addSet,
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("Set toevoegen", fontSize = 14.sp)
+                Text(strings.addSet, fontSize = 14.sp)
             }
         }
         
@@ -830,8 +839,8 @@ fun EnhancedExerciseCard(
     if (showDeleteConfirmation) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirmation = false },
-            title = { Text("Oefening verwijderen") },
-            text = { Text("Weet je zeker dat je '${exercise.name}' wilt verwijderen?") },
+            title = { Text(strings.deleteExercise) },
+            text = { Text(String.format(strings.deleteExerciseConfirm, exercise.name)) },
             confirmButton = {
                 Button(
                     onClick = {
@@ -839,14 +848,14 @@ fun EnhancedExerciseCard(
                         showDeleteConfirmation = false
                     }
                 ) {
-                    Text("Verwijderen")
+                    Text(strings.delete)
                 }
             },
             dismissButton = {
                 TextButton(
                     onClick = { showDeleteConfirmation = false }
                 ) {
-                    Text("Annuleren")
+                    Text(strings.cancel)
                 }
             }
         )
@@ -855,6 +864,7 @@ fun EnhancedExerciseCard(
 
 @Composable
 fun CompactRestTimer(remainingSeconds: Int) {
+    val strings = strings()
     val minutes = remainingSeconds / 60
     val seconds = remainingSeconds % 60
     val formattedTime = String.format("%d:%02d", minutes, seconds)
@@ -878,7 +888,7 @@ fun CompactRestTimer(remainingSeconds: Int) {
         )
         Spacer(modifier = Modifier.width(12.dp))
         Text(
-            text = "RUST TIJD: $formattedTime",
+            text = String.format(strings.restTimeFormat, formattedTime),
             color = MaterialTheme.colorScheme.onPrimaryContainer,
             fontSize = 16.sp,
             fontWeight = FontWeight.Bold
@@ -920,6 +930,7 @@ fun ExerciseSelectorDialog(
     onDismiss: () -> Unit,
     onExerciseSelected: (AvailableExercise) -> Unit
 ) {
+    val strings = strings()
     var searchQuery by remember { mutableStateOf("") }
     
     val filteredExercises = remember(searchQuery, availableExercises) {
@@ -959,13 +970,13 @@ fun ExerciseSelectorDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Oefeningen",
+                        text = strings.exercises,
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
                     
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Sluiten")
+                        Icon(Icons.Default.Close, contentDescription = strings.close)
                     }
                 }
                 
@@ -975,8 +986,8 @@ fun ExerciseSelectorDialog(
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    placeholder = { Text("Zoek oefeningen...") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Zoeken") },
+                    placeholder = { Text(strings.searchExercises) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = strings.search) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
@@ -1025,6 +1036,7 @@ fun ExerciseItem(
     exercise: AvailableExercise,
     onExerciseClick: () -> Unit
 ) {
+    val strings = strings()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1049,7 +1061,7 @@ fun ExerciseItem(
         IconButton(onClick = onExerciseClick) {
             Icon(
                 Icons.Default.Add,
-                contentDescription = "Toevoegen",
+                contentDescription = strings.add,
                 tint = MaterialTheme.colorScheme.primary
             )
         }
@@ -1063,9 +1075,9 @@ fun PresetMenuDialog(
     onDismiss: () -> Unit,
     onPresetSelected: (List<Exercise>) -> Unit
 ) {
-    // Create dynamic presets based on available exercises
+    val strings = strings()
     val presets = remember(availableExercises, unitSystem) {
-        createWorkoutPresets(availableExercises, unitSystem)
+        createWorkoutPresets(availableExercises, unitSystem, strings)
     }
     
     Dialog(
@@ -1093,13 +1105,13 @@ fun PresetMenuDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Workout Presets",
+                        text = strings.workoutPresets,
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
                     
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Sluiten")
+                        Icon(Icons.Default.Close, contentDescription = strings.close)
                     }
                 }
                 
@@ -1131,26 +1143,27 @@ data class WorkoutPreset(
 )
 
 // Function to create dynamic presets based on available exercises
-fun createWorkoutPresets(availableExercises: List<AvailableExercise>, unitSystem: UnitSystem): List<WorkoutPreset> {
+fun createWorkoutPresets(
+    availableExercises: List<AvailableExercise>,
+    unitSystem: UnitSystem,
+    strings: StringResources
+): List<WorkoutPreset> {
     val presets = mutableListOf<WorkoutPreset>()
     
-    // Group exercises by muscle groups
     val exercisesByMuscle = availableExercises.groupBy { it.muscleGroup.lowercase() }
     
-    // Default weights based on unit system
-    val lightWeight = if (unitSystem == UnitSystem.IMPERIAL) 33.0 else 15.0 // 33 lbs ≈ 15 kg
-    val mediumWeight = if (unitSystem == UnitSystem.IMPERIAL) 44.0 else 20.0 // 44 lbs ≈ 20 kg  
-    val heavyWeight = if (unitSystem == UnitSystem.IMPERIAL) 88.0 else 40.0 // 88 lbs ≈ 40 kg
+    val lightWeight = if (unitSystem == UnitSystem.IMPERIAL) 33.0 else 15.0 
+    val mediumWeight = if (unitSystem == UnitSystem.IMPERIAL) 44.0 else 20.0 
+    val heavyWeight = if (unitSystem == UnitSystem.IMPERIAL) 88.0 else 40.0
     
-    // Push Workout (Chest, Shoulders, Triceps)
     val pushMuscles = listOf("borst", "chest", "schouders", "shoulders", "armen", "arms", "triceps")
     val pushExercises = exercisesByMuscle.filterKeys { muscle ->
         pushMuscles.any { pushMuscle -> muscle.contains(pushMuscle, ignoreCase = true) }
-    }.values.flatten().take(4) // Limit to 4 exercises
+    }.values.flatten().take(4)
     
     if (pushExercises.isNotEmpty()) {
         presets.add(WorkoutPreset(
-            name = "Push Workout",
+            name = strings.pushWorkout,
             exercises = pushExercises.map { exercise ->
                 Exercise(
                     name = exercise.name,
@@ -1166,7 +1179,6 @@ fun createWorkoutPresets(availableExercises: List<AvailableExercise>, unitSystem
         ))
     }
     
-    // Pull Workout (Back, Biceps)
     val pullMuscles = listOf("rug", "back", "biceps", "bicep")
     val pullExercises = exercisesByMuscle.filterKeys { muscle ->
         pullMuscles.any { pullMuscle -> muscle.contains(pullMuscle, ignoreCase = true) }
@@ -1174,7 +1186,7 @@ fun createWorkoutPresets(availableExercises: List<AvailableExercise>, unitSystem
     
     if (pullExercises.isNotEmpty()) {
         presets.add(WorkoutPreset(
-            name = "Pull Workout",
+            name = strings.pullWorkout,
             exercises = pullExercises.map { exercise ->
                 Exercise(
                     name = exercise.name,
@@ -1190,7 +1202,6 @@ fun createWorkoutPresets(availableExercises: List<AvailableExercise>, unitSystem
         ))
     }
     
-    // Leg Workout
     val legMuscles = listOf("benen", "legs", "leg", "quadriceps", "hamstring", "calves")
     val legExercises = exercisesByMuscle.filterKeys { muscle ->
         legMuscles.any { legMuscle -> muscle.contains(legMuscle, ignoreCase = true) }
@@ -1198,7 +1209,7 @@ fun createWorkoutPresets(availableExercises: List<AvailableExercise>, unitSystem
     
     if (legExercises.isNotEmpty()) {
         presets.add(WorkoutPreset(
-            name = "Leg Workout",
+            name = strings.legWorkout,
             exercises = legExercises.map { exercise ->
                 Exercise(
                     name = exercise.name,
@@ -1214,11 +1225,10 @@ fun createWorkoutPresets(availableExercises: List<AvailableExercise>, unitSystem
         ))
     }
     
-    // Full Body Workout (mix from all groups)
     if (availableExercises.size >= 5) {
-        val fullBodyExercises = availableExercises.shuffled().take(5) // Random selection
+        val fullBodyExercises = availableExercises.shuffled().take(5)
         presets.add(WorkoutPreset(
-            name = "Full Body Workout",
+            name = strings.fullBodyWorkout,
             exercises = fullBodyExercises.map { exercise ->
                 Exercise(
                     name = exercise.name,
@@ -1242,6 +1252,7 @@ fun PresetItem(
     exerciseCount: Int,
     onPresetClick: () -> Unit
 ) {
+    val strings = strings()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1266,14 +1277,14 @@ fun PresetItem(
         )
         
         Text(
-            text = "($exerciseCount oefeningen)",
+            text = String.format(strings.exercisesCountFormat, exerciseCount),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         
         Icon(
             Icons.Default.Add,
-            contentDescription = "Toevoegen",
+            contentDescription = strings.add,
             tint = MaterialTheme.colorScheme.primary
         )
     }

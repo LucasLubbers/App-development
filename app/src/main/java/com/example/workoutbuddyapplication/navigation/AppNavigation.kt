@@ -14,6 +14,8 @@ import androidx.compose.ui.platform.LocalContext
 import com.example.workoutbuddyapplication.models.Exercise
 import com.example.workoutbuddyapplication.screens.*
 import com.example.workoutbuddyapplication.ui.theme.UserPreferencesManager
+import com.example.workoutbuddyapplication.data.SupabaseClient
+import io.github.jan.supabase.gotrue.auth
 import org.json.JSONObject
 import androidx.compose.runtime.getValue
 
@@ -34,7 +36,10 @@ sealed class Screen(val route: String) {
     object RunningWorkout : Screen("running_workout")
     object StrengthWorkout : Screen("strength_workout")
     object YogaWorkout : Screen("yoga_workout")
-    object WorkoutCompleted : Screen("workout_completed")
+    object WorkoutCompleted : Screen("workout_completed/{duration}/{distance}/{calories}/{steps}") {
+        fun createRoute(duration: String, distance: String, calories: Int, steps: Int) = 
+            "workout_completed/$duration/$distance/$calories/$steps"
+    }
     object BluetoothDevice : Screen("bluetooth_device")
     object QRScanner : Screen("qr_scanner")
     object Exercises : Screen("exercises")
@@ -73,7 +78,8 @@ fun AppNavigation(navController: NavHostController) {
             StatsScreen(navController = navController)
         }
         composable(Screen.Goals.route) {
-            GoalsScreen(navController = navController)
+            val userId = SupabaseClient.client.auth.currentUserOrNull()?.id ?: ""
+            GoalsScreen(navController = navController, userId = userId)
         }
         composable(Screen.StartWorkout.route) {
             StartWorkoutScreen(navController = navController)
@@ -87,8 +93,27 @@ fun AppNavigation(navController: NavHostController) {
         composable(Screen.YogaWorkout.route) {
             YogaWorkoutScreen(navController = navController)
         }
-        composable(Screen.WorkoutCompleted.route) {
-            WorkoutCompletedScreen(navController = navController)
+        composable(
+            route = Screen.WorkoutCompleted.route,
+            arguments = listOf(
+                navArgument("duration") { type = NavType.StringType },
+                navArgument("distance") { type = NavType.StringType },
+                navArgument("calories") { type = NavType.IntType },
+                navArgument("steps") { type = NavType.IntType }
+            )
+        ) { backStackEntry ->
+            val duration = backStackEntry.arguments?.getString("duration") ?: "00:00"
+            val distance = backStackEntry.arguments?.getString("distance") ?: "0.00 km"
+            val calories = backStackEntry.arguments?.getInt("calories") ?: 0
+            val steps = backStackEntry.arguments?.getInt("steps") ?: 0
+            
+            WorkoutCompletedScreen(
+                navController = navController,
+                duration = duration,
+                workoutDistance = distance,
+                calories = calories,
+                steps = steps
+            )
         }
         composable(Screen.BluetoothDevice.route) {
             BluetoothDeviceScreen(navController = navController)
