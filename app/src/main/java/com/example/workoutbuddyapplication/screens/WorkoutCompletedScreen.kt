@@ -22,12 +22,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.workoutbuddyapplication.R
 import com.example.workoutbuddyapplication.navigation.Screen
-import com.example.workoutbuddyapplication.ui.theme.strings
 
 @Composable
 fun WorkoutCompletedScreen(
@@ -37,7 +38,6 @@ fun WorkoutCompletedScreen(
     calories: Int,
     steps: Int
 ) {
-    val strings = strings()
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -47,7 +47,7 @@ fun WorkoutCompletedScreen(
     ) {
         Icon(
             Icons.Default.Celebration,
-            contentDescription = strings.congratulations,
+            contentDescription = stringResource(R.string.congratulations),
             modifier = Modifier.size(100.dp),
             tint = MaterialTheme.colorScheme.primary
         )
@@ -55,7 +55,7 @@ fun WorkoutCompletedScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = strings.workoutCompleted,
+            text = stringResource(R.string.workout_completed),
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold
         )
@@ -63,7 +63,7 @@ fun WorkoutCompletedScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = strings.wellDone,
+            text = stringResource(R.string.well_done),
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.padding(horizontal = 32.dp)
         )
@@ -79,7 +79,7 @@ fun WorkoutCompletedScreen(
                 modifier = Modifier.padding(16.dp)
             ) {
                 Text(
-                    text = strings.workoutSummary,
+                    text = stringResource(R.string.workout_summary),
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp
                 )
@@ -92,7 +92,7 @@ fun WorkoutCompletedScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = strings.duration,
+                            text = stringResource(R.string.duration),
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
@@ -103,7 +103,7 @@ fun WorkoutCompletedScreen(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = strings.distance,
+                            text = stringResource(R.string.distance),
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
@@ -121,7 +121,7 @@ fun WorkoutCompletedScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = strings.calories,
+                            text = stringResource(R.string.calories),
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
@@ -132,7 +132,7 @@ fun WorkoutCompletedScreen(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = strings.steps,
+                            text = stringResource(R.string.steps),
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
@@ -150,7 +150,7 @@ fun WorkoutCompletedScreen(
             onClick = { navController.navigate(Screen.Dashboard.route) },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(strings.backToDashboard)
+            Text(stringResource(R.string.back_to_dashboard))
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -161,10 +161,10 @@ fun WorkoutCompletedScreen(
         ) {
             Icon(
                 Icons.Default.Share,
-                contentDescription = strings.share
+                contentDescription = stringResource(R.string.share)
             )
             Spacer(modifier = Modifier.padding(4.dp))
-            Text(strings.sharePerformance)
+            Text(stringResource(R.string.share_performance))
         }
     }
 }

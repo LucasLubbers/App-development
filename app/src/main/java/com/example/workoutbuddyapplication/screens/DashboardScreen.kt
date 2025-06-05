@@ -33,7 +33,6 @@ import com.example.workoutbuddyapplication.ui.theme.UnitSystem
 import com.example.workoutbuddyapplication.utils.UnitConverter
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.platform.LocalContext
-import com.example.workoutbuddyapplication.ui.theme.strings
 import com.example.workoutbuddyapplication.ui.theme.UserPreferencesManager
 import com.example.workoutbuddyapplication.ui.theme.toUnitSystem
 import kotlinx.coroutines.Dispatchers
@@ -45,10 +44,11 @@ import com.example.workoutbuddyapplication.BuildConfig
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.first
 import com.example.workoutbuddyapplication.ui.theme.dataStore
+import androidx.compose.ui.res.stringResource
+import com.example.workoutbuddyapplication.R
 
 @Composable
 fun SummaryCard(workouts: List<Workout> = emptyList(), unitSystem: UnitSystem = UnitSystem.METRIC) {
-    val strings = strings()
     val totalWorkouts = workouts.size
     val totalDistance = workouts.mapNotNull { it.distance }.sum()
     val totalDuration = workouts.sumOf { it.duration }
@@ -57,19 +57,19 @@ fun SummaryCard(workouts: List<Workout> = emptyList(), unitSystem: UnitSystem = 
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         StatCard(
-            title = strings.workouts,
+            title = stringResource(R.string.workouts),
             value = "$totalWorkouts",
             icon = Icons.Default.FitnessCenter,
             modifier = Modifier.weight(1f).padding(end = 4.dp)
         )
         StatCard(
-            title = strings.distance,
+            title = stringResource(R.string.distance),
             value = UnitConverter.formatDistance(totalDistance, unitSystem),
             icon = Icons.AutoMirrored.Filled.DirectionsRun,
             modifier = Modifier.weight(1f).padding(horizontal = 4.dp)
         )
         StatCard(
-            title = strings.time,
+            title = stringResource(R.string.time),
             value = "$totalDuration min",
             icon = Icons.Default.Timer,
             modifier = Modifier.weight(1f).padding(start = 4.dp)
@@ -86,7 +86,6 @@ fun DashboardScreen(navController: NavController) {
     val preferencesManager = remember { UserPreferencesManager(context) }
     val selectedUnitSystem by preferencesManager.selectedUnitSystem.collectAsState(initial = "metric")
     val unitSystem = selectedUnitSystem.toUnitSystem()
-    val strings = strings()
     
     var workouts by remember { mutableStateOf<List<Workout>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -113,12 +112,12 @@ fun DashboardScreen(navController: NavController) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(strings.appName) },
+                title = { Text(stringResource(R.string.app_name)) },
                 actions = {
                     IconButton(onClick = { navController.navigate(Screen.Settings.route) }) {
                         Icon(
                             imageVector = Icons.Default.Settings,
-                            contentDescription = strings.settings
+                            contentDescription = stringResource(R.string.settings)
                         )
                     }
                 }
@@ -134,8 +133,8 @@ fun DashboardScreen(navController: NavController) {
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { navController.navigate(Screen.StartWorkout.route) },
-                icon = { Icon(Icons.Default.PlayArrow, contentDescription = strings.startWorkout) },
-                text = { Text(strings.startWorkout) }
+                icon = { Icon(Icons.Default.PlayArrow, contentDescription = stringResource(R.string.start_workout)) },
+                text = { Text(stringResource(R.string.start_workout)) }
             )
         }
     ) { paddingValues ->
@@ -146,9 +145,10 @@ fun DashboardScreen(navController: NavController) {
                 .padding(16.dp)
         ) {
             Text(
-                text = strings.welcomeToAktiv,
+                text = stringResource(R.string.welcome_to_aktiv),
                 fontSize = 24.sp,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 16.dp)
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -157,22 +157,17 @@ fun DashboardScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = strings.recentWorkouts,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Medium
-                )
+            Text(
+                text = stringResource(R.string.recent_workouts),
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
 
-                TextButton(
-                    onClick = { navController.navigate(Screen.AddWorkout.route) }
-                ) {
-                    Text(strings.addManually)
-                }
+            TextButton(
+                onClick = { navController.navigate(Screen.AddWorkout.route) }
+            ) {
+                Text(stringResource(R.string.add_manually))
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -185,7 +180,7 @@ fun DashboardScreen(navController: NavController) {
                     Text(error!!, color = MaterialTheme.colorScheme.error)
                 }
                 workouts.isEmpty() -> {
-                    Text(strings.noWorkoutsFound)
+                    Text(stringResource(R.string.no_workouts_found))
                 }
                 else -> {
                     LazyColumn {
@@ -207,7 +202,6 @@ fun DashboardScreen(navController: NavController) {
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun WorkoutItem(workout: Workout, unitSystem: UnitSystem = UnitSystem.METRIC, onClick: () -> Unit = {}) {
-    val strings = strings()
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -236,7 +230,7 @@ fun WorkoutItem(workout: Workout, unitSystem: UnitSystem = UnitSystem.METRIC, on
                     style = MaterialTheme.typography.bodySmall
                 )
                 Text(
-                    text = "${workout.duration} ${strings.minutes}" +
+                    text = "${workout.duration} ${stringResource(R.string.minutes)}" +
                             (workout.distance?.let { " | ${UnitConverter.formatDistance(it, unitSystem)}" } ?: ""),
                     style = MaterialTheme.typography.bodySmall
                 )

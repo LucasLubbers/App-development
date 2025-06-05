@@ -1,11 +1,16 @@
 package com.example.workoutbuddyapplication.screens
 
+import android.Manifest
 import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.os.Build
 import android.os.SystemClock
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -51,12 +56,15 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,36 +74,33 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
+import com.example.workoutbuddyapplication.R
+import com.example.workoutbuddyapplication.components.CartoMapStyle
+import com.example.workoutbuddyapplication.components.OpenStreetMapView
 import com.example.workoutbuddyapplication.navigation.Screen
-import kotlinx.coroutines.delay
-import kotlin.math.cos
-import kotlin.math.sin
-import androidx.compose.ui.graphics.vector.ImageVector
 import com.example.workoutbuddyapplication.ui.theme.ThemeManager
 import com.example.workoutbuddyapplication.ui.theme.UnitSystem
-import com.example.workoutbuddyapplication.utils.UnitConverter
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.collectAsState
 import com.example.workoutbuddyapplication.ui.theme.UserPreferencesManager
 import com.example.workoutbuddyapplication.ui.theme.toUnitSystem
-import com.example.workoutbuddyapplication.utils.LocationManager
 import com.example.workoutbuddyapplication.utils.LatLng
-import com.example.workoutbuddyapplication.components.OpenStreetMapView
-import com.example.workoutbuddyapplication.components.CartoMapStyle
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.mutableStateListOf
+import com.example.workoutbuddyapplication.utils.LocationManager
+import com.example.workoutbuddyapplication.utils.UnitConverter
+import com.example.workoutbuddyapplication.utils.formatTime
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import android.Manifest
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.ContextCompat
+import kotlin.math.cos
+import kotlin.math.sin
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun RunningWorkoutScreen(navController: NavController) {
     val context = LocalContext.current
@@ -356,96 +361,40 @@ fun RunningWorkoutScreen(navController: NavController) {
     if (showGoalDialog) {
         AlertDialog(
             onDismissRequest = { showGoalDialog = false },
-            title = { Text("Stel je doel in") },
+            title = { Text(stringResource(R.string.set_goal)) },
             text = {
                 Column {
-                    Text("Afstand (km)")
                     OutlinedTextField(
                         value = targetDistanceInput,
                         onValueChange = { targetDistanceInput = it },
-                        label = { Text("Doel afstand (${UnitConverter.getDistanceUnit(unitSystem)})") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        label = { Text(stringResource(R.string.goal_distance)) },
                         modifier = Modifier.fillMaxWidth()
                     )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Text("Tijd (minuten)")
-                    Slider(
-                        value = targetTime.toFloat(),
-                        onValueChange = { targetTime = it.toInt() },
-                        valueRange = 5f..180f,
-                        steps = 35
-                    )
-                    Text("${targetTime} minuten")
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    OutlinedTextField(
+                        value = targetTimeInput,
+                        onValueChange = { targetTimeInput = it },
+                        label = { Text("Target Time (minutes)") },
                         modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = "Hartslagzones gebruiken",
-                            modifier = Modifier.weight(1f)
-                        )
-                        Switch(
-                            checked = useHeartRateZones,
-                            onCheckedChange = { useHeartRateZones = it }
-                        )
-                    }
-
-                    if (useHeartRateZones) {
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Text("Doelzone")
-                        TabRow(selectedTabIndex = targetHeartRateZone - 1) {
-                            for (i in 1..5) {
-                                Tab(
-                                    selected = targetHeartRateZone == i,
-                                    onClick = { targetHeartRateZone = i },
-                                    text = { Text("Zone $i") }
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Text(
-                            text = when (targetHeartRateZone) {
-                                1 -> "Zone 1: 50-60% van max HR - Herstel"
-                                2 -> "Zone 2: 60-70% van max HR - Vetverbranding"
-                                3 -> "Zone 3: 70-80% van max HR - Aerobe training"
-                                4 -> "Zone 4: 80-90% van max HR - Anaerobe training"
-                                5 -> "Zone 5: 90-100% van max HR - Maximale inspanning"
-                                else -> ""
-                            },
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
+                    )
                 }
             },
             confirmButton = {
-                Button(
+                TextButton(
                     onClick = {
-                        // Convert input to km for storage
-                        val distanceInKm = UnitConverter.distanceToKm(
-                            targetDistanceInput.toDoubleOrNull() ?: 5.0,
-                            unitSystem
-                        )
-                        targetDistance = distanceInKm
-                        targetTime = targetTimeInput.toIntOrNull() ?: 30
+                        targetDistance = targetDistanceInput.toDoubleOrNull() ?: 0.0
+                        targetTime = targetTimeInput.toIntOrNull() ?: 0
                         showGoalDialog = false
                     }
                 ) {
-                    Text("Bevestigen")
+                    Text(stringResource(R.string.save))
                 }
             },
             dismissButton = {
-                TextButton(
-                    onClick = { showGoalDialog = false }
-                ) {
-                    Text("Annuleren")
+                TextButton(onClick = { showGoalDialog = false }) {
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -462,7 +411,7 @@ fun RunningWorkoutScreen(navController: NavController) {
                 ) {
                     Icon(
                         if (isRunning) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (isRunning) "Pauzeren" else "Hervatten"
+                        contentDescription = if (isRunning) stringResource(R.string.pause) else stringResource(R.string.resume)
                     )
                 }
 
@@ -483,7 +432,7 @@ fun RunningWorkoutScreen(navController: NavController) {
                 ) {
                     Icon(
                         Icons.Default.Stop,
-                        contentDescription = "Stoppen"
+                        contentDescription = stringResource(R.string.stop)
                     )
                 }
             }
@@ -510,7 +459,7 @@ fun RunningWorkoutScreen(navController: NavController) {
                 ) {
                     Icon(
                         Icons.Default.DirectionsRun,
-                        contentDescription = "Hardlopen",
+                        contentDescription = stringResource(R.string.running),
                         tint = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.size(24.dp)
                     )
@@ -520,14 +469,14 @@ fun RunningWorkoutScreen(navController: NavController) {
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Hardlopen",
+                        text = stringResource(R.string.running),
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold
                     )
 
                     if (targetDistance > 0) {
                         Text(
-                            text = "Doel: ${UnitConverter.formatDistance(targetDistance, unitSystem)} in ${targetTime} min",
+                            text = "${stringResource(R.string.goal_distance)}: ${UnitConverter.formatDistance(targetDistance, unitSystem)} in ${targetTime} min",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -537,7 +486,7 @@ fun RunningWorkoutScreen(navController: NavController) {
                 Button(
                     onClick = { showGoalDialog = true }
                 ) {
-                    Text("Doel instellen")
+                    Text(stringResource(R.string.set_goal))
                 }
             }
 
@@ -549,7 +498,7 @@ fun RunningWorkoutScreen(navController: NavController) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 StatCard(
-                    title = "Tijd",
+                    title = stringResource(R.string.time),
                     value = formatTime(elapsedTime),
                     icon = Icons.Default.Timer,
                     modifier = Modifier.weight(1f)
@@ -558,7 +507,7 @@ fun RunningWorkoutScreen(navController: NavController) {
                 Spacer(modifier = Modifier.padding(4.dp))
 
                 StatCard(
-                    title = "Afstand",
+                    title = stringResource(R.string.distance),
                     value = UnitConverter.formatDistance(distance, unitSystem),
                     icon = Icons.Default.LocationOn,
                     modifier = Modifier.weight(1f)
@@ -572,7 +521,7 @@ fun RunningWorkoutScreen(navController: NavController) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 StatCard(
-                    title = "Tempo",
+                    title = stringResource(R.string.pace),
                     value = if (pace > 0) {
                         val paceUnit = if (unitSystem == UnitSystem.IMPERIAL) "min/mi" else "min/km"
                         String.format("%.1f %s", pace, paceUnit)
@@ -584,8 +533,8 @@ fun RunningWorkoutScreen(navController: NavController) {
                 Spacer(modifier = Modifier.padding(4.dp))
 
                 StatCard(
-                    title = "Hartslag",
-                    value = "$heartRate bpm",
+                    title = stringResource(R.string.heart_rate),
+                    value = "$heartRate ${stringResource(R.string.bpm)}",
                     icon = Icons.Default.Favorite,
                     modifier = Modifier.weight(1f)
                 )
@@ -603,7 +552,7 @@ fun RunningWorkoutScreen(navController: NavController) {
                         modifier = Modifier.padding(16.dp)
                     ) {
                         Text(
-                            text = "Voortgang naar doel",
+                            text = stringResource(R.string.progress_to_goal),
                             fontWeight = FontWeight.Medium
                         )
 
@@ -635,7 +584,7 @@ fun RunningWorkoutScreen(navController: NavController) {
                             Spacer(modifier = Modifier.height(16.dp))
 
                             Text(
-                                text = "Hartslagzone",
+                                text = stringResource(R.string.heart_rate_zone),
                                 fontWeight = FontWeight.Medium
                             )
 
@@ -684,11 +633,11 @@ fun RunningWorkoutScreen(navController: NavController) {
 
                             Text(
                                 text = if (currentZone == targetHeartRateZone)
-                                    "Je zit in je doelzone!"
+                                    stringResource(R.string.in_target_zone)
                                 else if (currentZone < targetHeartRateZone)
-                                    "Verhoog je intensiteit om zone $targetHeartRateZone te bereiken"
+                                    "${stringResource(R.string.increase_intensity)} ${stringResource(R.string.to_reach_zone)} $targetHeartRateZone"
                                 else
-                                    "Verlaag je intensiteit om zone $targetHeartRateZone te bereiken",
+                                    "${stringResource(R.string.decrease_intensity)} ${stringResource(R.string.to_reach_zone)} $targetHeartRateZone",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = if (currentZone == targetHeartRateZone)
                                     MaterialTheme.colorScheme.primary
@@ -708,7 +657,7 @@ fun RunningWorkoutScreen(navController: NavController) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 SecondaryStatCard(
-                    title = "Stappen",
+                    title = stringResource(R.string.steps),
                     value = steps.toString(),
                     modifier = Modifier.weight(1f)
                 )
@@ -716,7 +665,7 @@ fun RunningWorkoutScreen(navController: NavController) {
                 Spacer(modifier = Modifier.padding(4.dp))
 
                 SecondaryStatCard(
-                    title = "Calorieën",
+                    title = stringResource(R.string.calories),
                     value = "$calories kcal",
                     modifier = Modifier.weight(1f)
                 )
@@ -724,7 +673,7 @@ fun RunningWorkoutScreen(navController: NavController) {
                 Spacer(modifier = Modifier.padding(4.dp))
 
                 SecondaryStatCard(
-                    title = "Gem. Tempo",
+                    title = stringResource(R.string.avg_pace),
                     value = if (pace > 0) {
                         val paceUnit = if (unitSystem == UnitSystem.IMPERIAL) "min/mi" else "min/km"
                         String.format("%.1f %s", pace, paceUnit)
@@ -740,22 +689,22 @@ fun RunningWorkoutScreen(navController: NavController) {
                 Tab(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
-                    text = { Text("Route") }
+                    text = { Text(stringResource(R.string.route)) }
                 )
                 Tab(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
-                    text = { Text("Hartslag") }
+                    text = { Text(stringResource(R.string.heart_rate)) }
                 )
                 Tab(
                     selected = selectedTab == 2,
                     onClick = { selectedTab = 2 },
-                    text = { Text("Tempo") }
+                    text = { Text(stringResource(R.string.pace)) }
                 )
                 Tab(
                     selected = selectedTab == 3,
                     onClick = { selectedTab = 3 },
-                    text = { Text("Hoogte") }
+                    text = { Text(stringResource(R.string.elevation)) }
                 )
             }
 
@@ -789,20 +738,20 @@ fun RunningWorkoutScreen(navController: NavController) {
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.Center
                                 ) {
-                                    Text("Locatie toegang nodig voor kaart")
+                                    Text(stringResource(R.string.location_access_needed))
                                     Spacer(modifier = Modifier.height(16.dp))
                                     Button(
                                         onClick = { 
                                             locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
                                         }
                                     ) {
-                                        Text("Toegang verlenen")
+                                        Text(stringResource(R.string.grant_access))
                                     }
                                     
                                     // Show simulated route as fallback
                                     if (simulatedRoutePoints.isNotEmpty()) {
                                         Spacer(modifier = Modifier.height(16.dp))
-                                        Text("Gesimuleerde route:")
+                                        Text(stringResource(R.string.simulated_route) + ":")
                                         
                                         Canvas(modifier = Modifier.size(200.dp)) {
                                             if (simulatedRoutePoints.size > 1) {
@@ -891,7 +840,7 @@ fun RunningWorkoutScreen(navController: NavController) {
                                     }
                                 }
                             } else {
-                                Text("Nog geen hartslaggegevens beschikbaar")
+                                Text(stringResource(R.string.no_heart_rate_data))
                             }
                         }
                         2 -> {
@@ -947,7 +896,7 @@ fun RunningWorkoutScreen(navController: NavController) {
                                     }
                                 }
                             } else {
-                                Text("Nog geen tempogegevens beschikbaar")
+                                Text(stringResource(R.string.no_pace_data))
                             }
                         }
                         3 -> {
@@ -1003,7 +952,7 @@ fun RunningWorkoutScreen(navController: NavController) {
                                     }
                                 }
                             } else {
-                                Text("Nog geen hoogtegegevens beschikbaar")
+                                Text(stringResource(R.string.no_elevation_data))
                             }
                         }
                     }
@@ -1083,17 +1032,5 @@ fun SecondaryStatCard(
                 fontWeight = FontWeight.Medium
             )
         }
-    }
-}
-
-fun formatTime(timeInMillis: Long): String {
-    val hours = (timeInMillis / (1000 * 60 * 60)) % 24
-    val minutes = (timeInMillis / (1000 * 60)) % 60
-    val seconds = (timeInMillis / 1000) % 60
-
-    return if (hours > 0) {
-        String.format("%d:%02d:%02d", hours, minutes, seconds)
-    } else {
-        String.format("%02d:%02d", minutes, seconds)
     }
 }

@@ -5,20 +5,21 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.workoutbuddyapplication.R
 import com.example.workoutbuddyapplication.data.SupabaseClient
 import com.example.workoutbuddyapplication.navigation.Screen
 import com.example.workoutbuddyapplication.models.Workout
 import com.example.workoutbuddyapplication.models.WorkoutType
-import com.example.workoutbuddyapplication.ui.theme.strings
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.CoroutineScope
@@ -29,7 +30,6 @@ import kotlinx.coroutines.withContext
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddWorkoutScreen(navController: NavController) {
-    val strings = strings()
     var selectedWorkoutType by remember { mutableStateOf(WorkoutType.RUNNING) }
     var customTypeName by remember { mutableStateOf("") }
     var date by remember { mutableStateOf("2023-05-11") }
@@ -42,10 +42,10 @@ fun AddWorkoutScreen(navController: NavController) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(strings.addWorkoutTitle) },
+                title = { Text(stringResource(R.string.add_workout_title)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = strings.back)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
@@ -59,7 +59,7 @@ fun AddWorkoutScreen(navController: NavController) {
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(strings.workoutType, fontWeight = FontWeight.Medium)
+            Text(stringResource(R.string.workout_type), fontWeight = FontWeight.Medium)
 
             Column(modifier = Modifier.fillMaxWidth()) {
                 WorkoutType.values().forEach { workoutType ->
@@ -79,9 +79,9 @@ fun AddWorkoutScreen(navController: NavController) {
                             onClick = null
                         )
                         val workoutTypeName = when (workoutType) {
-                            WorkoutType.RUNNING -> strings.running
-                            WorkoutType.STRENGTH -> strings.strengthTraining
-                            WorkoutType.YOGA -> strings.yoga
+                            WorkoutType.RUNNING -> stringResource(R.string.running)
+                            WorkoutType.STRENGTH -> stringResource(R.string.strength_training)
+                            WorkoutType.YOGA -> stringResource(R.string.yoga)
                             else -> workoutType.displayName
                         }
                         Text(
@@ -96,7 +96,7 @@ fun AddWorkoutScreen(navController: NavController) {
                 OutlinedTextField(
                     value = customTypeName,
                     onValueChange = { customTypeName = it },
-                    label = { Text(strings.typeName) },
+                    label = { Text(stringResource(R.string.type_name)) },
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -104,17 +104,17 @@ fun AddWorkoutScreen(navController: NavController) {
             OutlinedTextField(
                 value = date,
                 onValueChange = { date = it },
-                label = { Text(strings.date) },
+                label = { Text(stringResource(R.string.date)) },
                 modifier = Modifier.fillMaxWidth(),
                 trailingIcon = {
-                    Icon(Icons.Default.DateRange, contentDescription = strings.selectDate)
+                    Icon(Icons.Default.DateRange, contentDescription = stringResource(R.string.select_date))
                 }
             )
 
             OutlinedTextField(
                 value = duration,
                 onValueChange = { duration = it },
-                label = { Text(strings.durationMinutes) },
+                label = { Text(stringResource(R.string.duration_minutes)) },
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -122,7 +122,7 @@ fun AddWorkoutScreen(navController: NavController) {
                 OutlinedTextField(
                     value = distance,
                     onValueChange = { distance = it },
-                    label = { Text(strings.distanceKm) },
+                    label = { Text(stringResource(R.string.distance_km)) },
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -130,14 +130,14 @@ fun AddWorkoutScreen(navController: NavController) {
             OutlinedTextField(
                 value = notes,
                 onValueChange = { notes = it },
-                label = { Text(strings.notes) },
+                label = { Text(stringResource(R.string.notes)) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(120.dp)
             )
 
             if (saveError != null) {
-                Text("${strings.saveError}: $saveError", color = MaterialTheme.colorScheme.error)
+                Text("${stringResource(R.string.save_error)}: $saveError", color = MaterialTheme.colorScheme.error)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -152,7 +152,7 @@ fun AddWorkoutScreen(navController: NavController) {
                             val user = SupabaseClient.client.auth.currentUserOrNull()
                             if (user == null) {
                                 withContext(Dispatchers.Main) {
-                                    saveError = strings.noUserLoggedIn
+                                    saveError = "No user logged in"
                                     isSaving = false
                                 }
                                 return@launch
@@ -187,7 +187,7 @@ fun AddWorkoutScreen(navController: NavController) {
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !isSaving
             ) {
-                Text(if (isSaving) strings.saving else strings.saveWorkout)
+                Text(if (isSaving) stringResource(R.string.saving) else stringResource(R.string.save_workout))
             }
         }
     }

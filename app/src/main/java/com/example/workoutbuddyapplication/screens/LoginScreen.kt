@@ -3,11 +3,13 @@ package com.example.workoutbuddyapplication.screens
 import android.content.Context
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -16,9 +18,7 @@ import androidx.navigation.NavController
 import com.example.workoutbuddyapplication.R
 import com.example.workoutbuddyapplication.data.SupabaseClient
 import com.example.workoutbuddyapplication.navigation.Screen
-import com.example.workoutbuddyapplication.ui.theme.strings
-import com.example.workoutbuddyapplication.ui.theme.dutchStrings
-import com.example.workoutbuddyapplication.ui.theme.englishStrings
+import com.example.workoutbuddyapplication.ui.theme.UserPreferencesManager
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.gotrue.providers.builtin.Email
 import kotlinx.coroutines.launch
@@ -43,6 +43,7 @@ suspend fun getUserId(context: Context): String? {
     return prefs[USER_ID_KEY]
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(navController: NavController) {
     var email by remember { mutableStateOf("") }
@@ -51,7 +52,6 @@ fun LoginScreen(navController: NavController) {
     var isLoading by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
-    val strings = strings()
 
     Column(
         modifier = Modifier
@@ -69,7 +69,7 @@ fun LoginScreen(navController: NavController) {
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = strings.appName,
+            text = stringResource(R.string.app_name),
             fontSize = 30.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
@@ -78,7 +78,7 @@ fun LoginScreen(navController: NavController) {
         Spacer(modifier = Modifier.height(40.dp))
 
         Text(
-            text = strings.login,
+            text = stringResource(R.string.login),
             fontSize = 24.sp,
             fontWeight = FontWeight.Medium
         )
@@ -91,7 +91,7 @@ fun LoginScreen(navController: NavController) {
                 email = it
                 errorMessage = null
             },
-            label = { Text(strings.email) },
+            label = { Text(stringResource(R.string.email)) },
             modifier = Modifier.fillMaxWidth(),
             isError = errorMessage != null
         )
@@ -104,18 +104,18 @@ fun LoginScreen(navController: NavController) {
                 password = it
                 errorMessage = null
             },
-            label = { Text(strings.password) },
-            visualTransformation = PasswordVisualTransformation(),
+            label = { Text(stringResource(R.string.password)) },
             modifier = Modifier.fillMaxWidth(),
+            visualTransformation = PasswordVisualTransformation(),
             isError = errorMessage != null
         )
 
-        errorMessage?.let {
+        if (errorMessage != null) {
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = it,
+                text = errorMessage!!,
                 color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodyMedium
+                fontSize = 14.sp
             )
         }
 
@@ -124,65 +124,54 @@ fun LoginScreen(navController: NavController) {
         Button(
             onClick = {
                 if (email.isBlank() || password.isBlank()) {
-                    errorMessage = if (strings === dutchStrings) "Vul alle velden in" else "Fill in all fields"
-                } else if (!isValidEmail(email)) {
-                    errorMessage = if (strings === dutchStrings) "Ongeldig e-mailadres" else "Invalid email address"
-                } else {
-                    isLoading = true
-                    errorMessage = null
+                    errorMessage = "Please fill in all fields"
+                    return@Button
+                }
 
-                    coroutineScope.launch {
-                        try {
-                            // Authenticate with Supabase
-                            SupabaseClient.client.auth.signInWith(Email) {
-                                this.email = email
-                                this.password = password
-                            }
-
-                            // Get user ID and save it
-                            val user = SupabaseClient.client.auth.currentUserOrNull()
-                            user?.id?.let { userId ->
-                                saveUserId(context, userId)
-                            }
-
+                isLoading = true
+                coroutineScope.launch {
+                    try {
+                        val result = SupabaseClient.client.auth.signInWith(Email) {
+                            this.email = email
+                            this.password = password
+                        }
+                        
+                        if (result != null) {
+                            val preferencesManager = UserPreferencesManager(context)
+                            preferencesManager.loadPreferencesFromProfile()
                             navController.navigate(Screen.Dashboard.route) {
                                 popUpTo(Screen.Login.route) { inclusive = true }
                             }
-                        } catch (e: Exception) {
-                            errorMessage = when {
-                                e.message?.contains("invalid login credentials", ignoreCase = true) == true ->
-                                    if (strings === dutchStrings) "Ongeldige inloggegevens" else "Invalid login credentials"
-                                e.message?.contains("network", ignoreCase = true) == true ->
-                                    if (strings === dutchStrings) "Netwerkfout. Controleer je internetverbinding." else "Network error. Check your internet connection."
-                                else -> if (strings === dutchStrings) "Fout bij inloggen: ${e.message}" else "Login error: ${e.message}"
-                            }
-                        } finally {
-                            isLoading = false
+                        } else {
+                            errorMessage = "Login failed"
                         }
+                    } catch (e: Exception) {
+                        errorMessage = e.message ?: "Login failed"
+                    } finally {
+                        isLoading = false
                     }
                 }
             },
             modifier = Modifier.fillMaxWidth(),
-            enabled = !isLoading
+            enabled = !isLoading,
+            shape = RoundedCornerShape(8.dp)
         ) {
             if (isLoading) {
                 CircularProgressIndicator(
-                    modifier = Modifier.height(24.dp),
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    strokeWidth = 2.dp
+                    modifier = Modifier.size(20.dp),
+                    color = MaterialTheme.colorScheme.onPrimary
                 )
             } else {
-                Text(strings.login)
+                Text(stringResource(R.string.login))
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         TextButton(
-            onClick = { navController.navigate(Screen.Signup.route) },
-            enabled = !isLoading
+            onClick = { navController.navigate(Screen.Signup.route) }
         ) {
-            Text(if (strings === dutchStrings) "Nog geen account? Registreer hier" else "Don't have an account? Register here")
+            Text(stringResource(R.string.create_account))
         }
     }
 }

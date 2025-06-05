@@ -41,6 +41,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
@@ -52,6 +53,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -70,6 +72,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.TextStyle
@@ -78,6 +81,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavController
+import com.example.workoutbuddyapplication.R
 import com.example.workoutbuddyapplication.models.ExerciseDevice
 import com.example.workoutbuddyapplication.navigation.Screen
 import com.example.workoutbuddyapplication.models.Exercise as ExerciseModel
@@ -87,13 +91,12 @@ import com.example.workoutbuddyapplication.ui.theme.UserPreferencesManager
 import com.example.workoutbuddyapplication.ui.theme.UnitSystem
 import com.example.workoutbuddyapplication.ui.theme.toUnitSystem
 import com.example.workoutbuddyapplication.utils.UnitConverter
+import com.example.workoutbuddyapplication.utils.formatTime
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.decodeFromString
-import com.example.workoutbuddyapplication.ui.theme.strings
-import com.example.workoutbuddyapplication.ui.theme.StringResources
 import com.example.workoutbuddyapplication.screens.StatCard
 
 data class ExerciseSet(
@@ -121,7 +124,6 @@ data class AvailableExercise(
 
 @Composable
 fun StrengthWorkoutScreen(navController: NavController) {
-    val strings = strings()
     val context = LocalContext.current
     val preferencesManager = remember { UserPreferencesManager(context) }
     val selectedUnitSystem by preferencesManager.selectedUnitSystem.collectAsState(initial = "metric")
@@ -248,66 +250,69 @@ fun StrengthWorkoutScreen(navController: NavController) {
             elapsedTime = SystemClock.elapsedRealtime() - startTime
             delay(1000)
 
-            // Simulate calorie burn (about 5 calories per minute)
-            if (isRunning) {
-                // Calculate time-based calories only
-                val timeCalories = (elapsedTime / 60000 * 5).toInt()
-                // Set the total calories (time-based + exercise-based)
-                calories = timeCalories + exerciseCalories
-            }
+            // Update total calories
+            calories = ((elapsedTime / 60000) * 5).toInt() + exerciseCalories // 5 calories/min base rate
         }
     }
 
-    // Show exercise selector dialog
-    if (showExerciseSelector) {
-        ExerciseSelectorDialog(
-            availableExercises = availableExercises,
-            isLoading = isLoading,
-            error = error,
-            onDismiss = { showExerciseSelector = false },
-            onExerciseSelected = { selectedExercise ->
-                // Create a new exercise with just one set
-                val defaultWeight = if (unitSystem == UnitSystem.IMPERIAL) 45.0 else 20.0 // 45 lbs ≈ 20 kg
-                val newExercise = Exercise(
-                    name = selectedExercise.name,
-                    muscleGroup = selectedExercise.muscleGroup,
-                    sets = listOf(
-                        ExerciseSet(reps = 10, weight = defaultWeight)
-                    ),
-                    caloriesPerRep = selectedExercise.caloriesPerRep
-                )
-                exercises.add(newExercise)
-                showExerciseSelector = false
-            }
-        )
-    }
-
-    // Show preset menu dialog
-    if (showPresetMenu) {
-        PresetMenuDialog(
-            availableExercises = availableExercises,
-            unitSystem = unitSystem,
-            onDismiss = { showPresetMenu = false },
-            onPresetSelected = { presetExercises ->
-                // Add the selected preset exercises
-                exercises.addAll(presetExercises)
-                showPresetMenu = false
-            }
-        )
-    }
-
+    // Main UI
     Scaffold(
-        // Remove the floating action buttons
+        floatingActionButton = {
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FloatingActionButton(
+                    onClick = { showExerciseSelector = true },
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_exercise))
+                }
+
+                FloatingActionButton(
+                    onClick = { isRunning = !isRunning },
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                ) {
+                    Icon(
+                        if (isRunning) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = if (isRunning) stringResource(R.string.pause) else stringResource(R.string.resume)
+                    )
+                }
+
+                FloatingActionButton(
+                    onClick = {
+                        val formattedDuration = formatTime(elapsedTime)
+                        val totalSets = exercises.sumOf { it.sets.size }
+                        navController.navigate(
+                            Screen.WorkoutCompleted.createRoute(
+                                duration = formattedDuration,
+                                distance = "$totalSets sets",
+                                calories = calories,
+                                steps = 0
+                            )
+                        )
+                    },
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                ) {
+                    Icon(
+                        Icons.Default.Stop,
+                        contentDescription = stringResource(R.string.stop)
+                    )
+                }
+            }
+        }
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp)
+                .padding(horizontal = 16.dp)
         ) {
             // Header
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
@@ -319,7 +324,7 @@ fun StrengthWorkoutScreen(navController: NavController) {
                 ) {
                     Icon(
                         Icons.Default.FitnessCenter,
-                        contentDescription = strings.strengthWorkoutTitle,
+                        contentDescription = stringResource(R.string.strength_training),
                         tint = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.size(24.dp)
                     )
@@ -327,22 +332,67 @@ fun StrengthWorkoutScreen(navController: NavController) {
 
                 Spacer(modifier = Modifier.padding(8.dp))
 
-                Text(
-                    text = strings.strengthWorkoutTitle,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.strength_training),
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                // Preset templates menu
+                Box {
+                    IconButton(onClick = { showPresetMenu = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.presets))
+                    }
+
+                    DropdownMenu(
+                        expanded = showPresetMenu,
+                        onDismissRequest = { showPresetMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.push_workout)) },
+                            onClick = {
+                                exercises.clear()
+                                exercises.addAll(getPushWorkout())
+                                showPresetMenu = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.pull_workout)) },
+                            onClick = {
+                                exercises.clear()
+                                exercises.addAll(getPullWorkout())
+                                showPresetMenu = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.leg_workout)) },
+                            onClick = {
+                                exercises.clear()
+                                exercises.addAll(getLegWorkout())
+                                showPresetMenu = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.full_body_workout)) },
+                            onClick = {
+                                exercises.clear()
+                                exercises.addAll(getFullBodyWorkout())
+                                showPresetMenu = false
+                            }
+                        )
+                    }
+                }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Main stats
+            // Stat Cards
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 StatCard(
-                    title = strings.time,
+                    title = stringResource(R.string.time),
                     value = formatTime(elapsedTime),
                     icon = Icons.Default.Timer,
                     modifier = Modifier.weight(1f)
@@ -351,573 +401,366 @@ fun StrengthWorkoutScreen(navController: NavController) {
                 Spacer(modifier = Modifier.padding(4.dp))
 
                 StatCard(
-                    title = strings.calories,
+                    title = stringResource(R.string.calories),
                     value = "$calories kcal",
                     icon = Icons.Default.LocalFireDepartment,
                     modifier = Modifier.weight(1f)
                 )
             }
 
-            Spacer(modifier = Modifier.height(40.dp))
-            
-            // Preset toevoegen Button (Green)
-            Button(
-                onClick = { showPresetMenu = true },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .padding(horizontal = 16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF4CAF50) // Green color
-                ),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Text(
-                    text = strings.addPreset,
-                    fontSize = 18.sp,
-                    color = Color.White
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            // Add Exercises Button (Blue)
-            Button(
-                onClick = { showExerciseSelector = true },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .padding(horizontal = 16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                ),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Text(
-                    text = strings.addExercises,
-                    fontSize = 18.sp
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            // Stop Workout Button
-            Button(
-                onClick = { 
-                    val formattedDuration = formatTime(elapsedTime)
-                    navController.navigate(
-                        Screen.WorkoutCompleted.createRoute(
-                            duration = formattedDuration,
-                            distance = "0.00 km",
-                            calories = calories,
-                            steps = 0
-                        )
-                    )
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .padding(horizontal = 16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error
-                ),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Text(
-                    text = strings.stopWorkout,
-                    fontSize = 18.sp
-                )
-            }
-            
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Exercises
-            LazyColumn(
-                modifier = Modifier.weight(1f)
-            ) {
-                items(exercises) { exercise ->
-                    EnhancedExerciseCard(
-                        exercise = exercise,
-                        unitSystem = unitSystem,
-                        onStartRest = { duration, exerciseName, setIndex ->
-                            activeRestTimerExercise = exerciseName
-                            activeRestTimerSetIndex = setIndex
-                            restTimeRemaining = duration
-                            timerActive = true
-                        },
-                        onSetCompleted = { reps, wasCompleted -> 
-                            // Only add calories when a set is newly completed (not when unmarking)
-                            if (wasCompleted) {
-                                addCaloriesFromSet(reps, exercise.caloriesPerRep)
-                            }
-                        },
-                        activeRestTimer = timerActive && activeRestTimerExercise == exercise.name,
-                        activeRestTimerSet = activeRestTimerSetIndex,
-                        restTimeRemaining = restTimeRemaining,
-                        onDeleteExercise = { exerciseToDelete ->
-                            exercises.removeIf { it.name == exerciseToDelete.name }
-                        },
-                        onScanDevice = {
-                            currentExerciseForDevice = exercise
-                            navController.navigate(Screen.QRScanner.route)
-                        }
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-            }
-        }
-    }
-
-    // Handle device scanning result
-    LaunchedEffect(navController.currentBackStackEntry) {
-        val result = navController.currentBackStackEntry
-            ?.savedStateHandle
-            ?.get<ExerciseDevice>("scanned_device")
-
-        if (result != null && currentExerciseForDevice != null) {
-            val index = exercises.indexOfFirst { it.name == currentExerciseForDevice?.name }
-            if (index != -1) {
-                exercises[index] = exercises[index].copy(device = result)
-                navController.currentBackStackEntry?.savedStateHandle?.remove<ExerciseDevice>("scanned_device")
-                currentExerciseForDevice = null
-            }
-        }
-    }
-}
-
-@Composable
-fun EnhancedExerciseCard(
-    exercise: Exercise,
-    unitSystem: UnitSystem,
-    onStartRest: (Int, String, Int) -> Unit,
-    onSetCompleted: (Int, Boolean) -> Unit,
-    activeRestTimer: Boolean,
-    activeRestTimerSet: Int,
-    restTimeRemaining: Int,
-    onDeleteExercise: (Exercise) -> Unit,
-    onScanDevice: () -> Unit
-) {
-    val strings = strings()
-    var expanded by remember { mutableStateOf(true) }
-    var showDeleteConfirmation by remember { mutableStateOf(false) }
-    var showMenu by remember { mutableStateOf(false) }
-    var showRestTimeDialog by remember { mutableStateOf(false) }
-    var customRestTime by remember { mutableStateOf("") }
-    
-    // Create a mutable state list for the sets to allow adding new sets
-    val exerciseSets = remember { mutableStateListOf<ExerciseSet>().apply { addAll(exercise.sets) } }
-    
-    // Store default rest time
-    var defaultRestTimeSeconds by remember { mutableStateOf(120) } // Default 2 minutes
-    
-    // Function to add a new set
-    val addNewSet = {
-        // Clone the last set if available, otherwise create a default
-        val newSet = if (exerciseSets.isNotEmpty()) {
-            val lastSet = exerciseSets.last()
-            ExerciseSet(
-                reps = lastSet.reps,
-                weight = lastSet.weight,
-                completed = false,
-                restTime = defaultRestTimeSeconds
-            )
-        } else {
-            ExerciseSet(reps = 10, weight = 20.0, restTime = defaultRestTimeSeconds)
-        }
-        
-        // Add the new set to our local list
-        exerciseSets.add(newSet)
-        
-        // Update the exercise's sets in the parent state
-        exercise.sets = exerciseSets.toList()
-    }
-    
-    // Rest time dialog
-    if (showRestTimeDialog) {
-        AlertDialog(
-            onDismissRequest = { showRestTimeDialog = false },
-            title = { Text(strings.setRestTime) },
-            text = {
-                Column {
-                    Text("${strings.setRestTimeFor} ${exercise.name}")
-                    Spacer(modifier = Modifier.height(16.dp))
-                    OutlinedTextField(
-                        value = customRestTime,
-                        onValueChange = { customRestTime = it },
-                        placeholder = { Text("2:00", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = { 
-                        val seconds = try {
-                            if (customRestTime.contains(":")) {
-                                val parts = customRestTime.split(":")
-                                val minutes = parts[0].toIntOrNull() ?: 2
-                                val secs = parts[1].toIntOrNull() ?: 0
-                                minutes * 60 + secs
-                            } else {
-                                (customRestTime.toFloatOrNull() ?: 2f) * 60f
-                            }.toInt()
-                        } catch (e: Exception) {
-                            120
-                        }
-                        
-                        defaultRestTimeSeconds = seconds
-                        
-                        for (i in exerciseSets.indices) {
-                            exerciseSets[i] = exerciseSets[i].copy(restTime = seconds)
-                        }
-                        
-                        exercise.sets = exerciseSets.toList()
-                        
-                        showRestTimeDialog = false 
-                    }
+            // Exercise List
+            if (exercises.isEmpty()) {
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(strings.updateRestTime)
+                    Text(stringResource(R.string.no_exercises_added), style = MaterialTheme.typography.bodyLarge)
                 }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { showRestTimeDialog = false }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(bottom = 80.dp) // Space for FABs
                 ) {
-                    Text(strings.cancel)
-                }
-            }
-        )
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
-    ) {
-        // Exercise header with menu button
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = exercise.name,
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
-                color = MaterialTheme.colorScheme.primary
-            )
-
-            Box {
-                IconButton(
-                    onClick = { showMenu = true },
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        Icons.Default.MoreVert,
-                        contentDescription = strings.menu,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-                
-                DropdownMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(strings.restTime) },
-                        leadingIcon = { Icon(Icons.Default.Timer, contentDescription = null) },
-                        onClick = { 
-                            showRestTimeDialog = true
-                            showMenu = false 
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(strings.delete) },
-                        leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) },
-                        onClick = { 
-                            showDeleteConfirmation = true
-                            showMenu = false
-                        }
-                    )
-                }
-            }
-        }
-
-        if (expanded) {
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            // Headers row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = strings.set,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.weight(0.5f),
-                    fontSize = 12.sp
-                )
-                Text(
-                    text = strings.previous,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.weight(1.0f),
-                    fontSize = 12.sp
-                )
-                Text(
-                    text = UnitConverter.getWeightUnit(unitSystem),
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.weight(0.8f),
-                    fontSize = 12.sp
-                )
-                Text(
-                    text = strings.reps,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.weight(0.8f),
-                    fontSize = 12.sp
-                )
-                // Empty space for finish button
-                Spacer(modifier = Modifier.weight(0.4f))
-            }
-            
-            Spacer(modifier = Modifier.height(4.dp))
-            Divider()
-            
-            // Sets
-            exerciseSets.forEachIndexed { index, set ->
-                var completed by remember { mutableStateOf(set.completed) }
-                var reps by remember { mutableStateOf(set.reps.toString()) }
-                // Convert weight from kg storage to display unit
-                var weight by remember { 
-                    mutableStateOf(UnitConverter.weightFromKg(set.weight, unitSystem).toString()) 
-                }
-                var showRestTimer by remember { mutableStateOf(false) }
-                
-                // Update the values in the set when they change
-                LaunchedEffect(reps, weight, completed) {
-                    val weightInKg = UnitConverter.weightToKg(
-                        weight.toDoubleOrNull() ?: set.weight, 
-                        unitSystem
-                    )
-                    exerciseSets[index] = set.copy(
-                        reps = reps.toIntOrNull() ?: set.reps,
-                        weight = weightInKg,
-                        completed = completed
-                    )
-                }
-
-                // Update weight display when unit system changes
-                LaunchedEffect(unitSystem) {
-                    weight = UnitConverter.weightFromKg(set.weight, unitSystem).toString()
-                }
-                
-                Column(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    // Main set row
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                            .background(
-                                color = if (completed) 
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                                else 
-                                    Color.Transparent,
-                                shape = RoundedCornerShape(4.dp)
-                            )
-                            .padding(horizontal = 4.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // Set number
-                        Text(
-                            text = "${index + 1}",
-                            modifier = Modifier.weight(0.5f),
-                            fontSize = 14.sp
-                        )
-                        
-                        // Previous weight/reps
-                        Text(
-                            text = "${UnitConverter.formatWeight(set.weight, unitSystem)}×${set.reps}",
-                            modifier = Modifier.weight(1.0f),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 14.sp
-                        )
-                        
-                        // Weight input - fixed
-                        OutlinedTextField(
-                            value = weight,
-                            onValueChange = { weight = it },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                            modifier = Modifier.weight(0.8f),
-                            singleLine = true,
-                            textStyle = TextStyle(fontSize = 14.sp)
-                        )
-                        
-                        // Reps input - fixed
-                        OutlinedTextField(
-                            value = reps,
-                            onValueChange = { reps = it },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.weight(0.8f),
-                            singleLine = true,
-                            textStyle = TextStyle(fontSize = 14.sp)
-                        )
-                        
-                        // Finish button
-                        IconButton(
-                            onClick = { 
-                                val wasCompleted = completed
-                                completed = !completed
-                                
-                                // Update the actual set data
-                                exerciseSets[index] = exerciseSets[index].copy(
-                                    completed = completed
-                                )
-                                
-                                // Only start rest timer when marking a set as completed (not when unmarking)
-                                if (!wasCompleted && completed) {
-                                    val restTime = exerciseSets[index].restTime
-                                    onStartRest(restTime, exercise.name, index)
-                                }
-
-                                // Only add calories when a set is newly completed (not when unmarking)
-                                if (wasCompleted && !completed) {
-                                    // Temporarily commenting out to fix compilation error
-                                    // addCaloriesFromSet(reps.toIntOrNull() ?: 0, exercise.caloriesPerRep)
+                    items(items = exercises, key = { it.name }) { exercise ->
+                        ExerciseCard(
+                            exercise = exercise,
+                            unitSystem = unitSystem,
+                            onUpdateExercise = { updatedExercise ->
+                                val index = exercises.indexOfFirst { it.name == updatedExercise.name }
+                                if (index != -1) {
+                                    exercises[index] = updatedExercise
                                 }
                             },
-                            modifier = Modifier
-                                .weight(0.4f)
-                                .size(36.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.Check,
-                                contentDescription = strings.completed,
-                                tint = if (completed) 
-                                    MaterialTheme.colorScheme.primary 
-                                else 
-                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
-                    
-                    // Show compact rest timer below the set if it's active
-                    if (activeRestTimer && activeRestTimerSet == index) {
-                        CompactRestTimer(restTimeRemaining)
+                            onDeleteExercise = {
+                                exercises.remove(exercise)
+                            },
+                            onAddSet = {
+                                val currentSets = exercise.sets.toMutableList()
+                                val lastSet = currentSets.lastOrNull()
+                                currentSets.add(
+                                    ExerciseSet(
+                                        reps = lastSet?.reps ?: 10,
+                                        weight = lastSet?.weight ?: 50.0
+                                    )
+                                )
+                                exercise.sets = currentSets
+                            },
+                            onSetCompleted = { setIndex, completed ->
+                                val updatedSets = exercise.sets.toMutableList()
+                                val currentSet = updatedSets[setIndex]
+
+                                if (completed && !currentSet.completed) {
+                                    addCaloriesFromSet(currentSet.reps, exercise.caloriesPerRep)
+                                }
+
+                                updatedSets[setIndex] = currentSet.copy(completed = completed)
+                                exercise.sets = updatedSets
+
+                                // Start rest timer
+                                if (completed) {
+                                    activeRestTimerExercise = exercise.name
+                                    activeRestTimerSetIndex = setIndex
+                                    restTimeRemaining = currentSet.restTime
+                                    timerActive = true
+                                } else {
+                                    // If un-checking a set, stop its timer
+                                    if (activeRestTimerExercise == exercise.name && activeRestTimerSetIndex == setIndex) {
+                                        timerActive = false
+                                        activeRestTimerExercise = null
+                                        activeRestTimerSetIndex = -1
+                                    }
+                                }
+                            },
+                            activeRestTimerExercise = activeRestTimerExercise,
+                            activeRestTimerSetIndex = activeRestTimerSetIndex,
+                            restTimeRemaining = restTimeRemaining
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
                     }
                 }
-                
-                if (index < exerciseSets.size - 1) {
-                    Divider(modifier = Modifier.padding(vertical = 2.dp))
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            // Add set button
-            OutlinedButton(
-                onClick = { addNewSet() },
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(vertical = 6.dp)
-            ) {
-                Icon(
-                    Icons.Default.Add,
-                    contentDescription = strings.addSet,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(strings.addSet, fontSize = 14.sp)
             }
         }
-        
-        Divider(modifier = Modifier.padding(top = 8.dp))
     }
 
-    if (showDeleteConfirmation) {
-        AlertDialog(
-            onDismissRequest = { showDeleteConfirmation = false },
-            title = { Text(strings.deleteExercise) },
-            text = { Text(String.format(strings.deleteExerciseConfirm, exercise.name)) },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        onDeleteExercise(exercise)
-                        showDeleteConfirmation = false
-                    }
-                ) {
-                    Text(strings.delete)
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { showDeleteConfirmation = false }
-                ) {
-                    Text(strings.cancel)
-                }
+    if (showExerciseSelector) {
+        ExerciseSelectorDialog(
+            availableExercises = availableExercises,
+            onDismiss = { showExerciseSelector = false },
+            onExerciseSelected = { selectedExercise ->
+                exercises.add(
+                    Exercise(
+                        name = selectedExercise.name,
+                        sets = listOf(ExerciseSet(reps = 10, weight = 50.0)),
+                        muscleGroup = selectedExercise.muscleGroup,
+                        caloriesPerRep = selectedExercise.caloriesPerRep
+                    )
+                )
+                showExerciseSelector = false
             }
         )
     }
 }
 
 @Composable
-fun CompactRestTimer(remainingSeconds: Int) {
-    val strings = strings()
-    val minutes = remainingSeconds / 60
-    val seconds = remainingSeconds % 60
-    val formattedTime = String.format("%d:%02d", minutes, seconds)
-    
+fun ExerciseCard(
+    exercise: Exercise,
+    unitSystem: UnitSystem,
+    onUpdateExercise: (Exercise) -> Unit,
+    onDeleteExercise: () -> Unit,
+    onAddSet: () -> Unit,
+    onSetCompleted: (Int, Boolean) -> Unit,
+    activeRestTimerExercise: String?,
+    activeRestTimerSetIndex: Int,
+    restTimeRemaining: Int
+) {
+    var expanded by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = exercise.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = exercise.muscleGroup,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                
+                IconButton(onClick = { expanded = !expanded }) {
+                    Icon(
+                        if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = stringResource(R.string.expand)
+                    )
+                }
+            }
+
+            if (expanded) {
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Header row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(stringResource(R.string.set), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.weight), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.reps), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.done), modifier = Modifier.weight(0.5f), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                }
+                
+                Divider(modifier = Modifier.padding(vertical = 4.dp))
+                
+                exercise.sets.forEachIndexed { index, set ->
+                    SetRow(
+                        set = set,
+                        setIndex = index,
+                        unitSystem = unitSystem,
+                        onUpdateSet = { updatedSet ->
+                            val updatedSets = exercise.sets.toMutableList()
+                            updatedSets[index] = updatedSet
+                            onUpdateExercise(exercise.copy(sets = updatedSets))
+                        },
+                        onDeleteSet = {
+                            val updatedSets = exercise.sets.toMutableList()
+                            updatedSets.removeAt(index)
+                            onUpdateExercise(exercise.copy(sets = updatedSets))
+                        },
+                        onSetCompleted = { completed ->
+                            onSetCompleted(index, completed)
+                        }
+                    )
+                    
+                    // Show rest timer if this set is active
+                    if (activeRestTimerExercise == exercise.name && activeRestTimerSetIndex == index && restTimeRemaining > 0) {
+                        RestTimerRow(restTimeRemaining)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedButton(
+                    onClick = onAddSet,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.add_set))
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedButton(
+                    onClick = { showEditDialog = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.edit_exercise))
+                }
+            }
+        }
+    }
+
+    if (showEditDialog) {
+        EditExerciseDialog(
+            exercise = exercise,
+            onDismiss = { showEditDialog = false },
+            onSave = { updatedExercise ->
+                onUpdateExercise(updatedExercise)
+                showEditDialog = false
+            },
+            onDelete = {
+                onDeleteExercise()
+                showEditDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+fun SetRow(
+    set: ExerciseSet,
+    setIndex: Int,
+    unitSystem: UnitSystem,
+    onUpdateSet: (ExerciseSet) -> Unit,
+    onDeleteSet: () -> Unit,
+    onSetCompleted: (Boolean) -> Unit
+) {
+    var reps by remember { mutableStateOf(set.reps.toString()) }
+    var weight by remember { mutableStateOf(UnitConverter.toDisplayWeight(set.weight, unitSystem).toString()) }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-            .background(
-                color = MaterialTheme.colorScheme.primaryContainer,
-                shape = RoundedCornerShape(8.dp)
-            )
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Icon(
-            Icons.Default.Timer,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-            modifier = Modifier.size(24.dp)
+        Text((setIndex + 1).toString(), modifier = Modifier.weight(1f))
+
+        OutlinedTextField(
+            value = weight,
+            onValueChange = {
+                weight = it
+                val metricWeight = UnitConverter.fromDisplayWeight(it.toDoubleOrNull() ?: 0.0, unitSystem)
+                onUpdateSet(set.copy(weight = metricWeight))
+            },
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 4.dp),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            textStyle = TextStyle(fontSize = 14.sp)
         )
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(
-            text = String.format(strings.restTimeFormat, formattedTime),
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold
+
+        OutlinedTextField(
+            value = reps,
+            onValueChange = {
+                reps = it
+                onUpdateSet(set.copy(reps = it.toIntOrNull() ?: 0))
+            },
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 4.dp),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            textStyle = TextStyle(fontSize = 14.sp)
+        )
+
+        Checkbox(
+            checked = set.completed,
+            onCheckedChange = onSetCompleted,
+            modifier = Modifier.weight(0.5f)
         )
     }
 }
 
 @Composable
-fun FilterChip(
-    label: String,
-    isSelected: Boolean,
-    onClick: () -> Unit
+fun EditExerciseDialog(
+    exercise: Exercise,
+    onDismiss: () -> Unit,
+    onSave: (Exercise) -> Unit,
+    onDelete: () -> Unit
 ) {
-    Box(
-        modifier = Modifier
-            .clip(CircleShape)
-            .background(
-                if (isSelected) MaterialTheme.colorScheme.primaryContainer
-                else MaterialTheme.colorScheme.surfaceVariant
-            )
-            .padding(horizontal = 12.dp, vertical = 6.dp)
-            .clip(CircleShape),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
-            else MaterialTheme.colorScheme.onSurfaceVariant
+    var notes by remember { mutableStateOf(exercise.notes) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.edit_exercise)) },
+        text = {
+            Column {
+                Text(
+                    text = exercise.name,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+
+                OutlinedTextField(
+                    value = notes,
+                    onValueChange = { notes = it },
+                    label = { Text(stringResource(R.string.notes)) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onSave(exercise.copy(notes = notes)) }
+            ) {
+                Text(stringResource(R.string.save))
+            }
+        },
+        dismissButton = {
+            Row {
+                Button(
+                    onClick = { showDeleteConfirm = true },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text(stringResource(R.string.delete))
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        }
+    )
+
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text(stringResource(R.string.delete_exercise)) },
+            text = { Text(stringResource(R.string.delete_exercise_confirm, exercise.name)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDelete()
+                        showDeleteConfirm = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text(stringResource(R.string.delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
         )
     }
 }
@@ -925,104 +768,75 @@ fun FilterChip(
 @Composable
 fun ExerciseSelectorDialog(
     availableExercises: List<AvailableExercise>,
-    isLoading: Boolean,
-    error: String?,
     onDismiss: () -> Unit,
     onExerciseSelected: (AvailableExercise) -> Unit
 ) {
-    val strings = strings()
     var searchQuery by remember { mutableStateOf("") }
     
-    val filteredExercises = remember(searchQuery, availableExercises) {
-        if (searchQuery.isBlank()) {
-            availableExercises
-        } else {
-            availableExercises.filter {
-                it.name.contains(searchQuery, ignoreCase = true) ||
-                it.muscleGroup.contains(searchQuery, ignoreCase = true) ||
-                it.equipment.contains(searchQuery, ignoreCase = true)
-            }
+    val filteredExercises = if (searchQuery.isBlank()) {
+        availableExercises
+    } else {
+        availableExercises.filter {
+            it.name.contains(searchQuery, ignoreCase = true) ||
+            it.muscleGroup.contains(searchQuery, ignoreCase = true)
         }
     }
 
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(
-            dismissOnBackPress = true,
-            dismissOnClickOutside = true
-        )
+        properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        Card(
+        Surface(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(500.dp),
-            shape = RoundedCornerShape(16.dp)
+                .fillMaxSize()
+                .padding(16.dp),
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
-            ) {
-                // Header
+            Column(modifier = Modifier.padding(16.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = strings.exercises,
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
+                        text = stringResource(R.string.add_exercise),
+                        style = MaterialTheme.typography.titleLarge
                     )
-                    
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = strings.close)
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
                     }
                 }
                 
                 Spacer(modifier = Modifier.height(16.dp))
-                
-                // Search field
+
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    placeholder = { Text(strings.searchExercises) },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = strings.search) },
+                    label = { Text(stringResource(R.string.search_exercises)) },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    leadingIcon = {
+                        Icon(Icons.Default.Search, contentDescription = null)
+                    }
                 )
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
                 
-                // Exercise list
-                if (isLoading) {
+                if (filteredExercises.isEmpty()) {
                     Box(
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator()
-                    }
-                } else if (error != null) {
-                    Box(
-                        modifier = Modifier.weight(1f),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = error,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(16.dp)
-                        )
+                        Text(stringResource(R.string.no_exercises_found))
                     }
                 } else {
-                    LazyColumn(
-                        modifier = Modifier.weight(1f)
-                    ) {
+                    LazyColumn {
                         items(filteredExercises) { exercise ->
-                            ExerciseItem(
+                            ExerciseListItem(
                                 exercise = exercise,
-                                onExerciseClick = { onExerciseSelected(exercise) }
+                                onClick = { onExerciseSelected(exercise) }
                             )
-                            Divider()
                         }
                     }
                 }
@@ -1032,260 +846,98 @@ fun ExerciseSelectorDialog(
 }
 
 @Composable
-fun ExerciseItem(
+fun ExerciseListItem(
     exercise: AvailableExercise,
-    onExerciseClick: () -> Unit
+    onClick: () -> Unit
 ) {
-    val strings = strings()
-    Row(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onExerciseClick)
-            .padding(vertical = 12.dp, horizontal = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(vertical = 4.dp)
+            .clickable { onClick() },
+        elevation = CardDefaults.cardElevation(2.dp)
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = exercise.name,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium
-            )
-            
-            Text(
-                text = "${exercise.muscleGroup} • ${exercise.equipment}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        
-        IconButton(onClick = onExerciseClick) {
-            Icon(
-                Icons.Default.Add,
-                contentDescription = strings.add,
-                tint = MaterialTheme.colorScheme.primary
-            )
-        }
-    }
-}
-
-@Composable
-fun PresetMenuDialog(
-    availableExercises: List<AvailableExercise>,
-    unitSystem: UnitSystem,
-    onDismiss: () -> Unit,
-    onPresetSelected: (List<Exercise>) -> Unit
-) {
-    val strings = strings()
-    val presets = remember(availableExercises, unitSystem) {
-        createWorkoutPresets(availableExercises, unitSystem, strings)
-    }
-    
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(
-            dismissOnBackPress = true,
-            dismissOnClickOutside = true
-        )
-    ) {
-        Card(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(400.dp),
-            shape = RoundedCornerShape(16.dp)
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
-            ) {
-                // Header
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = strings.workoutPresets,
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                    
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = strings.close)
-                    }
-                }
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                // Preset list
-                LazyColumn(
-                    modifier = Modifier.weight(1f)
-                ) {
-                    items(presets) { preset ->
-                        PresetItem(
-                            presetName = preset.name,
-                            exerciseCount = preset.exercises.size,
-                            onPresetClick = { onPresetSelected(preset.exercises) }
-                        )
-                        if (preset != presets.last()) {
-                            Divider()
-                        }
-                    }
-                }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = exercise.name,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = "${exercise.muscleGroup} - ${exercise.equipment}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
+            Icon(
+                Icons.Default.Add,
+                contentDescription = stringResource(R.string.add)
+            )
         }
     }
 }
 
-data class WorkoutPreset(
-    val name: String,
-    val exercises: List<Exercise>
-)
-
-// Function to create dynamic presets based on available exercises
-fun createWorkoutPresets(
-    availableExercises: List<AvailableExercise>,
-    unitSystem: UnitSystem,
-    strings: StringResources
-): List<WorkoutPreset> {
-    val presets = mutableListOf<WorkoutPreset>()
-    
-    val exercisesByMuscle = availableExercises.groupBy { it.muscleGroup.lowercase() }
-    
-    val lightWeight = if (unitSystem == UnitSystem.IMPERIAL) 33.0 else 15.0 
-    val mediumWeight = if (unitSystem == UnitSystem.IMPERIAL) 44.0 else 20.0 
-    val heavyWeight = if (unitSystem == UnitSystem.IMPERIAL) 88.0 else 40.0
-    
-    val pushMuscles = listOf("borst", "chest", "schouders", "shoulders", "armen", "arms", "triceps")
-    val pushExercises = exercisesByMuscle.filterKeys { muscle ->
-        pushMuscles.any { pushMuscle -> muscle.contains(pushMuscle, ignoreCase = true) }
-    }.values.flatten().take(4)
-    
-    if (pushExercises.isNotEmpty()) {
-        presets.add(WorkoutPreset(
-            name = strings.pushWorkout,
-            exercises = pushExercises.map { exercise ->
-                Exercise(
-                    name = exercise.name,
-                    muscleGroup = exercise.muscleGroup,
-                    sets = listOf(
-                        ExerciseSet(reps = 10, weight = mediumWeight),
-                        ExerciseSet(reps = 10, weight = mediumWeight),
-                        ExerciseSet(reps = 10, weight = mediumWeight)
-                    ),
-                    caloriesPerRep = exercise.caloriesPerRep
-                )
-            }
-        ))
-    }
-    
-    val pullMuscles = listOf("rug", "back", "biceps", "bicep")
-    val pullExercises = exercisesByMuscle.filterKeys { muscle ->
-        pullMuscles.any { pullMuscle -> muscle.contains(pullMuscle, ignoreCase = true) }
-    }.values.flatten().take(4)
-    
-    if (pullExercises.isNotEmpty()) {
-        presets.add(WorkoutPreset(
-            name = strings.pullWorkout,
-            exercises = pullExercises.map { exercise ->
-                Exercise(
-                    name = exercise.name,
-                    muscleGroup = exercise.muscleGroup,
-                    sets = listOf(
-                        ExerciseSet(reps = 12, weight = lightWeight),
-                        ExerciseSet(reps = 12, weight = lightWeight),
-                        ExerciseSet(reps = 12, weight = lightWeight)
-                    ),
-                    caloriesPerRep = exercise.caloriesPerRep
-                )
-            }
-        ))
-    }
-    
-    val legMuscles = listOf("benen", "legs", "leg", "quadriceps", "hamstring", "calves")
-    val legExercises = exercisesByMuscle.filterKeys { muscle ->
-        legMuscles.any { legMuscle -> muscle.contains(legMuscle, ignoreCase = true) }
-    }.values.flatten().take(4)
-    
-    if (legExercises.isNotEmpty()) {
-        presets.add(WorkoutPreset(
-            name = strings.legWorkout,
-            exercises = legExercises.map { exercise ->
-                Exercise(
-                    name = exercise.name,
-                    muscleGroup = exercise.muscleGroup,
-                    sets = listOf(
-                        ExerciseSet(reps = 12, weight = heavyWeight),
-                        ExerciseSet(reps = 12, weight = heavyWeight),
-                        ExerciseSet(reps = 10, weight = heavyWeight)
-                    ),
-                    caloriesPerRep = exercise.caloriesPerRep
-                )
-            }
-        ))
-    }
-    
-    if (availableExercises.size >= 5) {
-        val fullBodyExercises = availableExercises.shuffled().take(5)
-        presets.add(WorkoutPreset(
-            name = strings.fullBodyWorkout,
-            exercises = fullBodyExercises.map { exercise ->
-                Exercise(
-                    name = exercise.name,
-                    muscleGroup = exercise.muscleGroup,
-                    sets = listOf(
-                        ExerciseSet(reps = 10, weight = mediumWeight),
-                        ExerciseSet(reps = 10, weight = mediumWeight)
-                    ),
-                    caloriesPerRep = exercise.caloriesPerRep
-                )
-            }
-        ))
-    }
-    
-    return presets
-}
-
 @Composable
-fun PresetItem(
-    presetName: String,
-    exerciseCount: Int,
-    onPresetClick: () -> Unit
+fun RestTimerRow(
+    timeRemaining: Int
 ) {
-    val strings = strings()
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onPresetClick)
-            .padding(vertical = 16.dp, horizontal = 8.dp),
+            .padding(vertical = 4.dp, horizontal = 8.dp)
+            .background(
+                MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+                RoundedCornerShape(8.dp)
+            )
+            .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            Icons.Default.FitnessCenter,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(24.dp)
-        )
-        
-        Spacer(modifier = Modifier.width(16.dp))
-        
+        Icon(Icons.Default.Timer, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer)
+        Spacer(modifier = Modifier.width(8.dp))
         Text(
-            text = presetName,
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.weight(1f)
-        )
-        
-        Text(
-            text = String.format(strings.exercisesCountFormat, exerciseCount),
+            text = "${stringResource(R.string.rest_time_remaining)}: ${formatTime(timeRemaining * 1000L)}",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        
-        Icon(
-            Icons.Default.Add,
-            contentDescription = strings.add,
-            tint = MaterialTheme.colorScheme.primary
+            color = MaterialTheme.colorScheme.onSecondaryContainer
         )
     }
+}
+
+// Preset Workouts
+fun getPushWorkout(): List<Exercise> {
+    return listOf(
+        Exercise("Bench Press", listOf(ExerciseSet(8, 60.0), ExerciseSet(8, 60.0), ExerciseSet(8, 60.0)), "Borst"),
+        Exercise("Overhead Press", listOf(ExerciseSet(10, 40.0), ExerciseSet(10, 40.0), ExerciseSet(10, 40.0)), "Schouders"),
+        Exercise("Tricep Dips", listOf(ExerciseSet(12, 0.0), ExerciseSet(12, 0.0), ExerciseSet(12, 0.0)), "Armen")
+    )
+}
+
+fun getPullWorkout(): List<Exercise> {
+    return listOf(
+        Exercise("Pull Ups", listOf(ExerciseSet(5, 0.0), ExerciseSet(5, 0.0), ExerciseSet(5, 0.0)), "Rug"),
+        Exercise("Barbell Rows", listOf(ExerciseSet(8, 70.0), ExerciseSet(8, 70.0), ExerciseSet(8, 70.0)), "Rug"),
+        Exercise("Bicep Curls", listOf(ExerciseSet(12, 15.0), ExerciseSet(12, 15.0), ExerciseSet(12, 15.0)), "Armen")
+    )
+}
+
+fun getLegWorkout(): List<Exercise> {
+    return listOf(
+        Exercise("Squats", listOf(ExerciseSet(10, 80.0), ExerciseSet(10, 80.0), ExerciseSet(10, 80.0)), "Benen"),
+        Exercise("Leg Press", listOf(ExerciseSet(10, 120.0), ExerciseSet(10, 120.0), ExerciseSet(10, 120.0)), "Benen"),
+        Exercise("Calf Raises", listOf(ExerciseSet(15, 20.0), ExerciseSet(15, 20.0), ExerciseSet(15, 20.0)), "Benen")
+    )
+}
+
+fun getFullBodyWorkout(): List<Exercise> {
+    return listOf(
+        Exercise("Squats", listOf(ExerciseSet(10, 80.0), ExerciseSet(10, 80.0), ExerciseSet(10, 80.0)), "Benen"),
+        Exercise("Bench Press", listOf(ExerciseSet(8, 60.0), ExerciseSet(8, 60.0), ExerciseSet(8, 60.0)), "Borst"),
+        Exercise("Barbell Rows", listOf(ExerciseSet(8, 70.0), ExerciseSet(8, 70.0), ExerciseSet(8, 70.0)), "Rug")
+    )
 }

@@ -13,22 +13,19 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.workoutbuddyapplication.R
 import com.example.workoutbuddyapplication.navigation.Screen
 import com.example.workoutbuddyapplication.data.SupabaseClient
 import com.example.workoutbuddyapplication.ui.theme.ThemeManager
-import com.example.workoutbuddyapplication.ui.theme.LanguageManager
-import com.example.workoutbuddyapplication.ui.theme.LocalStringResources
-import com.example.workoutbuddyapplication.ui.theme.dutchStrings
-import com.example.workoutbuddyapplication.ui.theme.englishStrings
-import com.example.workoutbuddyapplication.ui.theme.strings
-import com.example.workoutbuddyapplication.ui.theme.UnitSystem
+import com.example.workoutbuddyapplication.ui.theme.UserPreferencesManager
+import com.example.workoutbuddyapplication.util.LocaleHelper
 import io.github.jan.supabase.gotrue.auth
 import kotlinx.coroutines.launch
-import com.example.workoutbuddyapplication.ui.theme.UserPreferencesManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,14 +40,13 @@ fun SettingsScreen(navController: NavController) {
     val selectedLanguage by preferencesManager.selectedLanguage.collectAsState(initial = "nl")
     val selectedUnitSystem by preferencesManager.selectedUnitSystem.collectAsState(initial = "metric")
     val debugMode by preferencesManager.debugMode.collectAsState(initial = false)
-    val strings = strings()
 
     // Logout confirmation dialog
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
-            title = { Text(strings.logout) },
-            text = { Text(strings.logoutConfirm) },
+            title = { Text(stringResource(R.string.logout)) },
+            text = { Text(stringResource(R.string.logout_confirm)) },
             confirmButton = {
                 Button(
                     onClick = {
@@ -69,14 +65,14 @@ fun SettingsScreen(navController: NavController) {
                         showLogoutDialog = false
                     }
                 ) {
-                    Text(strings.logout)
+                    Text(stringResource(R.string.logout))
                 }
             },
             dismissButton = {
                 TextButton(
                     onClick = { showLogoutDialog = false }
                 ) {
-                    Text(strings.cancel)
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -85,10 +81,10 @@ fun SettingsScreen(navController: NavController) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(strings.settings) },
+                title = { Text(stringResource(R.string.settings)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.back)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
@@ -103,8 +99,8 @@ fun SettingsScreen(navController: NavController) {
         ) {
             item {
                 SettingsItem(
-                    title = strings.editProfile,
-                    subtitle = strings.editProfileSubtitle,
+                    title = stringResource(R.string.edit_profile),
+                    subtitle = stringResource(R.string.edit_profile_subtitle),
                     icon = Icons.Default.Person,
                     onClick = { navController.navigate(Screen.Profile.route) }
                 )
@@ -112,10 +108,10 @@ fun SettingsScreen(navController: NavController) {
 
             item {
                 SettingsItem(
-                    title = strings.notifications,
-                    subtitle = strings.notificationsSubtitle,
+                    title = stringResource(R.string.notifications),
+                    subtitle = stringResource(R.string.notifications_subtitle),
                     icon = Icons.Default.Notifications,
-                    onClick = { /* TODO: Implement notifications settings */ }
+                    onClick = { /* Navigate to notifications settings */ }
                 )
             }
 
@@ -125,7 +121,7 @@ fun SettingsScreen(navController: NavController) {
                 if (showLanguageDialog) {
                     AlertDialog(
                         onDismissRequest = { showLanguageDialog = false },
-                        title = { Text(strings.chooseLanguage) },
+                        title = { Text(stringResource(R.string.choose_language)) },
                         text = {
                             Column {
                                 ListItem(
@@ -136,6 +132,8 @@ fun SettingsScreen(navController: NavController) {
                                             onClick = {
                                                 coroutineScope.launch {
                                                     preferencesManager.setLanguage("nl")
+                                                    val updatedContext = LocaleHelper.setLocale(context, "nl")
+                                                    LocaleHelper.getActivity(context)?.recreate()
                                                 }
                                                 showLanguageDialog = false
                                             }
@@ -150,6 +148,8 @@ fun SettingsScreen(navController: NavController) {
                                             onClick = {
                                                 coroutineScope.launch {
                                                     preferencesManager.setLanguage("en")
+                                                    val updatedContext = LocaleHelper.setLocale(context, "en")
+                                                    LocaleHelper.getActivity(context)?.recreate()
                                                 }
                                                 showLanguageDialog = false
                                             }
@@ -160,14 +160,14 @@ fun SettingsScreen(navController: NavController) {
                         },
                         confirmButton = {
                             TextButton(onClick = { showLanguageDialog = false }) {
-                                Text(strings.close)
+                                Text(stringResource(R.string.close))
                             }
                         }
                     )
                 }
 
                 SettingsItem(
-                    title = strings.language,
+                    title = stringResource(R.string.language),
                     subtitle = if (selectedLanguage == "nl") "Nederlands" else "English",
                     icon = Icons.Default.Language,
                     onClick = { showLanguageDialog = true }
@@ -180,11 +180,11 @@ fun SettingsScreen(navController: NavController) {
                 if (showUnitsDialog) {
                     AlertDialog(
                         onDismissRequest = { showUnitsDialog = false },
-                        title = { Text(strings.units) },
+                        title = { Text(stringResource(R.string.units)) },
                         text = {
                             Column {
                                 ListItem(
-                                    headlineContent = { Text(strings.metric) },
+                                    headlineContent = { Text(stringResource(R.string.metric)) },
                                     leadingContent = {
                                         RadioButton(
                                             selected = selectedUnitSystem == "metric",
@@ -198,7 +198,7 @@ fun SettingsScreen(navController: NavController) {
                                     }
                                 )
                                 ListItem(
-                                    headlineContent = { Text(strings.imperial) },
+                                    headlineContent = { Text(stringResource(R.string.imperial)) },
                                     leadingContent = {
                                         RadioButton(
                                             selected = selectedUnitSystem == "imperial",
@@ -215,15 +215,15 @@ fun SettingsScreen(navController: NavController) {
                         },
                         confirmButton = {
                             TextButton(onClick = { showUnitsDialog = false }) {
-                                Text(strings.close)
+                                Text(stringResource(R.string.close))
                             }
                         }
                     )
                 }
 
                 SettingsItem(
-                    title = strings.units,
-                    subtitle = if (selectedUnitSystem == "imperial") strings.imperial else strings.metric,
+                    title = stringResource(R.string.units),
+                    subtitle = if (selectedUnitSystem == "imperial") stringResource(R.string.imperial) else stringResource(R.string.metric),
                     icon = Icons.Default.Straighten,
                     onClick = { showUnitsDialog = true }
                 )
@@ -242,19 +242,19 @@ fun SettingsScreen(navController: NavController) {
                     ) {
                         Icon(
                             if (isDarkMode) Icons.Default.DarkMode else Icons.Default.LightMode,
-                            contentDescription = strings.darkMode,
+                            contentDescription = stringResource(R.string.dark_mode),
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.width(16.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = strings.darkMode,
+                                text = stringResource(R.string.dark_mode),
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Medium
                             )
                             Text(
-                                text = if (isDarkMode) strings.darkModeEnabled else strings.lightModeEnabled,
+                                text = if (isDarkMode) stringResource(R.string.dark_mode_enabled) else stringResource(R.string.light_mode_enabled),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -284,14 +284,14 @@ fun SettingsScreen(navController: NavController) {
                     ) {
                         Icon(
                             Icons.Default.BugReport,
-                            contentDescription = "Debug Mode",
+                            contentDescription = stringResource(R.string.debug_mode),
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.width(16.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Debug Mode",
+                                text = stringResource(R.string.debug_mode),
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Medium
                             )
@@ -331,20 +331,20 @@ fun SettingsScreen(navController: NavController) {
                     ) {
                         Icon(
                             Icons.AutoMirrored.Filled.ExitToApp,
-                            contentDescription = strings.logout,
+                            contentDescription = stringResource(R.string.logout),
                             tint = MaterialTheme.colorScheme.onErrorContainer,
                             modifier = Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.width(16.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = strings.logout,
+                                text = stringResource(R.string.logout),
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Medium,
                                 color = MaterialTheme.colorScheme.onErrorContainer
                             )
                             Text(
-                                text = strings.logoutSubtitle,
+                                text = stringResource(R.string.logout_subtitle),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.7f)
                             )
@@ -354,7 +354,7 @@ fun SettingsScreen(navController: NavController) {
                         ) {
                             Icon(
                                 Icons.AutoMirrored.Filled.ExitToApp,
-                                contentDescription = strings.logout,
+                                contentDescription = stringResource(R.string.logout),
                                 tint = MaterialTheme.colorScheme.onErrorContainer
                             )
                         }

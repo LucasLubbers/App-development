@@ -27,8 +27,7 @@ import com.example.workoutbuddyapplication.data.SupabaseClient
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.gotrue.providers.builtin.Email
 import androidx.compose.ui.platform.LocalContext
-import com.example.workoutbuddyapplication.ui.theme.strings
-import com.example.workoutbuddyapplication.ui.theme.dutchStrings
+import androidx.compose.ui.res.stringResource
 
 suspend fun registerUser(email: String, password: String, name: String): Boolean = withContext(Dispatchers.IO) {
     val client = OkHttpClient()
@@ -89,7 +88,6 @@ fun SignupScreen(navController: NavController) {
     var isLoading by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
-    val strings = strings()
 
     Column(
         modifier = Modifier
@@ -107,7 +105,7 @@ fun SignupScreen(navController: NavController) {
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = strings.appName,
+            text = stringResource(R.string.app_name),
             fontSize = 30.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
@@ -116,7 +114,7 @@ fun SignupScreen(navController: NavController) {
         Spacer(modifier = Modifier.height(40.dp))
 
         Text(
-            text = strings.createAccount,
+            text = stringResource(R.string.create_account),
             fontSize = 24.sp,
             fontWeight = FontWeight.Medium
         )
@@ -126,7 +124,7 @@ fun SignupScreen(navController: NavController) {
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
-            label = { Text(strings.name) },
+            label = { Text(stringResource(R.string.name)) },
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -135,7 +133,7 @@ fun SignupScreen(navController: NavController) {
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
-            label = { Text(strings.email) },
+            label = { Text(stringResource(R.string.email)) },
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -144,7 +142,7 @@ fun SignupScreen(navController: NavController) {
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
-            label = { Text(strings.password) },
+            label = { Text(stringResource(R.string.password)) },
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth()
         )
@@ -154,7 +152,7 @@ fun SignupScreen(navController: NavController) {
         OutlinedTextField(
             value = confirmPassword,
             onValueChange = { confirmPassword = it },
-            label = { Text("Bevestig Wachtwoord") },
+            label = { Text(stringResource(R.string.confirm_password)) },
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth()
         )
@@ -164,7 +162,7 @@ fun SignupScreen(navController: NavController) {
         Button(
             onClick = {
                 if (password != confirmPassword) {
-                    errorMessage = "Wachtwoorden komen niet overeen"
+                    errorMessage = context.getString(R.string.passwords_do_not_match)
                     return@Button
                 }
                 coroutineScope.launch {
@@ -181,10 +179,10 @@ fun SignupScreen(navController: NavController) {
                             }
                             navController.navigate(Screen.Dashboard.route)
                         } catch (e: Exception) {
-                            errorMessage = "Automatisch inloggen mislukt: ${e.message}"
+                            errorMessage = "${context.getString(R.string.auto_login_failed)}: ${e.message}"
                         }
                     } else {
-                        errorMessage = "Registratie mislukt"
+                        errorMessage = context.getString(R.string.registration_failed)
                     }
                 }
             },
@@ -198,7 +196,7 @@ fun SignupScreen(navController: NavController) {
                     strokeWidth = 2.dp
                 )
             } else {
-                Text(strings.createAccount)
+                Text(stringResource(R.string.create_account))
             }
         }
 
@@ -213,7 +211,7 @@ fun SignupScreen(navController: NavController) {
             onClick = { navController.navigate(Screen.Login.route) },
             enabled = !isLoading
         ) {
-            Text(if (strings === dutchStrings) "Al een account? Log hier in" else "Already have an account? Login here")
+            Text(stringResource(R.string.already_have_account))
         }
     }
 }

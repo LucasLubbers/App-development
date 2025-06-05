@@ -13,6 +13,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -27,7 +29,6 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.ui.text.style.TextAlign
 import kotlinx.coroutines.launch
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -126,9 +127,7 @@ fun ProfileScreen(navController: NavController) {
     var passwordSaveMessage by remember { mutableStateOf<String?>(null) }
 
     var imageUri by remember { mutableStateOf<Uri?>(null) }
-    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) {
-            uri: Uri? -> imageUri = uri
-    }
+    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? -> imageUri = uri }
     var imageVersion by remember { mutableStateOf(0) }
 
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -136,6 +135,15 @@ fun ProfileScreen(navController: NavController) {
     var deleteAccountMessage by remember { mutableStateOf<String?>(null) }
     var isDeleting by remember { mutableStateOf(false) }
     var showDeleteSuccessScreen by remember { mutableStateOf(false) }
+
+    // Store string resources
+    val profilePhotoUpdatedStr = stringResource(R.string.profile_photo_updated)
+    val profileUpdatedStr = stringResource(R.string.profile_updated)
+    val updateFailedStr = stringResource(R.string.update_failed)
+    val passwordsDontMatchStr = stringResource(R.string.passwords_dont_match)
+    val passwordChangedSuccessStr = stringResource(R.string.password_changed_success)
+    val passwordChangeFailedStr = stringResource(R.string.password_change_failed)
+    val incorrectPasswordStr = stringResource(R.string.incorrect_password)
 
     LaunchedEffect(Unit) {
         val userId = getUserId(context)
@@ -149,10 +157,10 @@ fun ProfileScreen(navController: NavController) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Profiel") },
+                title = { Text(stringResource(R.string.profile)) },
                 actions = {
                     IconButton(onClick = { /* Navigate to settings */ }) {
-                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+                        Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.settings))
                     }
                 }
             )
@@ -230,8 +238,11 @@ fun ProfileScreen(navController: NavController) {
                                     onClick = { imagePicker.launch("image/*") },
                                     modifier = Modifier.fillMaxWidth(0.7f)
                                 ) {
-                                    Text("Upload Foto", modifier = Modifier.fillMaxWidth(),
-                                        textAlign = TextAlign.Center)
+                                    Text(
+                                        stringResource(R.string.upload_photo),
+                                        modifier = Modifier.fillMaxWidth(),
+                                        textAlign = TextAlign.Center
+                                    )
                                 }
 
                                 imageUri?.let { uri ->
@@ -252,7 +263,7 @@ fun ProfileScreen(navController: NavController) {
                                                 updateUserProfile(userId, nameInput, publicUrl)
                                                 profile = fetchUserProfile(userId)
                                                 imageVersion++
-                                                profileSaveMessage = "Profielfoto bijgewerkt"
+                                                profileSaveMessage = profilePhotoUpdatedStr
                                             }
                                         }
                                         imageUri = null
@@ -281,16 +292,16 @@ fun ProfileScreen(navController: NavController) {
                                         val profileSuccess = updateUserProfile(userId, nameInput)
                                         if (profileSuccess) {
                                             profile = fetchUserProfile(userId)
-                                            profileSaveMessage = "Profiel bijgewerkt"
+                                            profileSaveMessage = profileUpdatedStr
                                         } else {
-                                            profileSaveMessage = "Bijwerken mislukt"
+                                            profileSaveMessage = updateFailedStr
                                         }
                                     }
                                 }
                             },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Opslaan")
+                            Text(stringResource(R.string.save))
                         }
 
                         profileSaveMessage?.let {
@@ -316,14 +327,14 @@ fun ProfileScreen(navController: NavController) {
                             .fillMaxWidth()
                     ) {
                         Text(
-                            text = "Verander Wachtwoord",
+                            text = stringResource(R.string.change_password),
                             style = MaterialTheme.typography.titleMedium
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         OutlinedTextField(
                             value = currentPassword,
                             onValueChange = { currentPassword = it },
-                            label = { Text("Huidig Wachtwoord") },
+                            label = { Text(stringResource(R.string.current_password)) },
                             visualTransformation = PasswordVisualTransformation(),
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -331,7 +342,7 @@ fun ProfileScreen(navController: NavController) {
                         OutlinedTextField(
                             value = newPassword,
                             onValueChange = { newPassword = it },
-                            label = { Text("Nieuw Wachtwoord") },
+                            label = { Text(stringResource(R.string.new_password)) },
                             visualTransformation = PasswordVisualTransformation(),
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -339,7 +350,7 @@ fun ProfileScreen(navController: NavController) {
                         OutlinedTextField(
                             value = confirmNewPassword,
                             onValueChange = { confirmNewPassword = it },
-                            label = { Text("Bevestig Nieuw Wachtwoord") },
+                            label = { Text(stringResource(R.string.confirm_new_password)) },
                             visualTransformation = PasswordVisualTransformation(),
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -349,7 +360,7 @@ fun ProfileScreen(navController: NavController) {
                                 coroutineScope.launch {
                                     passwordSaveMessage = null
                                     if (newPassword != confirmNewPassword) {
-                                        passwordSaveMessage = "Wachtwoorden komen niet overeen"
+                                        passwordSaveMessage = passwordsDontMatchStr
                                         return@launch
                                     }
                                     try {
@@ -362,18 +373,18 @@ fun ProfileScreen(navController: NavController) {
                                         SupabaseClient.client.auth.modifyUser {
                                             password = newPassword
                                         }
-                                        passwordSaveMessage = "Wachtwoord succesvol gewijzigd"
+                                        passwordSaveMessage = passwordChangedSuccessStr
                                         currentPassword = ""
                                         newPassword = ""
                                         confirmNewPassword = ""
                                     } catch (e: Exception) {
-                                        passwordSaveMessage = "Wachtwoord wijzigen mislukt"
+                                        passwordSaveMessage = passwordChangeFailedStr
                                     }
                                 }
                             },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Bevestigen")
+                            Text(stringResource(R.string.confirm))
                         }
                         passwordSaveMessage?.let {
                             Spacer(modifier = Modifier.height(8.dp))
@@ -406,8 +417,10 @@ fun ProfileScreen(navController: NavController) {
                             ),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Verwijder Account", color = MaterialTheme.
-                            colorScheme.onError)
+                            Text(
+                                stringResource(R.string.delete_account),
+                                color = MaterialTheme.colorScheme.onError
+                            )
                         }
                         deleteAccountMessage?.let {
                             Spacer(modifier = Modifier.height(8.dp))
@@ -428,15 +441,15 @@ fun ProfileScreen(navController: NavController) {
                 deletePassword = ""
                 deleteAccountMessage = null
             },
-            title = { Text("Account verwijderen") },
+            title = { Text(stringResource(R.string.delete_account_title)) },
             text = {
                 Column {
-                    Text("Voer je wachtwoord in om je account te verwijderen.")
+                    Text(stringResource(R.string.enter_password_to_delete))
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
                         value = deletePassword,
                         onValueChange = { deletePassword = it },
-                        label = { Text("Wachtwoord") },
+                        label = { Text(stringResource(R.string.password)) },
                         visualTransformation = PasswordVisualTransformation(),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
@@ -468,14 +481,14 @@ fun ProfileScreen(navController: NavController) {
                                 deletePassword = ""
                                 showDeleteSuccessScreen = true
                             } catch (e: Exception) {
-                                deleteAccountMessage = "Onjuist wachtwoord."
+                                deleteAccountMessage = incorrectPasswordStr
                             }
                             isDeleting = false
                         }
                     },
                     enabled = deletePassword.isNotBlank() && !isDeleting
                 ) {
-                    Text("Bevestigen")
+                    Text(stringResource(R.string.confirm))
                 }
             },
             dismissButton = {
@@ -486,7 +499,7 @@ fun ProfileScreen(navController: NavController) {
                         deleteAccountMessage = null
                     }
                 ) {
-                    Text("Annuleren")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -495,11 +508,11 @@ fun ProfileScreen(navController: NavController) {
     if (showDeleteSuccessScreen) {
         AlertDialog(
             onDismissRequest = { showDeleteSuccessScreen = false },
-            title = { Text("Account verwijderen") },
-            text = { Text("Het verzoek om je account te verwijderen is verstuurd.") },
+            title = { Text(stringResource(R.string.delete_account_title)) },
+            text = { Text(stringResource(R.string.delete_account_requested)) },
             confirmButton = {
                 TextButton(onClick = { showDeleteSuccessScreen = false }) {
-                    Text("OK")
+                    Text(stringResource(R.string.ok))
                 }
             }
         )

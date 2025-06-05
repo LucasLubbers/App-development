@@ -10,10 +10,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.workoutbuddyapplication.R
 import com.example.workoutbuddyapplication.components.BottomNavBar
 import com.example.workoutbuddyapplication.navigation.Screen
 
@@ -21,7 +23,7 @@ import com.example.workoutbuddyapplication.navigation.Screen
 fun StatsScreen(navController: NavController) {
     var selectedTabIndex by remember { mutableStateOf(3) }
     var selectedTimeRange by remember { mutableStateOf(0) }
-    val timeRanges = listOf("Week", "Maand", "Jaar")
+    val timeRanges = listOf(stringResource(R.string.week), stringResource(R.string.month), stringResource(R.string.year))
 
     Scaffold(
         bottomBar = {
@@ -39,7 +41,7 @@ fun StatsScreen(navController: NavController) {
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            Text("Statistieken", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.statistics), fontSize = 24.sp, fontWeight = FontWeight.Bold)
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -59,7 +61,7 @@ fun StatsScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            Text("Workout Activiteit", fontSize = 20.sp, fontWeight = FontWeight.Medium)
+            Text(stringResource(R.string.workout_activity), fontSize = 20.sp, fontWeight = FontWeight.Medium)
             Spacer(modifier = Modifier.height(8.dp))
 
             Card(
@@ -73,7 +75,7 @@ fun StatsScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            Text("Workout Verdeling", fontSize = 20.sp, fontWeight = FontWeight.Medium)
+            Text(stringResource(R.string.workout_distribution), fontSize = 20.sp, fontWeight = FontWeight.Medium)
             Spacer(modifier = Modifier.height(8.dp))
 
             Card(
@@ -88,9 +90,11 @@ fun StatsScreen(navController: NavController) {
             Spacer(modifier = Modifier.height(16.dp))
 
             Button(
-                text = "Doelen Bekijken",
-                onClick = { navController.navigate(Screen.Goals.route) }
-            )
+                onClick = { navController.navigate(Screen.Goals.route) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(stringResource(R.string.view_goals))
+            }
         }
     }
 }
@@ -98,14 +102,22 @@ fun StatsScreen(navController: NavController) {
 @Composable
 fun WorkoutActivityChart() {
     val values = listOf(0.3f, 0.5f, 0.7f, 0.4f, 0.6f, 0.2f, 0.8f)
-    val days = listOf("Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo")
+    val days = listOf(
+        stringResource(R.string.monday).take(2),
+        stringResource(R.string.tuesday).take(2),
+        stringResource(R.string.wednesday).take(2),
+        stringResource(R.string.thursday).take(2),
+        stringResource(R.string.friday).take(2),
+        stringResource(R.string.saturday).take(2),
+        stringResource(R.string.sunday).take(2)
+    )
 
     Canvas(modifier = Modifier.fillMaxWidth().height(200.dp)) {
         val barWidth = size.width / (values.size * 1.5f)
         val spacing = barWidth / 2
         val maxBarHeight = size.height * 0.8f
 
-        // horizontale lijnen
+        // Draw horizontal lines
         for (i in 0..4) {
             val y = size.height - (i * size.height / 4)
             drawLine(
@@ -128,7 +140,7 @@ fun WorkoutActivityChart() {
                 strokeWidth = barWidth
             )
 
-            // tekst onder balken
+            // Draw text below bars
             drawContext.canvas.nativeCanvas.apply {
                 drawText(
                     days[index],
@@ -151,9 +163,9 @@ fun StatsSummaryCards() {
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        StatsSummaryCard("Totaal", "23", "workouts", Modifier.weight(1f))
+        StatsSummaryCard(stringResource(R.string.total), "23", stringResource(R.string.workouts), Modifier.weight(1f))
         Spacer(modifier = Modifier.width(8.dp))
-        StatsSummaryCard("Totale Tijd", "15.5", "uren", Modifier.weight(1f))
+        StatsSummaryCard(stringResource(R.string.total_time), "15.5", stringResource(R.string.hours), Modifier.weight(1f))
     }
 
     Spacer(modifier = Modifier.height(8.dp))
@@ -162,9 +174,9 @@ fun StatsSummaryCards() {
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        StatsSummaryCard("Afstand", "87", "km", Modifier.weight(1f))
+        StatsSummaryCard(stringResource(R.string.distance), "87", "km", Modifier.weight(1f))
         Spacer(modifier = Modifier.width(8.dp))
-        StatsSummaryCard("Gemiddeld", "3.2", "per week", Modifier.weight(1f))
+        StatsSummaryCard(stringResource(R.string.average), "3.2", stringResource(R.string.per_week), Modifier.weight(1f))
     }
 }
 
@@ -185,13 +197,13 @@ fun StatsSummaryCard(title: String, value: String, subtitle: String, modifier: M
 @Composable
 fun WorkoutTypeDistribution(running: Int, strength: Int, yoga: Int, other: Int) {
     Column {
-        WorkoutTypeBar("Hardlopen", running, MaterialTheme.colorScheme.primary)
+        WorkoutTypeBar(stringResource(R.string.running), running, MaterialTheme.colorScheme.primary)
         Spacer(modifier = Modifier.height(8.dp))
-        WorkoutTypeBar("Krachttraining", strength, MaterialTheme.colorScheme.secondary)
+        WorkoutTypeBar(stringResource(R.string.strength_training), strength, MaterialTheme.colorScheme.secondary)
         Spacer(modifier = Modifier.height(8.dp))
-        WorkoutTypeBar("Yoga", yoga, MaterialTheme.colorScheme.tertiary)
+        WorkoutTypeBar(stringResource(R.string.yoga), yoga, MaterialTheme.colorScheme.tertiary)
         Spacer(modifier = Modifier.height(8.dp))
-        WorkoutTypeBar("Overig", other, MaterialTheme.colorScheme.surfaceVariant)
+        WorkoutTypeBar(stringResource(R.string.other), other, MaterialTheme.colorScheme.surfaceVariant)
     }
 }
 

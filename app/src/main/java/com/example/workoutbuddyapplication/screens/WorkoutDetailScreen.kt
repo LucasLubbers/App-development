@@ -25,10 +25,11 @@ import org.json.JSONArray
 import java.time.LocalDate
 import com.example.workoutbuddyapplication.models.Exercise
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.stringResource
+import com.example.workoutbuddyapplication.R
 import com.example.workoutbuddyapplication.components.BottomNavBar
 import com.example.workoutbuddyapplication.models.WorkoutExerciseWithDetails
 import com.example.workoutbuddyapplication.navigation.Screen
-import com.example.workoutbuddyapplication.ui.theme.strings
 
 suspend fun fetchWorkoutById(workoutId: Int): Workout? = withContext(Dispatchers.IO) {
     val client = OkHttpClient()
@@ -130,7 +131,6 @@ fun WorkoutDetailScreen(
     navController: NavController,
     selectedTabIndex: Int
 ) {
-    val strings = strings()
     var workout by remember { mutableStateOf<Workout?>(null) }
     var exercises by remember { mutableStateOf<List<WorkoutExerciseWithDetails>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -144,7 +144,7 @@ fun WorkoutDetailScreen(
             workout = fetchWorkoutById(workoutId)
             exercises = fetchExercisesForWorkout(workoutId)
         } catch (e: Exception) {
-            error = strings.failedToLoadWorkoutDetails
+            error = "Failed to load workout details"
         }
         isLoading = false
     }
@@ -152,10 +152,10 @@ fun WorkoutDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(strings.workoutDetails) },
+                title = { Text(stringResource(R.string.workout_details)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
@@ -176,7 +176,7 @@ fun WorkoutDetailScreen(
             when {
                 isLoading -> CircularProgressIndicator()
                 error != null -> Text(error!!, color = MaterialTheme.colorScheme.error)
-                workout == null -> Text(strings.workoutNotFound)
+                workout == null -> Text(stringResource(R.string.workout_not_found))
                 else -> {
                     Card(
                         modifier = Modifier
@@ -201,14 +201,14 @@ fun WorkoutDetailScreen(
                                     text = workout!!.workoutTypeEnum.displayName,
                                     style = MaterialTheme.typography.titleLarge
                                 )
-                                Text("${strings.date}: ${workout!!.date}")
-                                Text("${strings.duration}: ${workout!!.duration} ${strings.minutes}")
-                                workout!!.distance?.let { Text("${strings.distance}: $it km") }
-                                workout!!.notes?.let { Text("${strings.notes}: $it") }
+                                Text("${stringResource(R.string.date)}: ${workout!!.date}")
+                                Text("${stringResource(R.string.duration)}: ${workout!!.duration} ${stringResource(R.string.minutes)}")
+                                workout!!.distance?.let { Text("${stringResource(R.string.distance)}: $it km") }
+                                workout!!.notes?.let { Text("${stringResource(R.string.notes)}: $it") }
                             }
                         }
                     }
-                    Text("${strings.exercises}:", style = MaterialTheme.typography.titleMedium)
+                    Text("${stringResource(R.string.exercises)}:", style = MaterialTheme.typography.titleMedium)
                     LazyColumn {
                         items(exercises) { item ->
                             WorkoutExerciseDetailCard(item, navController)
@@ -223,7 +223,6 @@ fun WorkoutDetailScreen(
 
 @Composable
 fun WorkoutExerciseDetailCard(item: WorkoutExerciseWithDetails, navController: NavController) {
-    val strings = strings()
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -236,11 +235,11 @@ fun WorkoutExerciseDetailCard(item: WorkoutExerciseWithDetails, navController: N
                 text = item.exercise.name,
                 style = MaterialTheme.typography.titleMedium
             )
-            item.sets?.let { Text("${strings.sets}: $it") }
-            item.reps?.let { Text("${strings.reps}: $it") }
-            item.weight?.let { Text("${strings.weight}: $it kg") }
-            item.restTime?.let { Text("${strings.restTime}: $it sec") }
-            item.notes?.takeIf { it.isNotBlank() }?.let { Text("${strings.notes}: $it") }
+            item.sets?.let { Text("${stringResource(R.string.sets)}: $it") }
+            item.reps?.let { Text("${stringResource(R.string.reps)}: $it") }
+            item.weight?.let { Text("${stringResource(R.string.weight)}: $it kg") }
+            item.restTime?.let { Text("${stringResource(R.string.rest_time)}: $it sec") }
+            item.notes?.takeIf { it.isNotBlank() }?.let { Text("${stringResource(R.string.notes)}: $it") }
         }
     }
 }

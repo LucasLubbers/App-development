@@ -10,10 +10,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.workoutbuddyapplication.R
 import com.example.workoutbuddyapplication.BuildConfig
 import com.example.workoutbuddyapplication.components.BottomNavBar
 import java.time.LocalDate
@@ -25,7 +28,6 @@ import org.json.JSONArray
 import java.time.Month
 import java.time.format.TextStyle
 import java.util.Locale
-import androidx.compose.ui.platform.LocalContext
 
 suspend fun fetchWorkouts(userId: String): List<Workout> = withContext(Dispatchers.IO) {
     val client = OkHttpClient()
@@ -75,6 +77,10 @@ fun HistoryScreen(navController: NavController, selectedLanguage: String) {
     var expanded by remember { mutableStateOf(false) }
     var selectedType by remember { mutableStateOf<WorkoutType?>(null) }
 
+    // Store string resources
+    val noWorkoutsFoundError = stringResource(R.string.no_workouts_or_fetch_failed)
+    val userNotLoggedInError = stringResource(R.string.user_not_logged_in)
+
     LaunchedEffect(Unit) {
         isLoading = true
         error = null
@@ -84,10 +90,10 @@ fun HistoryScreen(navController: NavController, selectedLanguage: String) {
             if (result.isNotEmpty()) {
                 workouts = result
             } else {
-                error = "No workouts found or failed to fetch."
+                error = noWorkoutsFoundError
             }
         } else {
-            error = "User not logged in."
+            error = userNotLoggedInError
         }
         isLoading = false
     }
@@ -107,7 +113,6 @@ fun HistoryScreen(navController: NavController, selectedLanguage: String) {
         (year, month) -> year * 100 + month
     }
 
-
     Scaffold(
         bottomBar = {
             BottomNavBar(
@@ -124,7 +129,7 @@ fun HistoryScreen(navController: NavController, selectedLanguage: String) {
                 .padding(16.dp)
         ) {
             Text(
-                text = "Workout Geschiedenis",
+                text = stringResource(R.string.workout_history),
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -134,14 +139,14 @@ fun HistoryScreen(navController: NavController, selectedLanguage: String) {
             // Filter dropdown
             Box {
                 Button(onClick = { expanded = true }) {
-                    Text(selectedType?.displayName ?: "Alle types")
+                    Text(selectedType?.displayName ?: stringResource(R.string.all_types))
                 }
                 DropdownMenu(
                     expanded = expanded,
                     onDismissRequest = { expanded = false }
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Alle types") },
+                        text = { Text(stringResource(R.string.all_types)) },
                         onClick = {
                             selectedType = null
                             expanded = false
@@ -169,7 +174,7 @@ fun HistoryScreen(navController: NavController, selectedLanguage: String) {
                     Text(error!!, color = MaterialTheme.colorScheme.error)
                 }
                 filteredWorkouts.isEmpty() -> {
-                    Text("No workouts found.")
+                    Text(stringResource(R.string.no_workouts_found))
                 }
                 else -> {
                     LazyColumn(

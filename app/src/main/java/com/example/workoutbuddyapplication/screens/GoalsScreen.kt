@@ -11,7 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -39,13 +39,89 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import com.example.workoutbuddyapplication.models.Workout
 import androidx.compose.ui.graphics.Color
-import com.example.workoutbuddyapplication.ui.theme.strings
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.ui.res.stringResource
+import com.example.workoutbuddyapplication.R
 import okhttp3.RequestBody.Companion.toRequestBody
-import com.example.workoutbuddyapplication.screens.fetchWorkouts
+import org.json.JSONObject
+
+suspend fun updateGoal(
+    goalId: Int,
+    title: String,
+    workoutType: WorkoutType,
+    goalType: GoalType,
+    targetValue: Double,
+    unit: String,
+    startDate: String,
+    endDate: String
+): Boolean = withContext(Dispatchers.IO) {
+    val client = OkHttpClient()
+    val json = JSONObject()
+    json.put("title", title)
+    json.put("workout_type", workoutType.name)
+    json.put("goal_type", goalType.name)
+    json.put("target_value", targetValue)
+    json.put("unit", unit)
+    json.put("start_date", startDate)
+    json.put("end_date", endDate)
+    
+    val body = json.toString().toRequestBody("application/json".toMediaTypeOrNull())
+    val request = Request.Builder()
+        .url("https://attsgwsxdlblbqxnboqx.supabase.co/rest/v1/goals?id=eq.$goalId")
+        .patch(body)
+        .addHeader("apikey", BuildConfig.SUPABASE_ANON_KEY)
+        .addHeader("Authorization", "Bearer ${BuildConfig.SUPABASE_ANON_KEY}")
+        .addHeader("Content-Type", "application/json")
+        .build()
+    
+    try {
+        val response = client.newCall(request).execute()
+        response.isSuccessful
+    } catch (e: Exception) {
+        false
+    }
+}
+
+suspend fun addGoal(
+    userId: String,
+    title: String,
+    workoutType: WorkoutType,
+    goalType: GoalType,
+    targetValue: Double,
+    unit: String,
+    startDate: String,
+    endDate: String
+): Boolean = withContext(Dispatchers.IO) {
+    val client = OkHttpClient()
+    val json = JSONObject()
+    json.put("profile_id", userId)
+    json.put("title", title)
+    json.put("workout_type", workoutType.name)
+    json.put("goal_type", goalType.name)
+    json.put("target_value", targetValue)
+    json.put("unit", unit)
+    json.put("start_date", startDate)
+    json.put("end_date", endDate)
+    
+    val body = json.toString().toRequestBody("application/json".toMediaTypeOrNull())
+    val request = Request.Builder()
+        .url("https://attsgwsxdlblbqxnboqx.supabase.co/rest/v1/goals")
+        .post(body)
+        .addHeader("apikey", BuildConfig.SUPABASE_ANON_KEY)
+        .addHeader("Authorization", "Bearer ${BuildConfig.SUPABASE_ANON_KEY}")
+        .addHeader("Content-Type", "application/json")
+        .build()
+    
+    try {
+        val response = client.newCall(request).execute()
+        response.isSuccessful
+    } catch (e: Exception) {
+        false
+    }
+}
 
 @RequiresApi(Build.VERSION_CODES.O)
 fun calculateGoalProgress(goal: Goal, workouts: List<Workout>): Double {
@@ -130,7 +206,6 @@ fun EditGoalDialog(
     onGoalUpdated: () -> Unit,
     userId: String
 ) {
-    val strings = strings()
     var title by remember { mutableStateOf(goal.title) }
     var target by remember { mutableStateOf(goal.target.toString()) }
     var unit by remember { mutableStateOf(goal.unit) }
@@ -149,31 +224,31 @@ fun EditGoalDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(strings.editGoal) },
+        title = { Text(stringResource(R.string.edit_goal)) },
         text = {
             Column {
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text(strings.title) },
+                    label = { Text(stringResource(R.string.title)) },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(8.dp))
                 ExposedDropdownMenuBoxDisplayName(
-                    label = strings.workoutType,
+                    label = stringResource(R.string.workout_type),
                     options = WorkoutType.values().toList(),
                     selected = selectedWorkoutType,
                     displayName = { it.displayName },
-                    placeholder = strings.selectWorkoutType,
+                    placeholder = stringResource(R.string.select_workout_type),
                     onSelected = { selectedWorkoutType = it }
                 )
                 Spacer(Modifier.height(8.dp))
                 ExposedDropdownMenuBoxDisplayName(
-                    label = strings.goalType,
+                    label = stringResource(R.string.goal_type),
                     options = GoalType.values().toList(),
                     selected = selectedGoalType,
                     displayName = { it.displayName },
-                    placeholder = strings.selectGoalType,
+                    placeholder = stringResource(R.string.select_goal_type),
                     onSelected = { selectedGoalType = it }
                 )
                 Spacer(Modifier.height(8.dp))
@@ -184,13 +259,13 @@ fun EditGoalDialog(
                     OutlinedTextField(
                         value = target,
                         onValueChange = { target = it },
-                        label = { Text(strings.value) },
+                        label = { Text(stringResource(R.string.value)) },
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = unit,
                         onValueChange = { unit = it },
-                        label = { Text(strings.unit) },
+                        label = { Text(stringResource(R.string.unit)) },
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -203,7 +278,7 @@ fun EditGoalDialog(
                         OutlinedTextField(
                             value = startDate,
                             onValueChange = {},
-                            label = { Text(strings.startDate) },
+                            label = { Text(stringResource(R.string.start_date)) },
                             readOnly = true,
                             trailingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = null) },
                             modifier = Modifier.fillMaxWidth()
@@ -218,7 +293,7 @@ fun EditGoalDialog(
                         OutlinedTextField(
                             value = endDate,
                             onValueChange = {},
-                            label = { Text(strings.endDate) },
+                            label = { Text(stringResource(R.string.end_date)) },
                             readOnly = true,
                             trailingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = null) },
                             modifier = Modifier.fillMaxWidth()
@@ -248,74 +323,55 @@ fun EditGoalDialog(
                         onDismiss = { isEndDatePickerOpen = false }
                     )
                 }
-                if (error != null) Text(error!!, color = MaterialTheme.colorScheme.error)
+                if (isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                }
+                error?.let {
+                    Text(
+                        text = it,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    isLoading = true
-                    error = null
-                    coroutineScope.launch {
-                        val success = updateGoal(
-                            goal.id!!, title, selectedWorkoutType, selectedGoalType,
-                            target.toDouble(), unit, startDate, endDate
-                        )
-                        isLoading = false
-                        if (success) {
-                            onGoalUpdated()
-                            onDismiss()
-                        } else {
-                            error = strings.updateFailed
+                    goal.id?.let { goalId ->
+                        isLoading = true
+                        coroutineScope.launch {
+                            val success = updateGoal(
+                                goalId = goalId,
+                                title = title,
+                                workoutType = selectedWorkoutType,
+                                goalType = selectedGoalType,
+                                targetValue = target.toDouble(),
+                                unit = unit,
+                                startDate = startDate,
+                                endDate = endDate
+                            )
+                            isLoading = false
+                            if (success) {
+                                onGoalUpdated()
+                                onDismiss()
+                            } else {
+                                error = "Failed to update goal."
+                            }
                         }
                     }
                 },
                 enabled = isFormValid && !isLoading
-            ) { Text(strings.update) }
+            ) {
+                Text(stringResource(R.string.save))
+            }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(strings.cancel) }
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
         }
     )
-}
-
-suspend fun updateGoal(
-    goalId: Int,
-    title: String,
-    workoutType: WorkoutType,
-    goalType: GoalType,
-    target: Double,
-    unit: String,
-    startDate: String?,
-    endDate: String?
-): Boolean = withContext(Dispatchers.IO) {
-    val client = OkHttpClient()
-    val json = buildString {
-        append("{")
-        append("\"title\":\"$title\",")
-        append("\"workout_type\":\"${workoutType.name}\",")
-        append("\"goal_type\":\"${goalType.name}\",")
-        append("\"target_value\":$target,")
-        append("\"unit\":\"$unit\"")
-        if (!startDate.isNullOrBlank()) append(",\"start_date\":\"$startDate\"")
-        if (!endDate.isNullOrBlank()) append(",\"end_date\":\"$endDate\"")
-        append("}")
-    }
-    val body = json
-        .toRequestBody("application/json".toMediaTypeOrNull())
-    val request = Request.Builder()
-        .url("https://attsgwsxdlblbqxnboqx.supabase.co/rest/v1/goals?id=eq.$goalId")
-        .addHeader("apikey", BuildConfig.SUPABASE_ANON_KEY)
-        .addHeader("Authorization", "Bearer ${BuildConfig.SUPABASE_ANON_KEY}")
-        .addHeader("Content-Type", "application/json")
-        .patch(body)
-        .build()
-    try {
-        val response = client.newCall(request).execute()
-        response.isSuccessful
-    } catch (e: Exception) {
-        false
-    }
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -325,7 +381,6 @@ fun AddGoalDialog(
     onGoalAdded: () -> Unit,
     userId: String
 ) {
-    val strings = strings()
     var title by remember { mutableStateOf("") }
     var target by remember { mutableStateOf("") }
     var unit by remember { mutableStateOf("") }
@@ -339,42 +394,37 @@ fun AddGoalDialog(
     var error by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
 
-    // Validation: all fields must be filled and target must be a valid number
-    val isFormValid = title.isNotBlank()
-            && target.toDoubleOrNull() != null
-            && unit.isNotBlank()
-            && selectedWorkoutType != null
-            && selectedGoalType != null
-            && startDate.isNotBlank()
-            && endDate.isNotBlank()
+    val isFormValid = title.isNotBlank() && target.toDoubleOrNull() != null && unit.isNotBlank() &&
+            selectedWorkoutType != null && selectedGoalType != null &&
+            startDate.isNotBlank() && endDate.isNotBlank()
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(strings.newGoal) },
+        title = { Text(stringResource(R.string.new_goal)) },
         text = {
             Column {
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text(strings.title) },
+                    label = { Text(stringResource(R.string.title)) },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(8.dp))
                 ExposedDropdownMenuBoxDisplayName(
-                    label = strings.workoutType,
+                    label = stringResource(R.string.workout_type),
                     options = WorkoutType.values().toList(),
                     selected = selectedWorkoutType,
                     displayName = { it.displayName },
-                    placeholder = strings.selectWorkoutType,
+                    placeholder = stringResource(R.string.select_workout_type),
                     onSelected = { selectedWorkoutType = it }
                 )
                 Spacer(Modifier.height(8.dp))
                 ExposedDropdownMenuBoxDisplayName(
-                    label = strings.goalType,
+                    label = stringResource(R.string.goal_type),
                     options = GoalType.values().toList(),
                     selected = selectedGoalType,
                     displayName = { it.displayName },
-                    placeholder = strings.selectGoalType,
+                    placeholder = stringResource(R.string.select_goal_type),
                     onSelected = { selectedGoalType = it }
                 )
                 Spacer(Modifier.height(8.dp))
@@ -385,13 +435,13 @@ fun AddGoalDialog(
                     OutlinedTextField(
                         value = target,
                         onValueChange = { target = it },
-                        label = { Text(strings.value) },
+                        label = { Text(stringResource(R.string.value)) },
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = unit,
                         onValueChange = { unit = it },
-                        label = { Text(strings.unit) },
+                        label = { Text(stringResource(R.string.unit)) },
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -404,11 +454,10 @@ fun AddGoalDialog(
                         OutlinedTextField(
                             value = startDate,
                             onValueChange = {},
-                            label = { Text(strings.startDate) },
+                            label = { Text(stringResource(R.string.start_date)) },
                             readOnly = true,
                             trailingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = null) },
-                            modifier = Modifier
-                                .fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth()
                         )
                         Box(
                             modifier = Modifier
@@ -420,11 +469,10 @@ fun AddGoalDialog(
                         OutlinedTextField(
                             value = endDate,
                             onValueChange = {},
-                            label = { Text(strings.endDate) },
+                            label = { Text(stringResource(R.string.end_date)) },
                             readOnly = true,
                             trailingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = null) },
-                            modifier = Modifier
-                                .fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth()
                         )
                         Box(
                             modifier = Modifier
@@ -451,35 +499,119 @@ fun AddGoalDialog(
                         onDismiss = { isEndDatePickerOpen = false }
                     )
                 }
-                if (error != null) Text(error!!, color = MaterialTheme.colorScheme.error)
+                if (isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                }
+                error?.let {
+                    Text(
+                        text = it,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
             }
         },
         confirmButton = {
             Button(
                 onClick = {
                     isLoading = true
-                    error = null
                     coroutineScope.launch {
-                        val success = createGoal(
-                            userId, title, selectedWorkoutType!!, selectedGoalType!!,
-                            target.toDouble(), unit, startDate, endDate
+                        val success = addGoal(
+                            userId = userId,
+                            title = title,
+                            workoutType = selectedWorkoutType!!,
+                            goalType = selectedGoalType!!,
+                            targetValue = target.toDouble(),
+                            unit = unit,
+                            startDate = startDate,
+                            endDate = endDate
                         )
                         isLoading = false
                         if (success) {
                             onGoalAdded()
                             onDismiss()
                         } else {
-                            error = strings.createFailed
+                            error = "Failed to add goal."
                         }
                     }
                 },
                 enabled = isFormValid && !isLoading
-            ) { Text(strings.update) }
+            ) {
+                Text(stringResource(R.string.add))
+            }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(strings.cancel) }
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
         }
     )
+}
+
+@SuppressLint("NewApi")
+@Composable
+fun MaterialDatePickerDialog(
+    onDateSelected: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    val today = LocalDate.now()
+    val dialog = DatePickerDialog(
+        context,
+        { _, year, month, dayOfMonth ->
+            val selectedDate = LocalDate.of(year, month + 1, dayOfMonth)
+            onDateSelected(selectedDate.format(DateTimeFormatter.ISO_DATE))
+        },
+        today.year,
+        today.monthValue - 1,
+        today.dayOfMonth
+    )
+    dialog.setOnDismissListener { onDismiss() }
+    dialog.show()
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun <T> ExposedDropdownMenuBox(
+    label: String,
+    options: List<T>,
+    selected: T,
+    onSelected: (T) -> Unit,
+    placeholder: String
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded }
+    ) {
+        OutlinedTextField(
+            value = selected.toString(),
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label) },
+            trailingIcon = {
+                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor()
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            options.forEach { item ->
+                DropdownMenuItem(
+                    text = { Text(item.toString()) },
+                    onClick = {
+                        onSelected(item)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -493,110 +625,37 @@ fun <T> ExposedDropdownMenuBoxDisplayName(
     onSelected: (T) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
+
     ExposedDropdownMenuBox(
         expanded = expanded,
-        onExpandedChange = { expanded = it }
+        onExpandedChange = { expanded = !expanded }
     ) {
         OutlinedTextField(
-            value = selected?.let(displayName) ?: "",
+            value = selected?.let(displayName) ?: placeholder,
             onValueChange = {},
-            label = { Text(label) },
-            placeholder = { Text(placeholder) },
             readOnly = true,
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            label = { Text(label) },
+            trailingIcon = {
+                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+            },
             modifier = Modifier
-                .menuAnchor()
                 .fillMaxWidth()
+                .menuAnchor()
         )
         ExposedDropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
-            options.forEach { option ->
+            options.forEach { item ->
                 DropdownMenuItem(
-                    text = { Text(displayName(option)) },
+                    text = { Text(displayName(item)) },
                     onClick = {
-                        onSelected(option)
+                        onSelected(item)
                         expanded = false
                     }
                 )
             }
         }
-    }
-}
-
-@RequiresApi(Build.VERSION_CODES.O)
-@Composable
-fun MaterialDatePickerDialog(
-    onDateSelected: (String) -> Unit,
-    onDismiss: () -> Unit
-) {
-    val context = LocalContext.current
-    val today = LocalDate.now()
-    var openDialog by remember { mutableStateOf(true) }
-
-    if (openDialog) {
-        LaunchedEffect(Unit) {
-            val datePicker = DatePickerDialog(
-                context,
-                { _, year, month, dayOfMonth ->
-                    openDialog = false
-                    val picked = LocalDate.of(year, month + 1, dayOfMonth)
-                    onDateSelected(picked.toString())
-                },
-                today.year,
-                today.monthValue - 1,
-                today.dayOfMonth
-            )
-            datePicker.setOnCancelListener {
-                openDialog = false
-                onDismiss()
-            }
-            datePicker.show()
-        }
-    }
-}
-
-@RequiresApi(Build.VERSION_CODES.O)
-suspend fun createGoal(
-    userId: String,
-    title: String,
-    workoutType: WorkoutType,
-    goalType: GoalType,
-    target: Double,
-    unit: String,
-    startDate: String?,
-    endDate: String?
-): Boolean = withContext(Dispatchers.IO) {
-    val client = OkHttpClient()
-    val now = LocalDate.now().toString()
-    val json = buildString {
-        append("{")
-        append("\"profile_id\":\"$userId\",")
-        append("\"title\":\"$title\",")
-        append("\"workout_type\":\"${workoutType.name}\",")
-        append("\"goal_type\":\"${goalType.name}\",")
-        append("\"target_value\":$target,")
-        append("\"unit\":\"$unit\",")
-        append("\"created_at\":\"$now\"")
-        if (!startDate.isNullOrBlank()) append(",\"start_date\":\"$startDate\"")
-        if (!endDate.isNullOrBlank()) append(",\"end_date\":\"$endDate\"")
-        append("}")
-    }
-    val body = json
-        .toRequestBody("application/json".toMediaTypeOrNull())
-    val request = Request.Builder()
-        .url("https://attsgwsxdlblbqxnboqx.supabase.co/rest/v1/goals")
-        .addHeader("apikey", BuildConfig.SUPABASE_ANON_KEY)
-        .addHeader("Authorization", "Bearer ${BuildConfig.SUPABASE_ANON_KEY}")
-        .addHeader("Content-Type", "application/json")
-        .post(body)
-        .build()
-    try {
-        val response = client.newCall(request).execute()
-        response.isSuccessful
-    } catch (e: Exception) {
-        false
     }
 }
 
@@ -606,181 +665,181 @@ fun GoalCard(
     onEdit: (Goal) -> Unit,
     onDelete: (Goal) -> Unit
 ) {
-    val strings = strings()
     var expanded by remember { mutableStateOf(false) }
-    var showDeleteDialog by remember { mutableStateOf(false) }
-    val progress = (goal.current / goal.target).coerceIn(0.0, 1.0).toFloat()
-    val isComplete = progress >= 1.0f
+    val progress = (goal.current / goal.target).toFloat().coerceIn(0f, 1f)
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .animateContentSize(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                goal.title,
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                "${strings.goalType}: ${goal.target} ${goal.unit}",
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Medium
-            )
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .animateContentSize()
+        ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 4.dp, bottom = 4.dp),
-                horizontalArrangement = Arrangement.End
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = { onEdit(goal) }) {
-                    Icon(Icons.Default.Edit, contentDescription = strings.edit)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = goal.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "${goal.workoutType.displayName} - ${goal.goalType.displayName}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
-                IconButton(onClick = { showDeleteDialog = true }) {
-                    Icon(Icons.Default.Delete, contentDescription = strings.delete)
+                IconButton(onClick = { onEdit(goal) }) {
+                    Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.edit))
+                }
+                IconButton(onClick = { onDelete(goal) }) {
+                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.delete))
                 }
                 IconButton(onClick = { expanded = !expanded }) {
                     Icon(
                         imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                        contentDescription = if (expanded) "Less info" else "More info"
+                        contentDescription = if (expanded) "Collapse" else "Expand"
                     )
                 }
             }
-            Text(
-                if (isComplete) strings.completedGoal else "${strings.of}: ${goal.current} ${goal.unit}",
-                color = if (isComplete) Color(0xFF388E3C) else MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = if (isComplete) FontWeight.Bold else FontWeight.Normal
-            )
+            Spacer(Modifier.height(8.dp))
             LinearProgressIndicator(
                 progress = { progress },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .requiredHeight(20.dp)
-                    .padding(vertical = 8.dp),
-                color = if (isComplete) Color(0xFF388E3C) else MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                strokeCap = StrokeCap.Butt
+                    .height(8.dp),
+                strokeCap = StrokeCap.Round
             )
-
+            Spacer(Modifier.height(4.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "${goal.current.toInt()} / ${goal.target.toInt()} ${goal.unit}",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text(
+                    text = "${(progress * 100).toInt()}%",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
             if (expanded) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Divider()
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(Modifier.height(16.dp))
                 Text(
-                    "${strings.workoutType}: ${goal.workoutType.displayName}",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = goal.description,
+                    style = MaterialTheme.typography.bodyMedium
                 )
-                Text(
-                    "${strings.goalType}: ${goal.goalType.displayName}",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                if (goal.description.isNotBlank()) {
+                goal.startDate?.let {
                     Text(
-                        "${strings.notes}: ${goal.description}",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = "${stringResource(R.string.start_date)}: ${formatDate(it)}",
+                        style = MaterialTheme.typography.bodySmall
                     )
                 }
-                if (!goal.startDate.isNullOrBlank()) {
+                goal.endDate?.let {
                     Text(
-                        "${strings.startDate}: ${goal.startDate}",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = "${stringResource(R.string.end_date)}: ${formatDate(it)}",
+                        style = MaterialTheme.typography.bodySmall
                     )
                 }
-                if (!goal.endDate.isNullOrBlank()) {
-                    Text(
-                        "${strings.endDate}: ${goal.endDate}",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Text(
-                    "${strings.date}: ${goal.createdAt}",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
         }
     }
-
-    if (showDeleteDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text(strings.deleteGoal) },
-            text = { Text(String.format(strings.deleteGoalConfirm, goal.title)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    showDeleteDialog = false
-                    onDelete(goal)
-                }) { Text(strings.delete) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text(strings.cancel) }
-            }
-        )
-    }
 }
 
-@SuppressLint("AutoboxingStateCreation")
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GoalsScreen(navController: NavController, userId: String) {
-    val strings = strings()
     var goals by remember { mutableStateOf<List<Goal>>(emptyList()) }
     var workouts by remember { mutableStateOf<List<Workout>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var showAddGoalDialog by remember { mutableStateOf(false) }
-    var showEditGoalDialog by remember { mutableStateOf<Goal?>(null) }
+    var isAddGoalDialogOpen by remember { mutableStateOf(false) }
+    var selectedGoalForEdit by remember { mutableStateOf<Goal?>(null) }
+    val coroutineScope = rememberCoroutineScope()
     var showDeleteConfirmDialog by remember { mutableStateOf<Goal?>(null) }
 
-    val coroutineScope = rememberCoroutineScope()
-
-    fun loadData() {
+    fun loadGoalsAndWorkouts() {
+        isLoading = true
         coroutineScope.launch {
-            isLoading = true
-            try {
-                val fetchedGoals = fetchGoals(userId)
-                val fetchedWorkouts = fetchWorkouts(userId)
-                goals = fetchedGoals.map { goal ->
-                    goal.copy(current = calculateGoalProgress(goal, fetchedWorkouts))
+            val fetchedGoals = fetchGoals(userId)
+            val fetchedWorkouts = fetchWorkouts(userId)
+            workouts = fetchedWorkouts
+            goals = fetchedGoals.map { goal ->
+                goal.copy(current = calculateGoalProgress(goal, fetchedWorkouts))
+            }
+            isLoading = false
+        }
+    }
+
+    LaunchedEffect(userId) {
+        loadGoalsAndWorkouts()
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.my_goals)) },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                    }
                 }
-                workouts = fetchedWorkouts
-                error = null
-            } catch (e: Exception) {
-                error = e.message
-            } finally {
-                isLoading = false
+            )
+        },
+        floatingActionButton = {
+            FloatingActionButton(onClick = { isAddGoalDialogOpen = true }) {
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_goal))
+            }
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            if (isLoading) {
+                CircularProgressIndicator()
+            } else if (goals.isEmpty()) {
+                Text(stringResource(R.string.no_goals_set))
+            } else {
+                goals.forEach { goal ->
+                    GoalCard(
+                        goal = goal,
+                        onEdit = { selectedGoalForEdit = it },
+                        onDelete = { showDeleteConfirmDialog = it }
+                    )
+                    Spacer(Modifier.height(16.dp))
+                }
             }
         }
     }
 
-    LaunchedEffect(Unit) {
-        loadData()
-    }
-
-    if (showAddGoalDialog) {
+    if (isAddGoalDialogOpen) {
         AddGoalDialog(
-            onDismiss = { showAddGoalDialog = false },
+            onDismiss = { isAddGoalDialogOpen = false },
             onGoalAdded = {
-                showAddGoalDialog = false
-                loadData()
+                isAddGoalDialogOpen = false
+                loadGoalsAndWorkouts()
             },
             userId = userId
         )
     }
 
-    showEditGoalDialog?.let { goal ->
+    selectedGoalForEdit?.let { goal ->
         EditGoalDialog(
             goal = goal,
-            onDismiss = { showEditGoalDialog = null },
+            onDismiss = { selectedGoalForEdit = null },
             onGoalUpdated = {
-                showEditGoalDialog = null
-                loadData()
+                selectedGoalForEdit = null
+                loadGoalsAndWorkouts()
             },
             userId = userId
         )
@@ -789,132 +848,34 @@ fun GoalsScreen(navController: NavController, userId: String) {
     showDeleteConfirmDialog?.let { goal ->
         AlertDialog(
             onDismissRequest = { showDeleteConfirmDialog = null },
-            title = { Text(strings.deleteGoal) },
-            text = { Text(String.format(strings.deleteGoalConfirm, goal.title)) },
+            title = { Text(stringResource(R.string.delete_goal)) },
+            text = { Text(stringResource(R.string.delete_goal_confirm, goal.title)) },
             confirmButton = {
-                Button(
+                TextButton(
                     onClick = {
                         coroutineScope.launch {
-                            if (deleteGoal(goal.id!!)) {
-                                showDeleteConfirmDialog = null
-                                loadData()
+                            val success = deleteGoal(goal.id ?: 0)
+                            if (success) {
+                                loadGoalsAndWorkouts()
                             }
+                            showDeleteConfirmDialog = null
                         }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) { Text(strings.delete) }
+                    }
+                ) {
+                    Text(stringResource(R.string.delete))
+                }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirmDialog = null }) {
-                    Text(strings.cancel)
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
     }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(strings.goals) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = strings.back)
-                    }
-                }
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = { showAddGoalDialog = true }) {
-                Icon(Icons.Default.Add, contentDescription = strings.addGoalPrompt)
-            }
-        }
-    ) { padding ->
-        if (isLoading) {
-            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-        } else if (error != null) {
-            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text("${strings.loadingError}: $error")
-            }
-        } else if (goals.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(strings.noGoalsFound)
-                    Text(strings.addGoalPrompt)
-                }
-            }
-        } else {
-            Column(
-                modifier = Modifier
-                    .padding(padding)
-                    .padding(16.dp)
-                    .verticalScroll(rememberScrollState())
-            ) {
-                goals.forEach { goal ->
-                    GoalCard(
-                        goal = goal,
-                        onEdit = { showEditGoalDialog = goal },
-                        onDelete = { showDeleteConfirmDialog = goal }
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
-            }
-        }
-    }
 }
 
-@Composable
-fun GoalItem(goal: Goal, onEdit: () -> Unit, onDelete: () -> Unit) {
-    val strings = strings()
-    var expanded by remember { mutableStateOf(false) }
-    val progress = (goal.current / goal.target).toFloat().coerceIn(0f, 1f)
-    
-    val workoutTypeName = when(goal.workoutType) {
-        WorkoutType.RUNNING -> strings.running
-        WorkoutType.STRENGTH -> strings.strengthTraining
-        WorkoutType.YOGA -> strings.yoga
-        else -> goal.workoutType.displayName
-    }
-
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier
-                .padding(16.dp)
-                .animateContentSize()
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(goal.title, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.weight(1f))
-                IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, contentDescription = strings.edit) }
-                IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, contentDescription = strings.delete) }
-                IconButton(onClick = { expanded = !expanded }) {
-                    Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = null)
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            if (expanded) {
-                Text(goal.description, style = MaterialTheme.typography.bodyMedium)
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("${strings.workoutType}: $workoutTypeName", style = MaterialTheme.typography.bodySmall)
-                Text("${strings.goalType}: ${goal.goalType.displayName}", style = MaterialTheme.typography.bodySmall)
-                goal.startDate?.let { Text("${strings.startDate}: $it", style = MaterialTheme.typography.bodySmall) }
-                goal.endDate?.let { Text("${strings.endDate}: $it", style = MaterialTheme.typography.bodySmall) }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            LinearProgressIndicator(
-                progress = { progress },
-                modifier = Modifier.fillMaxWidth().height(8.dp),
-                strokeCap = StrokeCap.Round
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "${goal.current.toInt()} ${strings.of} ${goal.target.toInt()} ${goal.unit} ${strings.completedGoal}",
-                style = MaterialTheme.typography.bodySmall
-            )
-        }
-    }
+@RequiresApi(Build.VERSION_CODES.O)
+private fun formatDate(dateString: String): String {
+    val date = LocalDate.parse(dateString, DateTimeFormatter.ISO_DATE)
+    return date.format(DateTimeFormatter.ofPattern("dd MMM yyyy"))
 }

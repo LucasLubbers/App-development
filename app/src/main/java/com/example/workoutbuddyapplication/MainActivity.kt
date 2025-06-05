@@ -17,16 +17,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
 import com.example.workoutbuddyapplication.navigation.AppNavigation
 import com.example.workoutbuddyapplication.navigation.DEBUG_MODE
 import com.example.workoutbuddyapplication.ui.theme.WorkoutBuddyTheme
 import com.example.workoutbuddyapplication.ui.theme.ThemeManager
-import com.example.workoutbuddyapplication.ui.theme.LanguageProvider
-import com.example.workoutbuddyapplication.ui.theme.strings
 
-class MainActivity : ComponentActivity() {
+class MainActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -35,20 +34,18 @@ class MainActivity : ComponentActivity() {
             val isDarkMode by themeManager.isDarkMode.collectAsState(initial = false)
             
             WorkoutBuddyTheme(darkTheme = isDarkMode) {
-                LanguageProvider {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        Surface(
-                            modifier = Modifier.fillMaxSize(),
-                            color = MaterialTheme.colorScheme.background
-                        ) {
-                            val navController = rememberNavController()
-                            AppNavigation(navController = navController)
-                        }
-                        
-                        // Debug indicator
-                        if (DEBUG_MODE) {
-                            DebugIndicator()
-                        }
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background
+                    ) {
+                        val navController = rememberNavController()
+                        AppNavigation(navController = navController)
+                    }
+                    
+                    // Debug indicator
+                    if (DEBUG_MODE) {
+                        DebugIndicator()
                     }
                 }
             }
@@ -59,7 +56,6 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun DebugIndicator() {
     var showDebugIndicator by remember { mutableStateOf(true) }
-    val strings = strings()
     
     if (showDebugIndicator) {
         Box(
@@ -74,7 +70,7 @@ fun DebugIndicator() {
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 Text(
-                    text = strings.debugMode,
+                    text = stringResource(R.string.debug_mode),
                     color = Color.Black.copy(alpha = 0.8f)
                 )
             }

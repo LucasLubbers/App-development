@@ -9,18 +9,20 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.workoutbuddyapplication.R
 import com.example.workoutbuddyapplication.navigation.Screen
-import com.example.workoutbuddyapplication.ui.theme.strings
-import com.example.workoutbuddyapplication.screens.formatTime
+import com.example.workoutbuddyapplication.utils.formatTime
 import com.example.workoutbuddyapplication.screens.StatCard
 import kotlinx.coroutines.delay
 
@@ -43,7 +45,6 @@ data class YogaRoutine(
 
 @Composable
 fun YogaWorkoutScreen(navController: NavController) {
-    val strings = strings()
     var isRunning by remember { mutableStateOf(true) }
     var elapsedTime by remember { mutableLongStateOf(0L) }
     var calories by remember { mutableIntStateOf(0) }
@@ -51,87 +52,87 @@ fun YogaWorkoutScreen(navController: NavController) {
     val yogaRoutines = remember {
         mutableStateListOf(
             YogaRoutine(
-                name = strings.morningFlow,
-                description = strings.morningFlowDescription,
+                name = "Morning Flow",
+                description = "Een zachte routine om de dag te beginnen en het lichaam wakker te maken.",
                 poses = listOf(
                     YogaPose(
-                        name = strings.mountainPose,
+                        name = "Mountain Pose",
                         duration = 60,
-                        description = strings.mountainPoseDescription,
+                        description = "Sta rechtop, voeten bij elkaar, armen langs je zij.",
                         benefits = "Improves posture, balance, and body awareness"
                     ),
                     YogaPose(
-                        name = strings.downwardDog,
+                        name = "Downward-Facing Dog",
                         duration = 90,
                         description = "Forms an inverted V with your body, hands and feet on the ground.",
                         benefits = "Stretches the back, strengthens arms and shoulders"
                     ),
                     YogaPose(
-                        name = strings.warriorOne,
+                        name = "Warrior I",
                         duration = 60,
                         description = "Lunge with one leg forward, arms stretched upwards.",
-                        difficulty = strings.intermediate,
+                        difficulty = "Intermediate",
                         benefits = "Strengthens legs, improves balance and focus"
                     ),
                     YogaPose(
-                        name = strings.warriorTwo,
+                        name = "Warrior II",
                         duration = 60,
                         description = "Lunge with one leg forward, arms stretched out to the sides.",
-                        difficulty = strings.intermediate,
+                        difficulty = "Intermediate",
                         benefits = "Opens hips, strengthens legs"
                     ),
                     YogaPose(
-                        name = strings.childsPose,
+                        name = "Child's Pose",
                         duration = 120,
                         description = "Kneel with your forehead on the ground, arms alongside your body or stretched out.",
                         benefits = "Relaxes the back, calms the mind"
                     )
                 ),
                 duration = 15,
-                level = strings.beginner
+                level = "Beginner"
             ),
             YogaRoutine(
-                name = strings.powerAndBalance,
-                description = strings.powerAndBalanceDescription,
+                name = "Power & Balance",
+                description = "Een uitdagende routine gericht op kracht en evenwicht.",
                 poses = listOf(
                     YogaPose(
-                        name = strings.treePose,
+                        name = "Tree Pose",
                         duration = 45,
                         description = "Stand on one leg, place the sole of the other foot against your inner thigh.",
-                        difficulty = strings.intermediate,
+                        difficulty = "Intermediate",
                         benefits = "Improves balance and concentration"
                     ),
                     YogaPose(
-                        name = strings.chairPose,
+                        name = "Chair Pose",
                         duration = 60,
                         description = "Bend your knees as if sitting in a chair, arms up.",
                         benefits = "Strengthens legs and core"
                     ),
                     YogaPose(
-                        name = strings.plankPose,
+                        name = "Plank Pose",
                         duration = 45,
                         description = "Keep your body in a straight line, supported on hands and toes.",
-                        difficulty = strings.intermediate,
+                        difficulty = "Intermediate",
                         benefits = "Strengthens core, arms and shoulders",
-                        breathingPattern = strings.deepBreathing
+                        breathingPattern = "Diepe ademhaling"
                     ),
                     YogaPose(
-                        name = strings.sidePlankPose,
+                        name = "Side Plank Pose",
                         duration = 30,
                         description = "From plank, turn to one side, supporting on one hand and the side of your feet.",
-                        difficulty = strings.advanced,
+                        difficulty = "Advanced",
                         benefits = "Strengthens arms, shoulders and core"
                     ),
                     YogaPose(
-                        name = strings.eaglePose,
+                        name = "Eagle Pose",
                         duration = 45,
                         description = "Cross your arms and legs in front of each other in a twisted position.",
-                        difficulty = strings.intermediate,
+                        difficulty = "Intermediate",
                         benefits = "Improves balance, concentration and coordination"
                     )
                 ),
                 duration = 20,
-                level = strings.intermediate
+                level = "Intermediate"
             )
         )
     }
@@ -146,12 +147,12 @@ fun YogaWorkoutScreen(navController: NavController) {
 
     var newRoutineName by remember { mutableStateOf("") }
     var newRoutineDescription by remember { mutableStateOf("") }
-    var newRoutineLevel by remember { mutableStateOf(strings.beginner) }
+    var newRoutineLevel by remember { mutableStateOf("Beginner") }
 
     var newPoseName by remember { mutableStateOf("") }
     var newPoseDuration by remember { mutableIntStateOf(60) }
     var newPoseDescription by remember { mutableStateOf("") }
-    var newPoseDifficulty by remember { mutableStateOf(strings.beginner) }
+    var newPoseDifficulty by remember { mutableStateOf("Beginner") }
     var newPoseBenefits by remember { mutableStateOf("") }
 
     LaunchedEffect(isRunning) {
@@ -167,15 +168,15 @@ fun YogaWorkoutScreen(navController: NavController) {
 
     LaunchedEffect(isRunning, currentPoseIndex, selectedRoutineIndex) {
         if (yogaRoutines.isNotEmpty() && selectedRoutineIndex < yogaRoutines.size) {
-            val currentRoutine = yogaRoutines[selectedRoutineIndex]
-            if (currentPoseIndex < currentRoutine.poses.size) {
-                poseTimeRemaining = currentRoutine.poses[currentPoseIndex].duration
-                while (isRunning && poseTimeRemaining > 0) {
-                    delay(1000)
-                    poseTimeRemaining--
-                }
-                if (poseTimeRemaining <= 0 && currentPoseIndex < currentRoutine.poses.size - 1) {
-                    currentPoseIndex++
+        val currentRoutine = yogaRoutines[selectedRoutineIndex]
+        if (currentPoseIndex < currentRoutine.poses.size) {
+            poseTimeRemaining = currentRoutine.poses[currentPoseIndex].duration
+            while (isRunning && poseTimeRemaining > 0) {
+                delay(1000)
+                poseTimeRemaining--
+            }
+            if (poseTimeRemaining <= 0 && currentPoseIndex < currentRoutine.poses.size - 1) {
+                currentPoseIndex++
                 }
             }
         }
@@ -190,7 +191,7 @@ fun YogaWorkoutScreen(navController: NavController) {
                 ) {
                     Icon(
                         if (isRunning) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (isRunning) strings.pause else strings.resume
+                        contentDescription = if (isRunning) stringResource(R.string.pause) else stringResource(R.string.resume)
                     )
                 }
                 FloatingActionButton(
@@ -207,7 +208,7 @@ fun YogaWorkoutScreen(navController: NavController) {
                     },
                     containerColor = MaterialTheme.colorScheme.errorContainer
                 ) {
-                    Icon(Icons.Default.Stop, contentDescription = strings.stopWorkout)
+                    Icon(Icons.Default.Stop, contentDescription = stringResource(R.string.stop_workout))
                 }
             }
         }
@@ -249,21 +250,22 @@ fun YogaWorkoutScreen(navController: NavController) {
                         selectedRoutineIndex = index
                         currentPoseIndex = 0
                         showRoutineSelector = false
-                    },
-                    onAddNew = {
-                        showRoutineSelector = false
-                        showAddRoutine = true
                     }
                 )
             }
 
             if (showAddRoutine) {
-                AddOrEditRoutineDialog(
+                AddRoutineDialog(
                     onDismiss = { showAddRoutine = false },
-                    onSave = { newRoutine ->
+                    onAdd = { name, description, level ->
+                        val newRoutine = YogaRoutine(
+                            name = name,
+                            description = description,
+                            poses = emptyList(), // Start with an empty list of poses
+                            duration = 0,
+                            level = level
+                        )
                         yogaRoutines.add(newRoutine)
-                        selectedRoutineIndex = yogaRoutines.size - 1
-                        currentPoseIndex = 0
                         showAddRoutine = false
                     }
                 )
@@ -275,89 +277,135 @@ fun YogaWorkoutScreen(navController: NavController) {
 // Helper Composables for YogaWorkoutScreen
 @Composable
 private fun YogaHeader(routine: YogaRoutine) {
-    val strings = strings()
-    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            modifier = Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(Icons.Default.SelfImprovement, contentDescription = strings.yoga, tint = MaterialTheme.colorScheme.onPrimaryContainer)
-        }
-        Spacer(modifier = Modifier.width(8.dp))
-        Column {
-            Text(text = routine.name, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            Text(text = routine.description, style = MaterialTheme.typography.bodyMedium)
-        }
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(
+            Icons.Default.SelfImprovement,
+            contentDescription = stringResource(R.string.yoga),
+            modifier = Modifier.size(48.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = routine.name,
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = routine.description,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
 @Composable
 private fun WorkoutStats(elapsedTime: Long, calories: Int) {
-    val strings = strings()
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        StatCard(title = strings.time, value = formatTime(elapsedTime), icon = Icons.Default.Timer, modifier = Modifier.weight(1f))
-        Spacer(modifier = Modifier.width(8.dp))
-        StatCard(title = strings.calories, value = "$calories kcal", icon = Icons.Default.LocalFireDepartment, modifier = Modifier.weight(1f))
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceAround
+    ) {
+        StatCard(
+            title = stringResource(R.string.time),
+            value = formatTime(elapsedTime),
+            icon = Icons.Default.Timer
+        )
+        StatCard(
+            title = stringResource(R.string.calories),
+            value = "$calories kcal",
+            icon = Icons.Default.LocalFireDepartment
+        )
     }
 }
 
 @Composable
 private fun CurrentPoseCard(pose: YogaPose, timeRemaining: Int) {
-    val strings = strings()
-    Text(text = strings.currentPose, style = MaterialTheme.typography.headlineSmall)
-    Spacer(modifier = Modifier.height(8.dp))
-    Card(modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = pose.name, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(4.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = pose.name,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold
+            )
             Spacer(modifier = Modifier.height(8.dp))
-            LinearProgressIndicator(progress = { (pose.duration - timeRemaining).toFloat() / pose.duration }, modifier = Modifier.fillMaxWidth())
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text = "${formatTime(timeRemaining * 1000L)} ${strings.time} remaining", style = MaterialTheme.typography.bodyMedium)
+            Text(
+                text = formatTime(timeRemaining * 1000L),
+                fontSize = 48.sp,
+                fontWeight = FontWeight.Light,
+                color = MaterialTheme.colorScheme.primary
+            )
             Spacer(modifier = Modifier.height(16.dp))
-            Text(text = pose.description, style = MaterialTheme.typography.bodyLarge)
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(text = String.format(strings.poseDifficulty, pose.difficulty), style = MaterialTheme.typography.bodyMedium)
+            Text(
+                text = pose.description,
+                style = MaterialTheme.typography.bodyLarge
+            )
             Spacer(modifier = Modifier.height(8.dp))
-            if (pose.benefits.isNotEmpty()) {
-                Text(text = String.format(strings.poseBenefits, pose.benefits), style = MaterialTheme.typography.bodyMedium)
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-            Text(text = String.format(strings.poseBreathing, pose.breathingPattern), style = MaterialTheme.typography.bodyMedium)
+            Text(
+                text = "${stringResource(R.string.difficulty)}: ${pose.difficulty}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = "${stringResource(R.string.breathing)}: ${pose.breathingPattern}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
 
 @Composable
 private fun NextPosePreview(pose: YogaPose) {
-    val strings = strings()
-    Text(text = strings.nextPoses, style = MaterialTheme.typography.headlineSmall)
-    Spacer(modifier = Modifier.height(8.dp))
-    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = pose.name, fontWeight = FontWeight.Bold)
-                Text(text = formatTime(pose.duration * 1000L), style = MaterialTheme.typography.bodySmall)
-            }
-            Icon(Icons.Default.ArrowForward, contentDescription = null)
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            Icons.AutoMirrored.Filled.ArrowForward,
+            contentDescription = stringResource(R.string.next_pose),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = "${stringResource(R.string.next)}: ${pose.name} (${formatTime(pose.duration * 1000L)})",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun ManagementButtons(
+    onSelectRoutine: () -> Unit,
+    onAddRoutine: () -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Button(
+            onClick = onSelectRoutine,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(stringResource(R.string.select_other_routine))
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedButton(
+            onClick = onAddRoutine,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(stringResource(R.string.create_new_routine))
         }
     }
 }
 
 @Composable
-private fun ManagementButtons(onSelectRoutine: () -> Unit, onAddRoutine: () -> Unit) {
-    val strings = strings()
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedButton(onClick = onSelectRoutine, modifier = Modifier.weight(1f)) { Text(strings.chooseYogaRoutine) }
-        OutlinedButton(onClick = onAddRoutine, modifier = Modifier.weight(1f)) { Text(strings.newYogaRoutine) }
-    }
-}
-
-@Composable
-private fun RoutineSelectorDialog(routines: List<YogaRoutine>, onDismiss: () -> Unit, onSelect: (Int) -> Unit, onAddNew: () -> Unit) {
-    val strings = strings()
+private fun RoutineSelectorDialog(routines: List<YogaRoutine>, onDismiss: () -> Unit, onSelect: (Int) -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(strings.chooseYogaRoutine) },
+        title = { Text(stringResource(R.string.choose_yoga_routine)) },
         text = {
             LazyColumn {
                 items(routines.size) { index ->
@@ -367,45 +415,43 @@ private fun RoutineSelectorDialog(routines: List<YogaRoutine>, onDismiss: () -> 
                             Text(routine.name, fontWeight = FontWeight.Medium)
                             Text("${routine.duration} min | ${routine.level}", style = MaterialTheme.typography.bodySmall)
                         }
-                        Button(onClick = { onSelect(index) }) { Text(strings.select) }
-                    }
-                }
-                item {
-                    OutlinedButton(onClick = onAddNew, modifier = Modifier.fillMaxWidth()) {
-                        Icon(Icons.Default.Add, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(strings.newRoutine)
+                        Button(onClick = { onSelect(index) }) { Text(stringResource(R.string.select)) }
                     }
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text(strings.close) } }
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) } }
     )
 }
 
 @Composable
-private fun AddOrEditRoutineDialog(onDismiss: () -> Unit, onSave: (YogaRoutine) -> Unit, routineToEdit: YogaRoutine? = null) {
-    val strings = strings()
-    var name by remember { mutableStateOf(routineToEdit?.name ?: "") }
-    var description by remember { mutableStateOf(routineToEdit?.description ?: "") }
-    var level by remember { mutableStateOf(routineToEdit?.level ?: strings.beginner) }
-    val poses = remember { mutableStateListOf<YogaPose>().apply { routineToEdit?.poses?.let { addAll(it) } } }
+private fun AddRoutineDialog(onDismiss: () -> Unit, onAdd: (String, String, String) -> Unit) {
+    var newRoutineName by remember { mutableStateOf("") }
+    var newRoutineDescription by remember { mutableStateOf("") }
+    var newRoutineLevel by remember { mutableStateOf("Beginner") }
     
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (routineToEdit == null) strings.newYogaRoutine else strings.editRoutine) },
+        title = { Text(stringResource(R.string.new_yoga_routine)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text(strings.routineName) })
-                OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text(strings.routineDescription) })
+                OutlinedTextField(
+                    value = newRoutineName, 
+                    onValueChange = { newRoutineName = it }, 
+                    label = { Text(stringResource(R.string.routine_name)) }
+                )
+                OutlinedTextField(
+                    value = newRoutineDescription, 
+                    onValueChange = { newRoutineDescription = it }, 
+                    label = { Text(stringResource(R.string.routine_description)) }
+                )
             }
         },
         confirmButton = {
             Button(onClick = {
-                val newRoutine = YogaRoutine(name, description, poses, poses.sumOf { it.duration } / 60, level)
-                onSave(newRoutine)
-            }) { Text(strings.save) }
+                onAdd(newRoutineName, newRoutineDescription, newRoutineLevel)
+            }) { Text(stringResource(R.string.save)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(strings.cancel) } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }
     )
 }

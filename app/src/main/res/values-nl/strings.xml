@@ -1,0 +1,335 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App Info -->
+    <string name="app_name">Aktiv</string>
+    <string name="appName">Aktiv</string>
+    <string name="app_tagline">Jouw persoonlijke trainingsmaatje</string>
+    
+    <!-- Common -->
+    <string name="back">Terug</string>
+    <string name="save">Opslaan</string>
+    <string name="delete">Verwijderen</string>
+    <string name="add">Toevoegen</string>
+    <string name="search">Zoeken</string>
+    <string name="yes">Ja</string>
+    <string name="no">Nee</string>
+    <string name="ok">OK</string>
+    <string name="edit">Bewerken</string>
+    <string name="select">Selecteren</string>
+    <string name="cancel">Annuleren</string>
+    <string name="close">Sluiten</string>
+    <string name="confirm">Bevestigen</string>
+    <string name="loading">Laden…</string>
+    <string name="distance">Afstand</string>
+    <string name="time">Tijd</string>
+    <string name="duration">Duur</string>
+    <string name="calories">Calorieën</string>
+    <string name="minutes">minuten</string>
+    <string name="seconds">seconden</string>
+    <string name="date">Datum</string>
+    <string name="notes">Notities</string>
+    <string name="title">Titel</string>
+    <string name="value">Waarde</string>
+    <string name="unit">Eenheid</string>
+    <string name="start_date">Start Datum</string>
+    <string name="end_date">Eind Datum</string>
+    <string name="of">van</string>
+    <string name="update_failed">Bijwerken mislukt</string>
+    
+    <!-- Navigation -->
+    <string name="dashboard">Dashboard</string>
+    <string name="history">Geschiedenis</string>
+    <string name="stats">Statistieken</string>
+    <string name="settings">Instellingen</string>
+    <string name="refresh">Verversen</string>
+    
+    <!-- Authentication -->
+    <string name="welcome_back">Welkom terug</string>
+    <string name="login">Inloggen</string>
+    <string name="signup">Registreren</string>
+    <string name="create_account">Account aanmaken</string>
+    <string name="already_have_account">Heb je al een account? Inloggen</string>
+    <string name="email">E-mail</string>
+    <string name="password">Wachtwoord</string>
+    <string name="confirm_password">Wachtwoord bevestigen</string>
+    <string name="passwords_do_not_match">Wachtwoorden komen niet overeen</string>
+    <string name="auto_login_failed">Automatisch inloggen mislukt</string>
+    <string name="registration_failed">Registratie mislukt</string>
+    <string name="name">Naam</string>
+    <string name="logout">Uitloggen</string>
+    <string name="logout_confirm">Weet je zeker dat je wilt uitloggen?</string>
+    <string name="logout_subtitle">Log uit van je account</string>
+    
+    <!-- Dashboard -->
+    <string name="welcome_to_aktiv">Welkom bij Aktiv</string>
+    <string name="recent_workouts">Recente trainingen</string>
+    
+    <!-- Workouts -->
+    <string name="workouts">Trainingen</string>
+    <string name="workout_type">Trainingstype</string>
+    <string name="choose_workout_type">Kies je workout type</string>
+    <string name="start_workout">Training starten</string>
+    <string name="startWorkout">Training starten</string>
+    <string name="stop_workout">Training stoppen</string>
+    <string name="add_manually">Handmatig toevoegen</string>
+    <string name="addManually">Handmatig toevoegen</string>
+    <string name="add_workout_title">Training toevoegen</string>
+    <string name="no_workouts_found">Geen trainingen gevonden</string>
+    <string name="workout_details">Trainingsdetails</string>
+    <string name="workout_completed">Training voltooid!</string>
+    <string name="workout_summary">Trainingsoverzicht</string>
+    <string name="well_done">Goed gedaan met het voltooien van je training!</string>
+    <string name="congratulations">Gefeliciteerd</string>
+    <string name="back_to_dashboard">Terug naar dashboard</string>
+    <string name="share">Delen</string>
+    <string name="share_performance">Prestatie delen</string>
+    <string name="workout_not_found">Training niet gevonden</string>
+    <string name="failed_to_load_workout_details">Fout bij het laden van workout details</string>
+    <string name="save_workout">Training opslaan</string>
+    <string name="saving">Opslaan</string>
+    <string name="save_error">Opslagfout</string>
+    <string name="no_user_logged_in">Geen Gebruiker Ingelogd</string>
+    <string name="type_name">Type naam</string>
+    <string name="select_date">Datum selecteren</string>
+    <string name="duration_minutes">Duur (minuten)</string>
+    <string name="distance_km">Afstand (km)</string>
+    
+    <!-- Workout Types -->
+    <string name="strength_training">Krachttraining</string>
+    <string name="running">Hardlopen</string>
+    <string name="yoga">Yoga</string>
+    <string name="cycling">Fietsen</string>
+    <string name="other">Anders</string>
+    
+    <!-- Strength Training -->
+    <string name="add_preset">Preset toevoegen</string>
+    <string name="add_exercises">Oefeningen toevoegen</string>
+    <string name="add_exercise">Oefening toevoegen</string>
+    <string name="set">Set</string>
+    <string name="sets">Sets</string>
+    <string name="previous">Vorige</string>
+    <string name="reps">Herhalingen</string>
+    <string name="weight">Gewicht</string>
+    <string name="rest_time">Rusttijd</string>
+    <string name="exercises">Oefeningen</string>
+    <string name="workout_presets">Workout Presets</string>
+    <string name="set_rest_time">Rust tijd instellen</string>
+    <string name="update_rest_time">Update rust tijd</string>
+    <string name="rest_time_format">RUST TIJD: %s</string>
+    <string name="delete_exercise">Oefening verwijderen</string>
+    <string name="delete_exercise_confirm">Weet je zeker dat je %1$s wilt verwijderen?</string>
+    <string name="add_set">Set toevoegen</string>
+    <string name="strength_workout_title">Krachttraining</string>
+    <string name="set_rest_time_for">Rust tijd instellen voor</string>
+    <string name="menu">Menu</string>
+    <string name="completed">Voltooid</string>
+    <string name="search_exercises">Oefeningen zoeken</string>
+    <string name="exercises_count">Aantal oefeningen</string>
+    <string name="set_rest_time_in_minutes">Rust tijd instellen in minuten</string>
+    <string name="exercises_count_format">(%d oefeningen)</string>
+    <string name="push_workout">Push training</string>
+    <string name="pull_workout">Pull training</string>
+    <string name="leg_workout">Beentraining</string>
+    <string name="full_body_workout">Volledige lichaamstraining</string>
+    <string name="no_exercises_added">Nog geen oefeningen toegevoegd</string>
+    <string name="expand">Uitklappen</string>
+    <string name="done">Klaar</string>
+    <string name="edit_exercise">Oefening bewerken</string>
+    
+    <!-- Running -->
+    <string name="set_goal">Stel je doel in</string>
+    <string name="use_heart_rate_zones">Hartslagzones gebruiken</string>
+    <string name="goal_distance">Doel afstand</string>
+    <string name="goal_time">Doel: %s in %d min</string>
+    <string name="progress_to_goal">Voortgang naar doel</string>
+    <string name="heart_rate_zone">Hartslagzone</string>
+    <string name="pace">Pace</string>
+    <string name="heart_rate">Hartslag</string>
+    <string name="steps">Stappen</string>
+    <string name="avg_pace">Gemiddeld Pace</string>
+    <string name="route">Route</string>
+    <string name="elevation">Hoogte</string>
+    <string name="stop">Stoppen</string>
+    <string name="target_zone">Doelzone</string>
+    <string name="zone">Zone</string>
+    <string name="recovery">Herstel</string>
+    <string name="fat_burning">Vetverbranding</string>
+    <string name="aerobic_training">Aerobische Training</string>
+    <string name="anaerobic_training">Anaerobische Training</string>
+    <string name="maximum_effort">Maximum Effort</string>
+    <string name="in_target_zone">In Doelzone</string>
+    <string name="increase_intensity">Intensiteit Verhogen</string>
+    <string name="decrease_intensity">Intensiteit Verlagen</string>
+    <string name="to_reach_zone">Naar Doelzone</string>
+    <string name="location_access_needed">Locatie-toestemming Nodig</string>
+    <string name="grant_access">Toestemming Geven</string>
+    <string name="simulated_route">Gesimuleerde Route</string>
+    <string name="no_heart_rate_data">Geen Hartslagdata</string>
+    <string name="no_pace_data">Geen Pacegegevens</string>
+    <string name="no_elevation_data">Geen Hoogtedata</string>
+    <string name="bpm">BPM</string>
+    
+    <!-- Yoga -->
+    <string name="current_pose">Huidige Pose</string>
+    <string name="difficulty">Moeilijkheid</string>
+    <string name="benefits">Voordelen: %s</string>
+    <string name="breathing">Ademhaling</string>
+    <string name="next_poses">Volgende Poses</string>
+    <string name="choose_yoga_routine">Yoga routine kiezen</string>
+    <string name="new_yoga_routine">Nieuwe yoga routine</string>
+    <string name="add_new_pose">Nieuwe Pose Toevoegen</string>
+    <string name="morning_flow">Ochtend Flow</string>
+    <string name="morning_flow_description">Een zachte routine om de dag te beginnen</string>
+    <string name="mountain_pose">Berghouding (Tadasana)</string>
+    <string name="mountain_pose_description">Sta rechtop met je voeten samen, armen langs je lichaam.</string>
+    <string name="mountain_pose_benefits">Verbetert houding, balans en lichaamsbesef</string>
+    <string name="downward_dog">Neerwaartse Hond (Adho Mukha Svanasana)</string>
+    <string name="downward_dog_description">Vorm een omgekeerde V met je lichaam, handen en voeten op de grond.</string>
+    <string name="warrior_one">Krijger I (Virabhadrasana I)</string>
+    <string name="warrior_one_description">Longe met één been naar voren, armen omhoog gestrekt.</string>
+    <string name="warrior_two">Krijger II (Virabhadrasana II)</string>
+    <string name="warrior_two_description">Longe met één been naar voren, armen gestrekt naar de zijkanten.</string>
+    <string name="childs_pose">Kindhouding (Balasana)</string>
+    <string name="childs_pose_description">Kniel met je voorhoofd op de grond, armen langs je lichaam of gestrekt.</string>
+    <string name="power_and_balance">Kracht &amp; Balans</string>
+    <string name="power_and_balance_description">Focus op kracht en balans poses</string>
+    <string name="tree_pose">Boom (Vrksasana)</string>
+    <string name="tree_pose_description">Sta op één been, plaats de voet van het andere been tegen de binnenkant van je dij.</string>
+    <string name="tree_pose_benefits">Verbetert balans en concentratie</string>
+    <string name="chair_pose">Stoel (Utkatasana)</string>
+    <string name="chair_pose_description">Buig je knieën alsof je op een stoel zit, armen omhoog.</string>
+    <string name="plank_pose">Plank (Phalakasana)</string>
+    <string name="plank_pose_description">Houd je lichaam in een rechte lijn, steunend op handen en tenen.</string>
+    <string name="side_plank_pose">Zijwaartse Plank (Vasisthasana)</string>
+    <string name="side_plank_pose_description">Draai vanuit plank naar één zijde, steunend op één hand en de zijkant van je voeten.</string>
+    <string name="eagle_pose">Adelaar (Garudasana)</string>
+    <string name="eagle_pose_description">Kruis je armen en benen voor elkaar in een gedraaide positie.</string>
+    <string name="eagle_pose_benefits">Verbetert balans, concentratie en coördinatie</string>
+    <string name="pause">Pauzeren</string>
+    <string name="resume">Hervatten</string>
+    <string name="next">Volgende</string>
+    <string name="next_pose">Volgende houding</string>
+    <string name="pose_duration">Duur van de houding</string>
+    <string name="pose_difficulty">Moeilijkheidsgraad</string>
+    <string name="pose_benefits">Voordelen: %s</string>
+    <string name="pose_breathing">Ademhaling: %s</string>
+    <string name="new_routine">Nieuwe Routine</string>
+    <string name="routine_name">Routine naam</string>
+    <string name="routine_description">Routine beschrijving</string>
+    <string name="routine_level">Niveau Routine</string>
+    <string name="add_pose">Houding Toevoegen</string>
+    <string name="pose_name">Naam Houding</string>
+    <string name="pose_description">Beschrijving Houding</string>
+    <string name="create_routine">Routine Aanmaken</string>
+    <string name="edit_routine">Routine Bewerken</string>
+    <string name="select_routine">Routine Selecteren</string>
+    <string name="beginner">Beginner</string>
+    <string name="intermediate">Gemiddeld</string>
+    <string name="advanced">Gevorderd</string>
+    <string name="normal_breathing">Normale ademhaling</string>
+    <string name="deep_breathing">Diepe ademhaling</string>
+    
+    <!-- Statistics -->
+    <string name="statistics">Statistieken</string>
+    <string name="workout_history">Workout Geschiedenis</string>
+    <string name="active_goals">Actieve Doelen</string>
+    <string name="view_goals">Doelen Bekijken</string>
+    <string name="week">Week</string>
+    <string name="month">Maand</string>
+    <string name="year">Jaar</string>
+    <string name="workout_activity">Workout Activiteit</string>
+    <string name="workout_distribution">Workout Distributie</string>
+    <string name="monday">Maandag</string>
+    <string name="tuesday">Dinsdag</string>
+    <string name="wednesday">Woensdag</string>
+    <string name="thursday">Donderdag</string>
+    <string name="friday">Vrijdag</string>
+    <string name="saturday">Zaterdag</string>
+    <string name="sunday">Zondag</string>
+    <string name="total">Totaal</string>
+    <string name="total_time">Totaal Tijd</string>
+    <string name="hours">Uren</string>
+    <string name="average">Gemiddeld</string>
+    <string name="per_week">Per Week</string>
+    
+    <!-- Settings -->
+    <string name="language">Taal</string>
+    <string name="choose_language">Taal kiezen</string>
+    <string name="edit_profile">Profiel bewerken</string>
+    <string name="edit_profile_subtitle">Pas je profielgegevens aan</string>
+    <string name="notifications">Notificaties</string>
+    <string name="notifications_subtitle">Beheer je notificatie-instellingen</string>
+    <string name="units">Eenheden</string>
+    <string name="metric">Metrisch (kg, km)</string>
+    <string name="imperial">Imperial (lbs, mi)</string>
+    <string name="dark_mode">Donkere modus</string>
+    <string name="dark_mode_enabled">Donker thema actief</string>
+    <string name="light_mode_enabled">Licht thema actief</string>
+    <string name="profile">Profiel</string>
+    <string name="change_password">Verander Wachtwoord</string>
+    <string name="debug_mode">DEBUG MODE</string>
+    
+    <!-- Goals -->
+    <string name="goals">Doelen</string>
+    <string name="edit_goal">Doel Bewerken</string>
+    <string name="new_goal">Nieuw Doel</string>
+    <string name="delete_goal">Doel Verwijderen</string>
+    <string name="delete_goal_confirm">Weet je zeker dat je \'%s\' wilt verwijderen?</string>
+    <string name="select_workout_type">Workout Type Selecteren</string>
+    <string name="select_goal_type">Doel Type Selecteren</string>
+    <string name="goal_type">Doel Type</string>
+    <string name="update_error">Update Fout</string>
+    <string name="create_failed">Aanmaken Mislukt</string>
+    <string name="goal_updated_success">Doel Succesvol Bijgewerkt</string>
+    <string name="update">Bijwerken</string>
+    <string name="goal_created_success">Doel Succesvol Aangemaakt</string>
+    <string name="create">Aanmaken</string>
+    <string name="loading_error">Laden Fout</string>
+    <string name="no_goals_found">Geen Doelen Gevonden</string>
+    <string name="add_goal_prompt">Voeg Nieuw Doel Toe</string>
+    <string name="completed_goal">Voltooid Doel</string>
+    <string name="my_goals">Mijn doelen</string>
+    <string name="add_goal">Doel toevoegen</string>
+    <string name="no_goals_set">Nog geen doelen ingesteld</string>
+    
+    <!-- Bluetooth -->
+    <string name="bluetooth_required">Bluetooth vereist</string>
+    <string name="bluetooth_disabled">Bluetooth uitgeschakeld</string>
+    <string name="bluetooth_disabled_prompt">Bluetooth is uitgeschakeld. Wil je het inschakelen?</string>
+    <string name="enable">Inschakelen</string>
+    <string name="permissions_required">Toestemming vereist</string>
+    <string name="permissions_required_prompt">Toestemming is vereist om deze functie te gebruiken</string>
+    <string name="connect">Verbinding maken</string>
+    <string name="connected">Verbonden</string>
+    <string name="disconnect">Verbinding verbreken</string>
+    <string name="no_devices_found">Geen apparaten gevonden</string>
+    <string name="ensure_device_is_near">Zorg ervoor dat het apparaat in de buurt is</string>
+    <string name="tracking_options">Tracking Opties</string>
+    <string name="bluetooth_devices">Bluetooth-apparaten</string>
+    <string name="connect_smartwatch">Verbind met smartwatch of sporthorloge</string>
+    <string name="searching_devices">Zoeken naar apparaten…</string>
+    <string name="available_devices">Beschikbare Apparaten</string>
+    <string name="pair_device">Apparaat Pairen</string>
+    <string name="rest_time_remaining">Resterende rusttijd</string>
+    <string name="select_other_routine">Andere routine selecteren</string>
+    <string name="create_new_routine">Nieuwe routine maken</string>
+    <string name="all_types">Alle types</string>
+    <string name="no_workouts_or_fetch_failed">Geen workouts gevonden of ophalen mislukt.</string>
+    <string name="user_not_logged_in">Gebruiker niet ingelogd.</string>
+    
+    <!-- Profile -->
+    <string name="upload_photo">Upload Foto</string>
+    <string name="profile_photo_updated">Profielfoto bijgewerkt</string>
+    <string name="profile_updated">Profiel bijgewerkt</string>
+    <string name="current_password">Huidig Wachtwoord</string>
+    <string name="new_password">Nieuw Wachtwoord</string>
+    <string name="confirm_new_password">Bevestig Nieuw Wachtwoord</string>
+    <string name="passwords_dont_match">Wachtwoorden komen niet overeen</string>
+    <string name="password_changed_success">Wachtwoord succesvol gewijzigd</string>
+    <string name="password_change_failed">Wachtwoord wijzigen mislukt</string>
+    <string name="delete_account">Verwijder Account</string>
+    <string name="delete_account_title">Account verwijderen</string>
+    <string name="enter_password_to_delete">Voer je wachtwoord in om je account te verwijderen</string>
+    <string name="incorrect_password">Onjuist wachtwoord</string>
+    <string name="delete_account_requested">Het verzoek om je account te verwijderen is verstuurd</string>
+</resources> 

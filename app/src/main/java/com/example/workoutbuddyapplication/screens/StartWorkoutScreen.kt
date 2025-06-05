@@ -14,7 +14,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.DirectionsRun
 import androidx.compose.material.icons.filled.FitnessCenter
@@ -43,22 +43,22 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.workoutbuddyapplication.navigation.Screen
-import com.example.workoutbuddyapplication.ui.theme.strings
+import androidx.compose.ui.res.stringResource
+import com.example.workoutbuddyapplication.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StartWorkoutScreen(navController: NavController) {
-    val strings = strings()
     var selectedWorkoutType by remember { mutableStateOf(WorkoutType.RUNNING) }
     var useBluetooth by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(strings.startWorkoutTitle) },
+                title = { Text(stringResource(R.string.start_workout_title)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = strings.back)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
@@ -73,9 +73,10 @@ fun StartWorkoutScreen(navController: NavController) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = strings.chooseWorkoutType,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Medium
+                text = stringResource(R.string.choose_workout_type),
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 16.dp)
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -118,7 +119,7 @@ fun StartWorkoutScreen(navController: NavController) {
                         modifier = Modifier.padding(16.dp)
                     ) {
                         Text(
-                            text = strings.trackingOptions,
+                            text = stringResource(R.string.tracking_options),
                             fontWeight = FontWeight.Medium,
                             fontSize = 18.sp
                         )
@@ -132,12 +133,12 @@ fun StartWorkoutScreen(navController: NavController) {
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = strings.bluetoothDevices,
+                                    text = stringResource(R.string.bluetooth_devices),
                                     fontWeight = FontWeight.Medium
                                 )
 
                                 Text(
-                                    text = strings.connectSmartwatch,
+                                    text = stringResource(R.string.connect_smartwatch),
                                     style = MaterialTheme.typography.bodySmall
                                 )
                             }
@@ -160,7 +161,7 @@ fun StartWorkoutScreen(navController: NavController) {
                                     contentDescription = "Bluetooth"
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(strings.pairDevice)
+                                Text(stringResource(R.string.pair_device))
                             }
                         }
                     }
@@ -181,12 +182,12 @@ fun StartWorkoutScreen(navController: NavController) {
                 modifier = Modifier.fillMaxWidth()
             ) {
                 val workoutTypeName = when (selectedWorkoutType) {
-                    WorkoutType.RUNNING -> strings.running
-                    WorkoutType.STRENGTH -> strings.strengthTraining
-                    WorkoutType.YOGA -> strings.yoga
-                    else -> strings.running
+                    WorkoutType.RUNNING -> stringResource(R.string.running)
+                    WorkoutType.STRENGTH -> stringResource(R.string.strength_training)
+                    WorkoutType.YOGA -> stringResource(R.string.yoga)
+                    else -> stringResource(R.string.running)
                 }
-                Text("${strings.startWorkout.split(" ")[0]} $workoutTypeName")
+                Text("${stringResource(R.string.start_workout).split(" ")[0]} $workoutTypeName")
             }
         }
     }
@@ -199,8 +200,6 @@ fun WorkoutTypeCard(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    val strings = strings()
-    
     Card(
         modifier = Modifier
             .size(100.dp)
@@ -228,9 +227,9 @@ fun WorkoutTypeCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             val workoutTypeName = when (type) {
-                WorkoutType.RUNNING -> strings.running
-                WorkoutType.STRENGTH -> strings.strengthTraining
-                WorkoutType.YOGA -> strings.yoga
+                WorkoutType.RUNNING -> stringResource(R.string.running)
+                WorkoutType.STRENGTH -> stringResource(R.string.strength_training)
+                WorkoutType.YOGA -> stringResource(R.string.yoga)
                 else -> type.displayName
             }
 

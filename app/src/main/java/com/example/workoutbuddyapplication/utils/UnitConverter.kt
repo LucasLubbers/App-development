@@ -119,4 +119,18 @@ object UnitConverter {
             UnitSystem.IMPERIAL -> kmToMiles(distanceInKm)
         }
     }
+
+    /**
+     * Convert weight from kg storage to display weight for user input
+     */
+    fun toDisplayWeight(weightInKg: Double, unitSystem: UnitSystem): Double {
+        return weightFromKg(weightInKg, unitSystem)
+    }
+
+    /**
+     * Convert weight from display input to kg for storage
+     */
+    fun fromDisplayWeight(displayWeight: Double, unitSystem: UnitSystem): Double {
+        return weightToKg(displayWeight, unitSystem)
+    }
 } 
