@@ -18,7 +18,6 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.*
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
@@ -39,13 +38,17 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import com.example.workoutbuddyapplication.models.Workout
 import androidx.compose.ui.graphics.Color
-import com.example.workoutbuddyapplication.ui.theme.strings
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Delete
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import okhttp3.RequestBody.Companion.toRequestBody
-import com.example.workoutbuddyapplication.screens.fetchWorkouts
+import com.example.workoutbuddyapplication.services.NotificationService
+import java.time.temporal.ChronoUnit
+import java.time.LocalDateTime
+import androidx.datastore.preferences.core.edit
+import kotlinx.coroutines.flow.first
 
 @RequiresApi(Build.VERSION_CODES.O)
 fun calculateGoalProgress(goal: Goal, workouts: List<Workout>): Double {
@@ -130,7 +133,6 @@ fun EditGoalDialog(
     onGoalUpdated: () -> Unit,
     userId: String
 ) {
-    val strings = strings()
     var title by remember { mutableStateOf(goal.title) }
     var target by remember { mutableStateOf(goal.target.toString()) }
     var unit by remember { mutableStateOf(goal.unit) }
@@ -149,31 +151,31 @@ fun EditGoalDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(strings.editGoal) },
+        title = { Text("Doel Bewerken") },
         text = {
             Column {
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text(strings.title) },
+                    label = { Text("Titel") },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(8.dp))
                 ExposedDropdownMenuBoxDisplayName(
-                    label = strings.workoutType,
-                    options = WorkoutType.values().toList(),
+                    label = "Workout Type",
+                    options = WorkoutType.entries,
                     selected = selectedWorkoutType,
                     displayName = { it.displayName },
-                    placeholder = strings.selectWorkoutType,
+                    placeholder = "Selecteer workout type",
                     onSelected = { selectedWorkoutType = it }
                 )
                 Spacer(Modifier.height(8.dp))
                 ExposedDropdownMenuBoxDisplayName(
-                    label = strings.goalType,
-                    options = GoalType.values().toList(),
+                    label = "Doel Type",
+                    options = GoalType.entries,
                     selected = selectedGoalType,
                     displayName = { it.displayName },
-                    placeholder = strings.selectGoalType,
+                    placeholder = "Selecteer doel type",
                     onSelected = { selectedGoalType = it }
                 )
                 Spacer(Modifier.height(8.dp))
@@ -184,13 +186,13 @@ fun EditGoalDialog(
                     OutlinedTextField(
                         value = target,
                         onValueChange = { target = it },
-                        label = { Text(strings.value) },
+                        label = { Text("Waarde") },
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = unit,
                         onValueChange = { unit = it },
-                        label = { Text(strings.unit) },
+                        label = { Text("Eenheid") },
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -203,7 +205,7 @@ fun EditGoalDialog(
                         OutlinedTextField(
                             value = startDate,
                             onValueChange = {},
-                            label = { Text(strings.startDate) },
+                            label = { Text("Startdatum") },
                             readOnly = true,
                             trailingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = null) },
                             modifier = Modifier.fillMaxWidth()
@@ -218,7 +220,7 @@ fun EditGoalDialog(
                         OutlinedTextField(
                             value = endDate,
                             onValueChange = {},
-                            label = { Text(strings.endDate) },
+                            label = { Text("Einddatum") },
                             readOnly = true,
                             trailingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = null) },
                             modifier = Modifier.fillMaxWidth()
@@ -266,15 +268,15 @@ fun EditGoalDialog(
                             onGoalUpdated()
                             onDismiss()
                         } else {
-                            error = strings.updateFailed
+                            error = "Bijwerken mislukt."
                         }
                     }
                 },
                 enabled = isFormValid && !isLoading
-            ) { Text(strings.update) }
+            ) { Text("Opslaan") }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(strings.cancel) }
+            TextButton(onClick = onDismiss) { Text("Annuleren") }
         }
     )
 }
@@ -322,10 +324,9 @@ suspend fun updateGoal(
 @Composable
 fun AddGoalDialog(
     onDismiss: () -> Unit,
-    onGoalAdded: () -> Unit,
+    onGoalCreated: () -> Unit,
     userId: String
 ) {
-    val strings = strings()
     var title by remember { mutableStateOf("") }
     var target by remember { mutableStateOf("") }
     var unit by remember { mutableStateOf("") }
@@ -350,31 +351,31 @@ fun AddGoalDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(strings.newGoal) },
+        title = { Text("Nieuw Doel") },
         text = {
             Column {
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text(strings.title) },
+                    label = { Text("Titel") },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(8.dp))
                 ExposedDropdownMenuBoxDisplayName(
-                    label = strings.workoutType,
-                    options = WorkoutType.values().toList(),
+                    label = "Workout Type",
+                    options = WorkoutType.entries,
                     selected = selectedWorkoutType,
                     displayName = { it.displayName },
-                    placeholder = strings.selectWorkoutType,
+                    placeholder = "Selecteer workout type",
                     onSelected = { selectedWorkoutType = it }
                 )
                 Spacer(Modifier.height(8.dp))
                 ExposedDropdownMenuBoxDisplayName(
-                    label = strings.goalType,
-                    options = GoalType.values().toList(),
+                    label = "Doel Type",
+                    options = GoalType.entries,
                     selected = selectedGoalType,
                     displayName = { it.displayName },
-                    placeholder = strings.selectGoalType,
+                    placeholder = "Selecteer doel type",
                     onSelected = { selectedGoalType = it }
                 )
                 Spacer(Modifier.height(8.dp))
@@ -385,13 +386,13 @@ fun AddGoalDialog(
                     OutlinedTextField(
                         value = target,
                         onValueChange = { target = it },
-                        label = { Text(strings.value) },
+                        label = { Text("Waarde") },
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = unit,
                         onValueChange = { unit = it },
-                        label = { Text(strings.unit) },
+                        label = { Text("Eenheid") },
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -404,7 +405,7 @@ fun AddGoalDialog(
                         OutlinedTextField(
                             value = startDate,
                             onValueChange = {},
-                            label = { Text(strings.startDate) },
+                            label = { Text("Startdatum") },
                             readOnly = true,
                             trailingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = null) },
                             modifier = Modifier
@@ -420,7 +421,7 @@ fun AddGoalDialog(
                         OutlinedTextField(
                             value = endDate,
                             onValueChange = {},
-                            label = { Text(strings.endDate) },
+                            label = { Text("Einddatum") },
                             readOnly = true,
                             trailingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = null) },
                             modifier = Modifier
@@ -466,18 +467,18 @@ fun AddGoalDialog(
                         )
                         isLoading = false
                         if (success) {
-                            onGoalAdded()
+                            onGoalCreated()
                             onDismiss()
                         } else {
-                            error = strings.createFailed
+                            error = "Aanmaken mislukt."
                         }
                     }
                 },
                 enabled = isFormValid && !isLoading
-            ) { Text(strings.update) }
+            ) { Text("Opslaan") }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(strings.cancel) }
+            TextButton(onClick = onDismiss) { Text("Annuleren") }
         }
     )
 }
@@ -606,7 +607,6 @@ fun GoalCard(
     onEdit: (Goal) -> Unit,
     onDelete: (Goal) -> Unit
 ) {
-    val strings = strings()
     var expanded by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     val progress = (goal.current / goal.target).coerceIn(0.0, 1.0).toFloat()
@@ -629,7 +629,7 @@ fun GoalCard(
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                "${strings.goalType}: ${goal.target} ${goal.unit}",
+                "Doel: ${goal.target} ${goal.unit}",
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Medium
             )
@@ -640,10 +640,10 @@ fun GoalCard(
                 horizontalArrangement = Arrangement.End
             ) {
                 IconButton(onClick = { onEdit(goal) }) {
-                    Icon(Icons.Default.Edit, contentDescription = strings.edit)
+                    Icon(Icons.Default.Edit, contentDescription = "Edit")
                 }
                 IconButton(onClick = { showDeleteDialog = true }) {
-                    Icon(Icons.Default.Delete, contentDescription = strings.delete)
+                    Icon(Icons.Default.Delete, contentDescription = "Delete")
                 }
                 IconButton(onClick = { expanded = !expanded }) {
                     Icon(
@@ -653,7 +653,7 @@ fun GoalCard(
                 }
             }
             Text(
-                if (isComplete) strings.completedGoal else "${strings.of}: ${goal.current} ${goal.unit}",
+                if (isComplete) "Voltooid" else "Voortgang: ${goal.current} ${goal.unit}",
                 color = if (isComplete) Color(0xFF388E3C) else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (isComplete) FontWeight.Bold else FontWeight.Normal
             )
@@ -673,33 +673,33 @@ fun GoalCard(
                 Divider()
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "${strings.workoutType}: ${goal.workoutType.displayName}",
+                    "Workout type: ${goal.workoutType.displayName}",
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    "${strings.goalType}: ${goal.goalType.displayName}",
+                    "Type doel: ${goal.goalType.displayName}",
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 if (goal.description.isNotBlank()) {
                     Text(
-                        "${strings.notes}: ${goal.description}",
+                        "Beschrijving: ${goal.description}",
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 if (!goal.startDate.isNullOrBlank()) {
                     Text(
-                        "${strings.startDate}: ${goal.startDate}",
+                        "Startdatum: ${goal.startDate}",
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 if (!goal.endDate.isNullOrBlank()) {
                     Text(
-                        "${strings.endDate}: ${goal.endDate}",
+                        "Einddatum: ${goal.endDate}",
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 Text(
-                    "${strings.date}: ${goal.createdAt}",
+                    "Aangemaakt op: ${goal.createdAt}",
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -709,16 +709,16 @@ fun GoalCard(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text(strings.deleteGoal) },
-            text = { Text(String.format(strings.deleteGoalConfirm, goal.title)) },
+            title = { Text("Doel verwijderen") },
+            text = { Text("Weet je zeker dat je dit doel wilt verwijderen?") },
             confirmButton = {
                 TextButton(onClick = {
                     showDeleteDialog = false
                     onDelete(goal)
-                }) { Text(strings.delete) }
+                }) { Text("Verwijderen") }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text(strings.cancel) }
+                TextButton(onClick = { showDeleteDialog = false }) { Text("Annuleren") }
             }
         )
     }
@@ -728,193 +728,150 @@ fun GoalCard(
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GoalsScreen(navController: NavController, userId: String) {
-    val strings = strings()
+fun GoalsScreen(navController: NavController) {
+    val context = LocalContext.current
     var goals by remember { mutableStateOf<List<Goal>>(emptyList()) }
-    var workouts by remember { mutableStateOf<List<Workout>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var showAddGoalDialog by remember { mutableStateOf(false) }
-    var showEditGoalDialog by remember { mutableStateOf<Goal?>(null) }
-    var showDeleteConfirmDialog by remember { mutableStateOf<Goal?>(null) }
+    var refreshTrigger by remember { mutableIntStateOf(0) }
+    var goalToEdit by remember { mutableStateOf<Goal?>(null) }
+    var goalToDelete by remember { mutableStateOf<Goal?>(null) }
 
-    val coroutineScope = rememberCoroutineScope()
+    var userId by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) {
+        userId = getUserId(context)
+    }
 
-    fun loadData() {
-        coroutineScope.launch {
+    LaunchedEffect(userId, refreshTrigger) {
+        if (userId != null) {
             isLoading = true
-            try {
-                val fetchedGoals = fetchGoals(userId)
-                val fetchedWorkouts = fetchWorkouts(userId)
-                goals = fetchedGoals.map { goal ->
-                    goal.copy(current = calculateGoalProgress(goal, fetchedWorkouts))
+            error = null
+            val fetchedGoals = fetchGoals(userId!!)
+            val fetchedWorkouts = fetchWorkouts(userId!!)
+            goals = fetchedGoals.map { goal ->
+                goal.copy(current = calculateGoalProgress(goal, fetchedWorkouts))
+            }
+            isLoading = false
+
+            if (NotificationService.areGoalReminderNotificationsEnabled(context)) {
+                val formatter = DateTimeFormatter.ISO_DATE
+                val today = LocalDate.now()
+                for (goal in goals) {
+                    val endDateStr = goal.endDate
+                    val progress = (goal.current / goal.target).coerceIn(0.0, 1.0)
+                    if (!endDateStr.isNullOrBlank() && progress < 1.0) {
+                        try {
+                            val endDate = LocalDate.parse(endDateStr, formatter)
+                            if (endDate.isEqual(today)) {
+                                NotificationService.createNotificationChannel(context)
+                                NotificationService.sendGoalDeadlineNotification(context, goal.id ?: 0, goal.title)
+                            }
+                        } catch (_: Exception) {}
+                    }
                 }
-                workouts = fetchedWorkouts
-                error = null
-            } catch (e: Exception) {
-                error = e.message
-            } finally {
-                isLoading = false
             }
         }
     }
 
-    LaunchedEffect(Unit) {
-        loadData()
-    }
-
-    if (showAddGoalDialog) {
-        AddGoalDialog(
-            onDismiss = { showAddGoalDialog = false },
-            onGoalAdded = {
-                showAddGoalDialog = false
-                loadData()
-            },
-            userId = userId
-        )
-    }
-
-    showEditGoalDialog?.let { goal ->
-        EditGoalDialog(
-            goal = goal,
-            onDismiss = { showEditGoalDialog = null },
-            onGoalUpdated = {
-                showEditGoalDialog = null
-                loadData()
-            },
-            userId = userId
-        )
-    }
-
-    showDeleteConfirmDialog?.let { goal ->
-        AlertDialog(
-            onDismissRequest = { showDeleteConfirmDialog = null },
-            title = { Text(strings.deleteGoal) },
-            text = { Text(String.format(strings.deleteGoalConfirm, goal.title)) },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        coroutineScope.launch {
-                            if (deleteGoal(goal.id!!)) {
-                                showDeleteConfirmDialog = null
-                                loadData()
-                            }
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) { Text(strings.delete) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteConfirmDialog = null }) {
-                    Text(strings.cancel)
-                }
-            }
-        )
+    val (completedGoals, activeGoals) = remember(goals) {
+        goals.partition {
+            val progress = (it.current / it.target).coerceIn(0.0, 1.0)
+            progress >= 1.0
+        }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(strings.goals) },
+                title = { Text("Mijn Doelen") },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = strings.back)
+                    IconButton(onClick = { navController.navigateUp() }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Terug")
                     }
                 }
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showAddGoalDialog = true }) {
-                Icon(Icons.Default.Add, contentDescription = strings.addGoalPrompt)
-            }
-        }
-    ) { padding ->
-        if (isLoading) {
-            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-        } else if (error != null) {
-            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text("${strings.loadingError}: $error")
-            }
-        } else if (goals.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(strings.noGoalsFound)
-                    Text(strings.addGoalPrompt)
-                }
-            }
-        } else {
-            Column(
-                modifier = Modifier
-                    .padding(padding)
-                    .padding(16.dp)
-                    .verticalScroll(rememberScrollState())
+            FloatingActionButton(
+                onClick = { showAddGoalDialog = true }
             ) {
-                goals.forEach { goal ->
-                    GoalCard(
-                        goal = goal,
-                        onEdit = { showEditGoalDialog = goal },
-                        onDelete = { showDeleteConfirmDialog = goal }
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
+                Icon(Icons.Default.Add, contentDescription = "Doel toevoegen")
             }
         }
-    }
-}
-
-@Composable
-fun GoalItem(goal: Goal, onEdit: () -> Unit, onDelete: () -> Unit) {
-    val strings = strings()
-    var expanded by remember { mutableStateOf(false) }
-    val progress = (goal.current / goal.target).toFloat().coerceIn(0f, 1f)
-    
-    val workoutTypeName = when(goal.workoutType) {
-        WorkoutType.RUNNING -> strings.running
-        WorkoutType.STRENGTH -> strings.strengthTraining
-        WorkoutType.YOGA -> strings.yoga
-        else -> goal.workoutType.displayName
-    }
-
-    Card(modifier = Modifier.fillMaxWidth()) {
+    ) { paddingValues ->
         Column(
             modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
                 .padding(16.dp)
-                .animateContentSize()
+                .verticalScroll(rememberScrollState())
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(goal.title, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.weight(1f))
-                IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, contentDescription = strings.edit) }
-                IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, contentDescription = strings.delete) }
-                IconButton(onClick = { expanded = !expanded }) {
-                    Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = null)
+            Text(
+                text = "Actieve Doelen",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Medium
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            when {
+                isLoading -> CircularProgressIndicator()
+                error != null -> Text(error!!, color = MaterialTheme.colorScheme.error)
+                activeGoals.isEmpty() -> Text("Geen actieve doelen gevonden.")
+                else -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    activeGoals.forEach { goal ->
+                        GoalCard(
+                            goal = goal,
+                            onEdit = { goalToEdit = it },
+                            onDelete = { goalToDelete = it }
+                        )
+                    }
                 }
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            if (expanded) {
-                Text(goal.description, style = MaterialTheme.typography.bodyMedium)
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("${strings.workoutType}: $workoutTypeName", style = MaterialTheme.typography.bodySmall)
-                Text("${strings.goalType}: ${goal.goalType.displayName}", style = MaterialTheme.typography.bodySmall)
-                goal.startDate?.let { Text("${strings.startDate}: $it", style = MaterialTheme.typography.bodySmall) }
-                goal.endDate?.let { Text("${strings.endDate}: $it", style = MaterialTheme.typography.bodySmall) }
+
+            if (completedGoals.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(32.dp))
+                Text(
+                    text = "Voltooide Doelen",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    completedGoals.forEach { goal ->
+                        GoalCard(
+                            goal = goal,
+                            onEdit = { goalToEdit = it },
+                            onDelete = { goalToDelete = it }
+                        )
+                    }
+                }
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            LinearProgressIndicator(
-                progress = { progress },
-                modifier = Modifier.fillMaxWidth().height(8.dp),
-                strokeCap = StrokeCap.Round
+        }
+
+        if (showAddGoalDialog && userId != null) {
+            AddGoalDialog(
+                onDismiss = { showAddGoalDialog = false },
+                onGoalCreated = { refreshTrigger++ },
+                userId = userId!!
             )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "${goal.current.toInt()} ${strings.of} ${goal.target.toInt()} ${goal.unit} ${strings.completedGoal}",
-                style = MaterialTheme.typography.bodySmall
-            )
+        }
+    }
+    if (goalToEdit != null && userId != null) {
+        EditGoalDialog(
+            goal = goalToEdit!!,
+            onDismiss = { goalToEdit = null },
+            onGoalUpdated = { refreshTrigger++; goalToEdit = null },
+            userId = userId!!
+        )
+    }
+
+    if (goalToDelete != null) {
+        LaunchedEffect(goalToDelete) {
+            val success = deleteGoal(goalToDelete!!.id!!)
+            if (success) refreshTrigger++
+            goalToDelete = null
         }
     }
 }

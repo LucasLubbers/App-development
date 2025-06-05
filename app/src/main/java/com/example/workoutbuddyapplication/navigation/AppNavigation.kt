@@ -78,8 +78,7 @@ fun AppNavigation(navController: NavHostController) {
             StatsScreen(navController = navController)
         }
         composable(Screen.Goals.route) {
-            val userId = SupabaseClient.client.auth.currentUserOrNull()?.id ?: ""
-            GoalsScreen(navController = navController, userId = userId)
+            GoalsScreen(navController = navController)
         }
         composable(Screen.StartWorkout.route) {
             StartWorkoutScreen(navController = navController)
