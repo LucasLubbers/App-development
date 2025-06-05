@@ -42,7 +42,13 @@ import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Delete
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import okhttp3.RequestBody.Companion.toRequestBody
+import com.example.workoutbuddyapplication.services.NotificationService
+import java.time.temporal.ChronoUnit
+import java.time.LocalDateTime
+import androidx.datastore.preferences.core.edit
+import kotlinx.coroutines.flow.first
 
 @RequiresApi(Build.VERSION_CODES.O)
 fun calculateGoalProgress(goal: Goal, workouts: List<Workout>): Double {
@@ -732,13 +738,11 @@ fun GoalsScreen(navController: NavController) {
     var goalToEdit by remember { mutableStateOf<Goal?>(null) }
     var goalToDelete by remember { mutableStateOf<Goal?>(null) }
 
-    // Fetch userId in a coroutine
     var userId by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) {
         userId = getUserId(context)
     }
 
-    // Fetch goals and workouts when userId or refreshTrigger changes
     LaunchedEffect(userId, refreshTrigger) {
         if (userId != null) {
             isLoading = true
@@ -749,6 +753,24 @@ fun GoalsScreen(navController: NavController) {
                 goal.copy(current = calculateGoalProgress(goal, fetchedWorkouts))
             }
             isLoading = false
+
+            if (NotificationService.areGoalReminderNotificationsEnabled(context)) {
+                val formatter = DateTimeFormatter.ISO_DATE
+                val today = LocalDate.now()
+                for (goal in goals) {
+                    val endDateStr = goal.endDate
+                    val progress = (goal.current / goal.target).coerceIn(0.0, 1.0)
+                    if (!endDateStr.isNullOrBlank() && progress < 1.0) {
+                        try {
+                            val endDate = LocalDate.parse(endDateStr, formatter)
+                            if (endDate.isEqual(today)) {
+                                NotificationService.createNotificationChannel(context)
+                                NotificationService.sendGoalDeadlineNotification(context, goal.id ?: 0, goal.title)
+                            }
+                        } catch (_: Exception) {}
+                    }
+                }
+            }
         }
     }
 
