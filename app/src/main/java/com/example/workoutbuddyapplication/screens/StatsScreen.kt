@@ -1,5 +1,6 @@
 package com.example.workoutbuddyapplication.screens
 
+import android.graphics.Paint
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Canvas
@@ -14,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -22,11 +24,16 @@ import com.example.workoutbuddyapplication.components.BottomNavBar
 import com.example.workoutbuddyapplication.models.Workout
 import com.example.workoutbuddyapplication.models.WorkoutType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import com.example.workoutbuddyapplication.navigation.Screen
+import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.Year
 import java.time.temporal.ChronoUnit
+import java.time.temporal.IsoFields
 import kotlin.compareTo
 import kotlin.div
+import kotlin.text.toDouble
 import kotlin.text.toLong
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -79,6 +86,16 @@ fun StatsScreen(navController: NavController) {
         val last = currentMonthWorkouts.maxOf { LocalDate.parse(it.date) }
         val weeks = ChronoUnit.WEEKS.between(first, last).toInt() + 1
         (currentMonthWorkouts.size.toDouble() / weeks).takeIf { weeks > 0 } ?: 0.0
+    } else 0.0
+
+    val avgDurationPerWorkoutWeek = if (currentWeekWorkouts.isNotEmpty()) {
+        currentWeekWorkouts.sumOf { it.duration }.toDouble() / currentWeekWorkouts.size
+    } else 0.0
+
+    val currentYearWorkouts = workouts.filter { LocalDate.parse(it.date).year == now.year }
+    val monthsPassed = if (now.monthValue > 0) now.monthValue else 1
+    val avgWorkoutsPerMonth = if (monthsPassed > 0) {
+        currentYearWorkouts.size.toDouble() / monthsPassed
     } else 0.0
 
     val filteredWorkouts = when (selectedTimeRange) {
@@ -149,11 +166,27 @@ fun StatsScreen(navController: NavController) {
                 error != null -> Text(error!!, color = MaterialTheme.colorScheme.error)
                 else -> {
                     StatsSummaryCards(
-                        totalWorkouts = if (selectedTimeRange == 0) currentWeekWorkouts.size else totalWorkouts,
-                        totalDurationHours = if (selectedTimeRange == 0) currentWeekWorkouts.sumOf { it.duration } / 60.0 else totalDurationHours,
-                        totalDistance = if (selectedTimeRange == 0) currentWeekWorkouts.mapNotNull { it.distance }.sum() else totalDistance,
-                        avgPerWeek = if (selectedTimeRange == 1) avgPerWeekInMonth else 0.0,
-                        showAvgPerWeek = selectedTimeRange == 1
+                        totalWorkouts = when (selectedTimeRange) {
+                            0 -> currentWeekWorkouts.size
+                            1 -> currentMonthWorkouts.size
+                            else -> currentYearWorkouts.size
+                        },
+                        totalDurationHours = when (selectedTimeRange) {
+                            0 -> currentWeekWorkouts.sumOf { it.duration } / 60.0
+                            1 -> currentMonthWorkouts.sumOf { it.duration } / 60.0
+                            else -> currentYearWorkouts.sumOf { it.duration } / 60.0
+                        },
+                        totalDistance = when (selectedTimeRange) {
+                            0 -> currentWeekWorkouts.mapNotNull { it.distance }.sum()
+                            1 -> currentMonthWorkouts.mapNotNull { it.distance }.sum()
+                            else -> currentYearWorkouts.mapNotNull { it.distance }.sum()
+                        },
+                        avgPerWeek = avgPerWeekInMonth,
+                        showAvgPerWeek = selectedTimeRange == 1,
+                        avgDurationPerWorkoutWeek = avgDurationPerWorkoutWeek,
+                        showAvgDurationPerWorkoutWeek = selectedTimeRange == 0,
+                        avgWorkoutsPerMonth = avgWorkoutsPerMonth,
+                        showAvgWorkoutsPerMonth = selectedTimeRange == 2
                     )
 
                     Spacer(modifier = Modifier.height(24.dp))
@@ -179,7 +212,10 @@ fun StatsScreen(navController: NavController) {
                             )
                         }
                         2 -> { // Jaar
-                            // You can add a year diagram here if needed
+                            YearHeatmap(
+                                year = now.year,
+                                workoutDates = workouts.map { LocalDate.parse(it.date) }.filter { it.year == now.year }
+                            )
                         }
                     }
 
@@ -221,7 +257,7 @@ fun CalendarMonthViewStyled(year: Int, month: Int, workoutDays: List<Int>) {
                     modifier = Modifier.weight(1f),
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    textAlign = TextAlign.Center
                 )
             }
         }
@@ -254,7 +290,7 @@ fun CalendarMonthViewStyled(year: Int, month: Int, workoutDays: List<Int>) {
                                 Text(
                                     text = dayNum.toString(),
                                     color = when {
-                                        isToday || isWorkout -> Color.White
+                                        isToday || isWorkout -> MaterialTheme.colorScheme.onPrimary
                                         else -> MaterialTheme.colorScheme.onSurface
                                     },
                                     fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal
@@ -272,8 +308,82 @@ fun CalendarMonthViewStyled(year: Int, month: Int, workoutDays: List<Int>) {
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
+fun YearHeatmap(
+    year: Int,
+    workoutDates: List<LocalDate>
+) {
+    val daysInYear = if (Year.isLeap(year.toLong())) 366 else 365
+    val firstDay = LocalDate.of(year, 1, 1)
+    val today = LocalDate.now()
+    val workoutSet = workoutDates.toSet()
+
+    // Monday = 1, Sunday = 7
+    val firstDayOfWeek = firstDay.dayOfWeek.value % 7 // 0=Sunday, 1=Monday, ..., 6=Saturday
+
+    // Day labels (Monday to Sunday)
+    val dayLabels = listOf("Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo")
+
+    Column {
+        Row {
+            Spacer(modifier = Modifier.width(28.dp)) // Space for week numbers
+            dayLabels.forEach {
+                Text(
+                    it,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(1.dp),
+                    fontSize = 10.sp,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+        var dayCounter = 0
+        for (week in 0 until 53) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Week number (ISO-8601)
+                val weekDate = firstDay.plusDays((week * 7 - firstDayOfWeek + 1).toLong()).with(
+                    DayOfWeek.MONDAY)
+                val weekNumber = weekDate.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
+                Text(
+                    text = weekNumber.toString().padStart(2, '0'),
+                    fontSize = 10.sp,
+                    modifier = Modifier.width(28.dp),
+                    color = MaterialTheme.colorScheme.outline
+                )
+                for (day in 0..6) {
+                    val gridIndex = week * 7 + day
+                    val date = firstDay.plusDays((gridIndex - firstDayOfWeek + 1).toLong())
+                    if (gridIndex >= firstDayOfWeek - 1 && dayCounter < daysInYear) {
+                        val isWorkout = date in workoutSet
+                        val isToday = date == today
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .aspectRatio(1f)
+                                .padding(1.dp)
+                                .background(
+                                    color = when {
+                                        isToday -> MaterialTheme.colorScheme.secondary
+                                        isWorkout -> MaterialTheme.colorScheme.primary
+                                        else -> MaterialTheme.colorScheme.surfaceVariant
+                                    },
+                                    shape = MaterialTheme.shapes.small
+                                )
+                        )
+                        dayCounter++
+                    } else {
+                        Spacer(modifier = Modifier.weight(1f).aspectRatio(1f))
+                    }
+                }
+            }
+            if (dayCounter >= daysInYear) break
+        }
+    }
+}
+
+@Composable
+@RequiresApi(Build.VERSION_CODES.O)
 fun WorkoutActivityChart(workouts: List<Workout>) {
-    // Example: show number of workouts per day of week
     val days = listOf("Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo")
     val counts = IntArray(7)
     workouts.forEach {
@@ -283,6 +393,9 @@ fun WorkoutActivityChart(workouts: List<Workout>) {
     val max = counts.maxOrNull()?.takeIf { it > 0 } ?: 1
     val values = counts.map { it.toFloat() / max }
 
+    val textColor = MaterialTheme.colorScheme.onSurface
+    val colorScheme = MaterialTheme.colorScheme
+
     Canvas(modifier = Modifier.fillMaxWidth().height(200.dp)) {
         val barWidth = size.width / (values.size * 1.5f)
         val spacing = barWidth / 2
@@ -291,7 +404,7 @@ fun WorkoutActivityChart(workouts: List<Workout>) {
         for (i in 0..4) {
             val y = size.height - (i * size.height / 4)
             drawLine(
-                color = Color.LightGray,
+                color = colorScheme.surfaceVariant,
                 start = Offset(0f, y),
                 end = Offset(size.width, y),
                 strokeWidth = 1f
@@ -304,22 +417,23 @@ fun WorkoutActivityChart(workouts: List<Workout>) {
             val y = size.height - barHeight
 
             drawLine(
-                color = Color.Blue,
+                color = colorScheme.primary,
                 start = Offset(x + barWidth / 2, size.height),
                 end = Offset(x + barWidth / 2, y),
                 strokeWidth = barWidth
             )
 
             drawContext.canvas.nativeCanvas.apply {
+                val paint = Paint().apply {
+                    color = textColor.toArgb()
+                    textSize = 30f
+                    textAlign = Paint.Align.CENTER
+                }
                 drawText(
                     days[index],
                     x + barWidth / 2,
                     size.height + 30,
-                    android.graphics.Paint().apply {
-                        color = android.graphics.Color.BLACK
-                        textSize = 30f
-                        textAlign = android.graphics.Paint.Align.CENTER
-                    }
+                    paint
                 )
             }
         }
@@ -332,7 +446,11 @@ fun StatsSummaryCards(
     totalDurationHours: Double,
     totalDistance: Double,
     avgPerWeek: Double,
-    showAvgPerWeek: Boolean
+    showAvgPerWeek: Boolean,
+    avgDurationPerWorkoutWeek: Double = 0.0,
+    showAvgDurationPerWorkoutWeek: Boolean = false,
+    avgWorkoutsPerMonth: Double = 0.0,
+    showAvgWorkoutsPerMonth: Boolean = false
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -351,10 +469,11 @@ fun StatsSummaryCards(
     ) {
         StatsSummaryCard("Afstand", String.format("%.1f", totalDistance), "km", Modifier.weight(1f))
         Spacer(modifier = Modifier.width(8.dp))
-        if (showAvgPerWeek) {
-            StatsSummaryCard("Gemiddeld", String.format("%.1f", avgPerWeek), "per week", Modifier.weight(1f))
-        } else {
-            Spacer(modifier = Modifier.weight(1f))
+        when {
+            showAvgPerWeek -> StatsSummaryCard("Gemiddeld", String.format("%.1f", avgPerWeek), "per week", Modifier.weight(1f))
+            showAvgDurationPerWorkoutWeek -> StatsSummaryCard("Gem. duur", String.format("%.0f", avgDurationPerWorkoutWeek), "min/wo", Modifier.weight(1f))
+            showAvgWorkoutsPerMonth -> StatsSummaryCard("Gemiddeld", String.format("%.1f", avgWorkoutsPerMonth), "per maand", Modifier.weight(1f))
+            else -> Spacer(modifier = Modifier.weight(1f))
         }
     }
 }
