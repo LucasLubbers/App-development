@@ -79,7 +79,6 @@ fun HistoryScreen(navController: NavController, selectedLanguage: String) {
     var showCalendarView by remember { mutableStateOf(false) }
     var calendarMonth by remember { mutableStateOf(LocalDate.now().withDayOfMonth(1)) }
 
-
     // Filter state
     var expanded by remember { mutableStateOf(false) }
     var selectedType by remember { mutableStateOf<WorkoutType?>(null) }
@@ -116,7 +115,6 @@ fun HistoryScreen(navController: NavController, selectedLanguage: String) {
         year * 100 + month
     }
 
-
     Scaffold(
         bottomBar = {
             BottomNavBar(
@@ -138,46 +136,45 @@ fun HistoryScreen(navController: NavController, selectedLanguage: String) {
                 fontWeight = FontWeight.Bold
             )
 
+            // Row with calendar/list toggle and type selection
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp, top = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                Box {
+                    Button(onClick = { expanded = true }) {
+                        Text(selectedType?.displayName ?: "Alle types")
+                    }
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Alle types") },
+                            onClick = {
+                                selectedType = null
+                                expanded = false
+                            }
+                        )
+                        WorkoutType.values().forEach { type ->
+                            DropdownMenuItem(
+                                text = { Text(type.displayName) },
+                                onClick = {
+                                    selectedType = type
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
                 Button(onClick = { showCalendarView = !showCalendarView }) {
                     Text(if (showCalendarView) "Lijst" else "Kalender")
                 }
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Filter dropdown
-            Box {
-                Button(onClick = { expanded = true }) {
-                    Text(selectedType?.displayName ?: "Alle types")
-                }
-                DropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("Alle types") },
-                        onClick = {
-                            selectedType = null
-                            expanded = false
-                        }
-                    )
-                    WorkoutType.values().forEach { type ->
-                        DropdownMenuItem(
-                            text = { Text(type.displayName) },
-                            onClick = {
-                                selectedType = type
-                                expanded = false
-                            }
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
 
             when {
                 isLoading -> {
