@@ -7,8 +7,14 @@ import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -70,6 +76,9 @@ fun HistoryScreen(navController: NavController, selectedLanguage: String) {
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var selectedTabIndex by remember { mutableStateOf(1) }
+    var showCalendarView by remember { mutableStateOf(false) }
+    var calendarMonth by remember { mutableStateOf(LocalDate.now().withDayOfMonth(1)) }
+
 
     // Filter state
     var expanded by remember { mutableStateOf(false) }
@@ -103,8 +112,8 @@ fun HistoryScreen(navController: NavController, selectedLanguage: String) {
         Pair(localDate.year, localDate.monthValue)
     }
 
-    val monthsOrdered = workoutsByMonth.keys.sortedByDescending {
-        (year, month) -> year * 100 + month
+    val monthsOrdered = workoutsByMonth.keys.sortedByDescending { (year, month) ->
+        year * 100 + month
     }
 
 
@@ -128,6 +137,15 @@ fun HistoryScreen(navController: NavController, selectedLanguage: String) {
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold
             )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                Button(onClick = { showCalendarView = !showCalendarView }) {
+                    Text(if (showCalendarView) "Lijst" else "Kalender")
+                }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -165,34 +183,79 @@ fun HistoryScreen(navController: NavController, selectedLanguage: String) {
                 isLoading -> {
                     CircularProgressIndicator()
                 }
+
                 error != null -> {
                     Text(error!!, color = MaterialTheme.colorScheme.error)
                 }
+
                 filteredWorkouts.isEmpty() -> {
                     Text("No workouts found.")
                 }
+
                 else -> {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        monthsOrdered.forEach { (year, month) ->
-                            val monthLocale = Locale(selectedLanguage)
-                            val monthName = Month.of(month).getDisplayName(TextStyle.FULL, monthLocale)
-                            val header = "$monthName $year"
-                            val monthWorkouts = workoutsByMonth[Pair(year, month)] ?: emptyList()
-                            item {
-                                Text(
-                                    text = header,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    modifier = Modifier.padding(vertical = 8.dp)
-                                )
+                    if (showCalendarView) {
+                        // Calendar navigation row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(onClick = {
+                                calendarMonth = calendarMonth.minusMonths(1)
+                            }) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Previous month")
                             }
-                            items(monthWorkouts) { workout ->
-                                WorkoutItem(
-                                    workout = workout,
-                                    onClick = { navController.navigate("workoutDetail/${workout.id}/1") }
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "${
+                                    calendarMonth.month.getDisplayName(
+                                        TextStyle.FULL,
+                                        Locale(selectedLanguage)
+                                    )
+                                } ${calendarMonth.year}",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            IconButton(onClick = {
+                                calendarMonth = calendarMonth.plusMonths(1)
+                            }) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next month")
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        // Show calendar with workout days highlighted
+                        val monthWorkouts = filteredWorkouts.filter {
+                            val date = LocalDate.parse(it.date)
+                            date.year == calendarMonth.year && date.monthValue == calendarMonth.monthValue
+                        }
+                        CalendarMonthViewStyled(
+                            year = calendarMonth.year,
+                            month = calendarMonth.monthValue,
+                            workoutDays = monthWorkouts.map { LocalDate.parse(it.date).dayOfMonth }
+                        )
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            monthsOrdered.forEach { (year, month) ->
+                                val monthLocale = Locale(selectedLanguage)
+                                val monthName =
+                                    Month.of(month).getDisplayName(TextStyle.FULL, monthLocale)
+                                val header = "$monthName $year"
+                                val monthWorkouts =
+                                    workoutsByMonth[Pair(year, month)] ?: emptyList()
+                                item {
+                                    Text(
+                                        text = header,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        modifier = Modifier.padding(vertical = 8.dp)
+                                    )
+                                }
+                                items(monthWorkouts) { workout ->
+                                    WorkoutItem(
+                                        workout = workout,
+                                        onClick = { navController.navigate("workoutDetail/${workout.id}/1") }
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                }
                             }
                         }
                     }
