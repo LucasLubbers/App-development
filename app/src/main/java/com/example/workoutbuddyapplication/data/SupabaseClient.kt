@@ -11,7 +11,6 @@ import kotlinx.serialization.Serializable
 import io.github.jan.supabase.storage.Storage
 import kotlinx.serialization.json.Json
 
-
 @Serializable
 data class TestResponse(
     val success: Boolean = false
@@ -29,7 +28,8 @@ object SupabaseClient {
                 }
             )
         }
-        install(Auth)
+        install(Auth) {
+        }
         install(Storage)
     }
 
