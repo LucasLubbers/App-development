@@ -1,5 +1,6 @@
 package com.example.workoutbuddyapplication.screens
 
+import android.annotation.SuppressLint
 import com.example.workoutbuddyapplication.models.Workout
 import com.example.workoutbuddyapplication.models.WorkoutType
 import android.content.Context
@@ -36,16 +37,8 @@ import androidx.compose.ui.platform.LocalContext
 import com.example.workoutbuddyapplication.ui.theme.strings
 import com.example.workoutbuddyapplication.ui.theme.UserPreferencesManager
 import com.example.workoutbuddyapplication.ui.theme.toUnitSystem
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import org.json.JSONArray
-import com.example.workoutbuddyapplication.BuildConfig
-import androidx.datastore.preferences.core.stringPreferencesKey
-import kotlinx.coroutines.flow.first
-import com.example.workoutbuddyapplication.ui.theme.dataStore
 
+@SuppressLint("DefaultLocale")
 @Composable
 fun SummaryCard(workouts: List<Workout> = emptyList(), unitSystem: UnitSystem = UnitSystem.METRIC) {
     val strings = strings()
@@ -70,7 +63,7 @@ fun SummaryCard(workouts: List<Workout> = emptyList(), unitSystem: UnitSystem = 
         )
         StatCard(
             title = strings.time,
-            value = "$totalDuration min",
+            value = String.format("%.1f h", totalDuration / 60.0),
             icon = Icons.Default.Timer,
             modifier = Modifier.weight(1f).padding(start = 4.dp)
         )
