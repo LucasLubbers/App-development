@@ -25,19 +25,27 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import android.app.DatePickerDialog
+import android.os.Build
+import androidx.annotation.RequiresApi
+import androidx.compose.ui.platform.LocalContext
+import java.time.LocalDate
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddWorkoutScreen(navController: NavController) {
     val strings = strings()
     var selectedWorkoutType by remember { mutableStateOf(WorkoutType.RUNNING) }
     var customTypeName by remember { mutableStateOf("") }
-    var date by remember { mutableStateOf("2023-05-11") }
+    var date by remember { mutableStateOf(LocalDate.now().toString()) }
     var duration by remember { mutableStateOf("30") }
     var distance by remember { mutableStateOf("5.0") }
     var notes by remember { mutableStateOf("") }
     var isSaving by remember { mutableStateOf(false) }
     var saveError by remember { mutableStateOf<String?>(null) }
+    var isDatePickerOpen by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -98,18 +106,50 @@ fun AddWorkoutScreen(navController: NavController) {
                     onValueChange = { customTypeName = it },
                     label = { Text(strings.typeName) },
                     modifier = Modifier.fillMaxWidth()
+                    // Removed isError to keep the field style consistent
                 )
             }
 
-            OutlinedTextField(
-                value = date,
-                onValueChange = { date = it },
-                label = { Text(strings.date) },
-                modifier = Modifier.fillMaxWidth(),
-                trailingIcon = {
-                    Icon(Icons.Default.DateRange, contentDescription = strings.selectDate)
+            Box(modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = date,
+                    onValueChange = {},
+                    label = { Text(strings.date) },
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    trailingIcon = {
+                        IconButton(onClick = { isDatePickerOpen = true }) {
+                            Icon(Icons.Default.DateRange, contentDescription = strings.selectDate)
+                        }
+                    },
+                    readOnly = true
+                )
+                if (isDatePickerOpen) {
+                    val today = LocalDate.now()
+                    LaunchedEffect(Unit) {
+                        val initialDate = try {
+                            LocalDate.parse(date)
+                        } catch (_: Exception) {
+                            today
+                        }
+                        val datePicker = DatePickerDialog(
+                            context,
+                            { _, year, month, dayOfMonth ->
+                                val picked = LocalDate.of(year, month + 1, dayOfMonth)
+                                date = picked.toString()
+                                isDatePickerOpen = false
+                            },
+                            initialDate.year,
+                            initialDate.monthValue - 1,
+                            initialDate.dayOfMonth
+                        )
+                        datePicker.setOnCancelListener {
+                            isDatePickerOpen = false
+                        }
+                        datePicker.show()
+                    }
                 }
-            )
+            }
 
             OutlinedTextField(
                 value = duration,
@@ -142,6 +182,12 @@ fun AddWorkoutScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            val isOtherType = selectedWorkoutType == WorkoutType.OTHER
+            val canSave = !isSaving &&
+                (!isOtherType || customTypeName.isNotBlank()) &&
+                duration.toIntOrNull() != null &&
+                (selectedWorkoutType != WorkoutType.RUNNING && selectedWorkoutType != WorkoutType.CYCLING || distance.toDoubleOrNull() != null)
+
             Button(
                 onClick = {
                     isSaving = true
@@ -158,21 +204,23 @@ fun AddWorkoutScreen(navController: NavController) {
                                 return@launch
                             }
 
+                            val workoutTypeString = if (selectedWorkoutType == WorkoutType.OTHER && customTypeName.isNotBlank())
+                                customTypeName
+                            else
+                                selectedWorkoutType.name
+
                             val workout = Workout(
-                                type = if (selectedWorkoutType == WorkoutType.OTHER && customTypeName.isNotBlank())
-                                    customTypeName
-                                else
-                                    selectedWorkoutType.name,
+                                type = workoutTypeString,
                                 date = date,
                                 duration = duration.toIntOrNull() ?: 0,
-                                distance = distance.toDoubleOrNull(),
+                                distance = if (selectedWorkoutType == WorkoutType.RUNNING || selectedWorkoutType == WorkoutType.CYCLING) distance.toDoubleOrNull() else null,
                                 notes = notes.takeIf { it.isNotBlank() },
                                 profileId = user.id
                             )
 
                             SupabaseClient.client.postgrest.from("workouts")
                                 .insert(workout)
-                            
+
                             withContext(Dispatchers.Main) {
                                 navController.navigate(Screen.Dashboard.route)
                             }
@@ -185,7 +233,7 @@ fun AddWorkoutScreen(navController: NavController) {
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !isSaving
+                enabled = canSave
             ) {
                 Text(if (isSaving) strings.saving else strings.saveWorkout)
             }
