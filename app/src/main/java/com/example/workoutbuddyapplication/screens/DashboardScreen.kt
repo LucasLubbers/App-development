@@ -221,7 +221,7 @@ fun WorkoutItem(workout: Workout, unitSystem: UnitSystem = UnitSystem.METRIC, on
             Spacer(modifier = Modifier.width(16.dp))
             Column {
                 Text(
-                    text = workout.workoutTypeEnum.displayName,
+                    text = if (workout.workoutTypeEnum == WorkoutType.OTHER && !workout.type.isNullOrBlank()) workout.type else workout.workoutTypeEnum.displayName,
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium)
                 )
                 Text(
