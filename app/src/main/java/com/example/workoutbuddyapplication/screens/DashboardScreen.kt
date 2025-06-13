@@ -1,5 +1,6 @@
 package com.example.workoutbuddyapplication.screens
 
+import android.annotation.SuppressLint
 import com.example.workoutbuddyapplication.models.Workout
 import com.example.workoutbuddyapplication.models.WorkoutType
 import android.content.Context
@@ -47,6 +48,7 @@ import com.example.workoutbuddyapplication.ui.theme.dataStore
 import androidx.compose.ui.res.stringResource
 import com.example.workoutbuddyapplication.R
 
+@SuppressLint("DefaultLocale")
 @Composable
 fun SummaryCard(workouts: List<Workout> = emptyList(), unitSystem: UnitSystem = UnitSystem.METRIC) {
     val totalWorkouts = workouts.size
@@ -70,7 +72,7 @@ fun SummaryCard(workouts: List<Workout> = emptyList(), unitSystem: UnitSystem = 
         )
         StatCard(
             title = stringResource(R.string.time),
-            value = "$totalDuration min",
+            value = String.format("%.1f h", totalDuration / 60.0),
             icon = Icons.Default.Timer,
             modifier = Modifier.weight(1f).padding(start = 4.dp)
         )
@@ -222,7 +224,7 @@ fun WorkoutItem(workout: Workout, unitSystem: UnitSystem = UnitSystem.METRIC, on
             Spacer(modifier = Modifier.width(16.dp))
             Column {
                 Text(
-                    text = workout.workoutTypeEnum.displayName,
+                    text = if (workout.workoutTypeEnum == WorkoutType.OTHER && !workout.type.isNullOrBlank()) workout.type else workout.workoutTypeEnum.displayName,
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium)
                 )
                 Text(

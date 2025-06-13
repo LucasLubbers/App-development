@@ -19,12 +19,15 @@ import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import com.example.workoutbuddyapplication.R
 import com.example.workoutbuddyapplication.services.NotificationService
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
+import java.util.concurrent.TimeUnit
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import com.example.workoutbuddyapplication.ui.theme.strings
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 private val NOTIFICATIONS_ENABLED_KEY = booleanPreferencesKey("notifications_enabled")
+private val GOAL_REMINDER_NOTIFICATIONS_ENABLED_KEY = booleanPreferencesKey("goal_reminder_notifications_enabled")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,15 +35,27 @@ fun NotificationSettingsScreen(navController: NavController) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     var notificationsEnabled by remember { mutableStateOf(true) }
+    var goalReminderEnabled by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        val enabled = context.dataStore.data.first()[NOTIFICATIONS_ENABLED_KEY] ?: true
+        val prefs = context.dataStore.data.first()
+        val enabled = prefs[NOTIFICATIONS_ENABLED_KEY] ?: true
+        val goalReminder = prefs[GOAL_REMINDER_NOTIFICATIONS_ENABLED_KEY] ?: false
         notificationsEnabled = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             ContextCompat.checkSelfPermission(
                 context, Manifest.permission.POST_NOTIFICATIONS
             ) == PackageManager.PERMISSION_GRANTED && enabled
         } else {
             enabled
+        }
+        goalReminderEnabled = goalReminder
+
+        if (!prefs.contains(GOAL_REMINDER_NOTIFICATIONS_ENABLED_KEY)) {
+            coroutineScope.launch {
+                context.dataStore.edit { prefsEdit ->
+                    prefsEdit[GOAL_REMINDER_NOTIFICATIONS_ENABLED_KEY] = false
+                }
+            }
         }
     }
 
@@ -75,6 +90,7 @@ fun NotificationSettingsScreen(navController: NavController) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
+            // Main notification switch
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
@@ -98,6 +114,29 @@ fun NotificationSettingsScreen(navController: NavController) {
                             }
                         }
                         notificationsEnabled = checked
+                    }
+                )
+            }
+
+            // Goal reminder notification switch
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "Enable Goal Reminder Notifications",
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f)
+                )
+                Switch(
+                    checked = goalReminderEnabled,
+                    onCheckedChange = { checked ->
+                        coroutineScope.launch {
+                            context.dataStore.edit { prefs ->
+                                prefs[GOAL_REMINDER_NOTIFICATIONS_ENABLED_KEY] = checked
+                            }
+                        }
+                        goalReminderEnabled = checked
                     }
                 )
             }

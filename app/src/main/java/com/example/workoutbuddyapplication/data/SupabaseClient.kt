@@ -6,9 +6,10 @@ import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.gotrue.Auth
 import io.github.jan.supabase.gotrue.auth
 import com.example.workoutbuddyapplication.BuildConfig
+import io.github.jan.supabase.serializer.KotlinXSerializer
 import kotlinx.serialization.Serializable
 import io.github.jan.supabase.storage.Storage
-
+import kotlinx.serialization.json.Json
 
 @Serializable
 data class TestResponse(
@@ -20,8 +21,15 @@ object SupabaseClient {
         supabaseUrl = BuildConfig.SUPABASE_URL,
         supabaseKey = BuildConfig.SUPABASE_ANON_KEY
     ) {
-        install(Postgrest)
-        install(Auth)
+        install(Postgrest) {
+            serializer = KotlinXSerializer(
+                Json {
+                    ignoreUnknownKeys = true
+                }
+            )
+        }
+        install(Auth) {
+        }
         install(Storage)
     }
 

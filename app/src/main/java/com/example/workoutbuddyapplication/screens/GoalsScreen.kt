@@ -18,7 +18,6 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.*
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
@@ -43,6 +42,13 @@ import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Delete
+import androidx.datastore.preferences.core.stringSetPreferencesKey
+import okhttp3.RequestBody.Companion.toRequestBody
+import com.example.workoutbuddyapplication.services.NotificationService
+import java.time.temporal.ChronoUnit
+import java.time.LocalDateTime
+import androidx.datastore.preferences.core.edit
+import kotlinx.coroutines.flow.first
 import androidx.compose.ui.res.stringResource
 import com.example.workoutbuddyapplication.R
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -208,9 +214,8 @@ fun EditGoalDialog(
 ) {
     var title by remember { mutableStateOf(goal.title) }
     var target by remember { mutableStateOf(goal.target.toString()) }
-    var unit by remember { mutableStateOf(goal.unit) }
     var selectedWorkoutType by remember { mutableStateOf(goal.workoutType) }
-    var selectedGoalType by remember { mutableStateOf(goal.goalType) }
+    var selectedGoalType by remember { mutableStateOf<GoalType?>(goal.goalType) }
     var startDate by remember { mutableStateOf(goal.startDate ?: "") }
     var endDate by remember { mutableStateOf(goal.endDate ?: "") }
     var isStartDatePickerOpen by remember { mutableStateOf(false) }
@@ -219,7 +224,24 @@ fun EditGoalDialog(
     var error by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
 
-    val isFormValid = title.isNotBlank() && target.toDoubleOrNull() != null && unit.isNotBlank() &&
+    // Filter goal types based on workout type
+    val availableGoalTypes = when (selectedWorkoutType) {
+        null -> emptyList()
+        WorkoutType.STRENGTH, WorkoutType.YOGA -> listOf(GoalType.COUNT, GoalType.TIME)
+        else -> listOf(GoalType.COUNT, GoalType.DISTANCE, GoalType.TIME, GoalType.CALORIES)
+    }
+
+    // Auto-fill unit based on goal type
+    val unit = when (selectedGoalType) {
+        GoalType.TIME -> "min"
+        GoalType.DISTANCE -> "km"
+        GoalType.COUNT -> "workouts"
+        GoalType.CALORIES -> "kcal"
+        else -> ""
+    }
+
+    val isFormValid = title.isNotBlank() && target.toDoubleOrNull() != null &&
+            selectedWorkoutType != null && selectedGoalType != null &&
             startDate.isNotBlank() && endDate.isNotBlank()
 
     AlertDialog(
@@ -234,22 +256,28 @@ fun EditGoalDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(8.dp))
+                // Workout type selection
                 ExposedDropdownMenuBoxDisplayName(
                     label = stringResource(R.string.workout_type),
-                    options = WorkoutType.values().toList(),
+                    options = WorkoutType.entries,
                     selected = selectedWorkoutType,
                     displayName = { it.displayName },
                     placeholder = stringResource(R.string.select_workout_type),
-                    onSelected = { selectedWorkoutType = it }
+                    onSelected = {
+                        selectedWorkoutType = it
+                        selectedGoalType = null
+                    }
                 )
                 Spacer(Modifier.height(8.dp))
+                // Goal type selection, disabled if no workout type
                 ExposedDropdownMenuBoxDisplayName(
                     label = stringResource(R.string.goal_type),
-                    options = GoalType.values().toList(),
+                    options = availableGoalTypes,
                     selected = selectedGoalType,
                     displayName = { it.displayName },
-                    placeholder = stringResource(R.string.select_goal_type),
-                    onSelected = { selectedGoalType = it }
+                    placeholder = if (selectedWorkoutType == null) "Eerst workout type kiezen" else "Selecteer doel type",
+                    onSelected = { selectedGoalType = it },
+                    enabled = selectedWorkoutType != null
                 )
                 Spacer(Modifier.height(8.dp))
                 Row(
@@ -260,13 +288,16 @@ fun EditGoalDialog(
                         value = target,
                         onValueChange = { target = it },
                         label = { Text(stringResource(R.string.value)) },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        enabled = selectedGoalType != null
                     )
                     OutlinedTextField(
                         value = unit,
-                        onValueChange = { unit = it },
+                        onValueChange = {},
                         label = { Text(stringResource(R.string.unit)) },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        readOnly = true,
+                        enabled = false
                     )
                 }
                 Spacer(Modifier.height(8.dp))
@@ -338,38 +369,27 @@ fun EditGoalDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    goal.id?.let { goalId ->
-                        isLoading = true
-                        coroutineScope.launch {
-                            val success = updateGoal(
-                                goalId = goalId,
-                                title = title,
-                                workoutType = selectedWorkoutType,
-                                goalType = selectedGoalType,
-                                targetValue = target.toDouble(),
-                                unit = unit,
-                                startDate = startDate,
-                                endDate = endDate
-                            )
-                            isLoading = false
-                            if (success) {
-                                onGoalUpdated()
-                                onDismiss()
-                            } else {
-                                error = "Failed to update goal."
-                            }
+                    isLoading = true
+                    error = null
+                    coroutineScope.launch {
+                        val success = createGoal(
+                            userId, title, selectedWorkoutType!!, selectedGoalType!!,
+                            target.toDouble(), unit, startDate, endDate
+                        )
+                        isLoading = false
+                        if (success) {
+                            onGoalUpdated()
+                            onDismiss()
+                        } else {
+                            error = "Bijwerken mislukt."
                         }
                     }
                 },
                 enabled = isFormValid && !isLoading
-            ) {
-                Text(stringResource(R.string.save))
-            }
+            ) { Text(stringResource(R.string.save)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
-            }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         }
     )
 }
@@ -378,12 +398,11 @@ fun EditGoalDialog(
 @Composable
 fun AddGoalDialog(
     onDismiss: () -> Unit,
-    onGoalAdded: () -> Unit,
+    onGoalCreated: () -> Unit,
     userId: String
 ) {
     var title by remember { mutableStateOf("") }
     var target by remember { mutableStateOf("") }
-    var unit by remember { mutableStateOf("") }
     var selectedWorkoutType by remember { mutableStateOf<WorkoutType?>(null) }
     var selectedGoalType by remember { mutableStateOf<GoalType?>(null) }
     var startDate by remember { mutableStateOf("") }
@@ -394,9 +413,28 @@ fun AddGoalDialog(
     var error by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
 
-    val isFormValid = title.isNotBlank() && target.toDoubleOrNull() != null && unit.isNotBlank() &&
-            selectedWorkoutType != null && selectedGoalType != null &&
-            startDate.isNotBlank() && endDate.isNotBlank()
+    // Filter goal types based on workout type
+    val availableGoalTypes = when (selectedWorkoutType) {
+        null -> emptyList()
+        WorkoutType.STRENGTH, WorkoutType.YOGA -> listOf(GoalType.COUNT, GoalType.TIME)
+        else -> listOf(GoalType.COUNT, GoalType.DISTANCE, GoalType.TIME, GoalType.CALORIES)
+    }
+
+    // Auto-fill unit based on goal type
+    val unit = when (selectedGoalType) {
+        GoalType.TIME -> "min"
+        GoalType.DISTANCE -> "km"
+        GoalType.COUNT -> "workouts"
+        GoalType.CALORIES -> "kcal"
+        else -> ""
+    }
+
+    val isFormValid = title.isNotBlank()
+            && target.toDoubleOrNull() != null
+            && selectedWorkoutType != null
+            && selectedGoalType != null
+            && startDate.isNotBlank()
+            && endDate.isNotBlank()
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -410,22 +448,28 @@ fun AddGoalDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(8.dp))
+                // Workout type selection
                 ExposedDropdownMenuBoxDisplayName(
                     label = stringResource(R.string.workout_type),
-                    options = WorkoutType.values().toList(),
+                    options = WorkoutType.entries,
                     selected = selectedWorkoutType,
                     displayName = { it.displayName },
                     placeholder = stringResource(R.string.select_workout_type),
-                    onSelected = { selectedWorkoutType = it }
+                    onSelected = {
+                        selectedWorkoutType = it
+                        selectedGoalType = null // Reset goal type when workout type changes
+                    }
                 )
                 Spacer(Modifier.height(8.dp))
+                // Goal type selection, disabled if no workout type
                 ExposedDropdownMenuBoxDisplayName(
                     label = stringResource(R.string.goal_type),
-                    options = GoalType.values().toList(),
+                    options = availableGoalTypes,
                     selected = selectedGoalType,
                     displayName = { it.displayName },
-                    placeholder = stringResource(R.string.select_goal_type),
-                    onSelected = { selectedGoalType = it }
+                    placeholder = if (selectedWorkoutType == null) "Eerst workout type kiezen" else "Selecteer doel type",
+                    onSelected = { selectedGoalType = it },
+                    enabled = selectedWorkoutType != null
                 )
                 Spacer(Modifier.height(8.dp))
                 Row(
@@ -436,13 +480,16 @@ fun AddGoalDialog(
                         value = target,
                         onValueChange = { target = it },
                         label = { Text(stringResource(R.string.value)) },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        enabled = selectedGoalType != null
                     )
                     OutlinedTextField(
                         value = unit,
-                        onValueChange = { unit = it },
+                        onValueChange = {},
                         label = { Text(stringResource(R.string.unit)) },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        readOnly = true,
+                        enabled = false
                     )
                 }
                 Spacer(Modifier.height(8.dp))
@@ -528,22 +575,18 @@ fun AddGoalDialog(
                         )
                         isLoading = false
                         if (success) {
-                            onGoalAdded()
+                            onGoalCreated()
                             onDismiss()
                         } else {
-                            error = "Failed to add goal."
+                            error = "Aanmaken mislukt."
                         }
                     }
                 },
                 enabled = isFormValid && !isLoading
-            ) {
-                Text(stringResource(R.string.add))
-            }
+            ) { Text(stringResource(R.string.add)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
-            }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         }
     )
 }
@@ -575,9 +618,11 @@ fun MaterialDatePickerDialog(
 fun <T> ExposedDropdownMenuBox(
     label: String,
     options: List<T>,
-    selected: T,
+    selected: T?,
+    displayName: (T) -> String,
+    placeholder: String,
     onSelected: (T) -> Unit,
-    placeholder: String
+    enabled: Boolean = true
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -594,8 +639,9 @@ fun <T> ExposedDropdownMenuBox(
                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
             },
             modifier = Modifier
-                .fillMaxWidth()
                 .menuAnchor()
+                .fillMaxWidth(),
+            enabled = enabled
         )
         ExposedDropdownMenu(
             expanded = expanded,
@@ -672,11 +718,18 @@ fun GoalCard(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .padding(16.dp)
-                .animateContentSize()
-        ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                goal.title,
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                "Doel: ${goal.target} ${goal.unit}",
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Medium
+            )
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -694,10 +747,10 @@ fun GoalCard(
                     )
                 }
                 IconButton(onClick = { onEdit(goal) }) {
-                    Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.edit))
+                    Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.edit)))
                 }
-                IconButton(onClick = { onDelete(goal) }) {
-                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.delete))
+                IconButton(onClick = { showDeleteDialog = true }) {
+                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.delete)))
                 }
                 IconButton(onClick = { expanded = !expanded }) {
                     Icon(
@@ -706,7 +759,11 @@ fun GoalCard(
                     )
                 }
             }
-            Spacer(Modifier.height(8.dp))
+            Text(
+                if (isComplete) "Voltooid" else "Voortgang: ${goal.current} ${goal.unit}",
+                color = if (isComplete) Color(0xFF388E3C) else MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = if (isComplete) FontWeight.Bold else FontWeight.Normal
+            )
             LinearProgressIndicator(
                 progress = { progress },
                 modifier = Modifier
@@ -720,80 +777,129 @@ fun GoalCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "${goal.current.toInt()} / ${goal.target.toInt()} ${goal.unit}",
-                    style = MaterialTheme.typography.bodySmall
+                    "Workout type: ${goal.workoutType.displayName}",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = "${(progress * 100).toInt()}%",
-                    style = MaterialTheme.typography.bodySmall
+                    "Type doel: ${goal.goalType.displayName}",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            }
-            if (expanded) {
-                Spacer(Modifier.height(16.dp))
-                Text(
-                    text = goal.description,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                goal.startDate?.let {
+                if (goal.description.isNotBlank()) {
                     Text(
-                        text = "${stringResource(R.string.start_date)}: ${formatDate(it)}",
-                        style = MaterialTheme.typography.bodySmall
+                        "Beschrijving: ${goal.description}",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                if (!goal.startDate.isNullOrBlank()) {
+                    Text(
+                        "Startdatum: ${goal.startDate}",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 goal.endDate?.let {
                     Text(
-                        text = "${stringResource(R.string.end_date)}: ${formatDate(it)}",
-                        style = MaterialTheme.typography.bodySmall
+                        "Einddatum: ${goal.endDate}",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+                Text(
+                    "Aangemaakt op: ${goal.createdAt}",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Doel verwijderen") },
+            text = { Text("Weet je zeker dat je dit doel wilt verwijderen?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteDialog = false
+                    onDelete(goal)
+                }) { Text("Verwijderen") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) { Text("Annuleren") }
+            }
+        )
     }
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GoalsScreen(navController: NavController, userId: String) {
+fun GoalsScreen(navController: NavController) {
+    val context = LocalContext.current
     var goals by remember { mutableStateOf<List<Goal>>(emptyList()) }
-    var workouts by remember { mutableStateOf<List<Workout>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
-    var isAddGoalDialogOpen by remember { mutableStateOf(false) }
-    var selectedGoalForEdit by remember { mutableStateOf<Goal?>(null) }
-    val coroutineScope = rememberCoroutineScope()
-    var showDeleteConfirmDialog by remember { mutableStateOf<Goal?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var showAddGoalDialog by remember { mutableStateOf(false) }
+    var refreshTrigger by remember { mutableIntStateOf(0) }
+    var goalToEdit by remember { mutableStateOf<Goal?>(null) }
+    var goalToDelete by remember { mutableStateOf<Goal?>(null) }
 
-    fun loadGoalsAndWorkouts() {
-        isLoading = true
-        coroutineScope.launch {
-            val fetchedGoals = fetchGoals(userId)
-            val fetchedWorkouts = fetchWorkouts(userId)
-            workouts = fetchedWorkouts
+    var userId by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) {
+        userId = getUserId(context)
+    }
+
+    LaunchedEffect(userId, refreshTrigger) {
+        if (userId != null) {
+            isLoading = true
+            error = null
+            val fetchedGoals = fetchGoals(userId!!)
+            val fetchedWorkouts = fetchWorkouts(userId!!)
             goals = fetchedGoals.map { goal ->
                 goal.copy(current = calculateGoalProgress(goal, fetchedWorkouts))
             }
             isLoading = false
+
+            if (NotificationService.areGoalReminderNotificationsEnabled(context)) {
+                val formatter = DateTimeFormatter.ISO_DATE
+                val today = LocalDate.now()
+                for (goal in goals) {
+                    val endDateStr = goal.endDate
+                    val progress = (goal.current / goal.target).coerceIn(0.0, 1.0)
+                    if (!endDateStr.isNullOrBlank() && progress < 1.0) {
+                        try {
+                            val endDate = LocalDate.parse(endDateStr, formatter)
+                            if (endDate.isEqual(today)) {
+                                NotificationService.createNotificationChannel(context)
+                                NotificationService.sendGoalDeadlineNotification(context, goal.id ?: 0, goal.title)
+                            }
+                        } catch (_: Exception) {}
+                    }
+                }
+            }
         }
     }
 
-    LaunchedEffect(userId) {
-        loadGoalsAndWorkouts()
+    val (completedGoals, activeGoals) = remember(goals) {
+        goals.partition {
+            val progress = (it.current / it.target).coerceIn(0.0, 1.0)
+            progress >= 1.0
+        }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.my_goals)) },
+                title = { Text("Mijn Doelen") },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                    IconButton(onClick = { navController.navigateUp() }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Terug")
                     }
                 }
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { isAddGoalDialogOpen = true }) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_goal))
+            FloatingActionButton(
+                onClick = { showAddGoalDialog = true }
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Doel toevoegen")
             }
         }
     ) { paddingValues ->
@@ -802,80 +908,73 @@ fun GoalsScreen(navController: NavController, userId: String) {
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .verticalScroll(rememberScrollState())
         ) {
-            if (isLoading) {
-                CircularProgressIndicator()
-            } else if (goals.isEmpty()) {
-                Text(stringResource(R.string.no_goals_set))
-            } else {
-                goals.forEach { goal ->
-                    GoalCard(
-                        goal = goal,
-                        onEdit = { selectedGoalForEdit = it },
-                        onDelete = { showDeleteConfirmDialog = it }
-                    )
-                    Spacer(Modifier.height(16.dp))
+            Text(
+                text = "Actieve Doelen",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Medium
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            when {
+                isLoading -> CircularProgressIndicator()
+                error != null -> Text(error!!, color = MaterialTheme.colorScheme.error)
+                activeGoals.isEmpty() -> Text("Geen actieve doelen gevonden.")
+                else -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    activeGoals.forEach { goal ->
+                        GoalCard(
+                            goal = goal,
+                            onEdit = { goalToEdit = it },
+                            onDelete = { goalToDelete = it }
+                        )
+                    }
+                }
+            }
+
+            if (completedGoals.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(32.dp))
+                Text(
+                    text = "Voltooide Doelen",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    completedGoals.forEach { goal ->
+                        GoalCard(
+                            goal = goal,
+                            onEdit = { goalToEdit = it },
+                            onDelete = { goalToDelete = it }
+                        )
+                    }
                 }
             }
         }
-    }
 
-    if (isAddGoalDialogOpen) {
-        AddGoalDialog(
-            onDismiss = { isAddGoalDialogOpen = false },
-            onGoalAdded = {
-                isAddGoalDialogOpen = false
-                loadGoalsAndWorkouts()
-            },
-            userId = userId
-        )
+        if (showAddGoalDialog && userId != null) {
+            AddGoalDialog(
+                onDismiss = { showAddGoalDialog = false },
+                onGoalCreated = { refreshTrigger++ },
+                userId = userId!!
+            )
+        }
     }
-
-    selectedGoalForEdit?.let { goal ->
+    if (goalToEdit != null && userId != null) {
         EditGoalDialog(
-            goal = goal,
-            onDismiss = { selectedGoalForEdit = null },
-            onGoalUpdated = {
-                selectedGoalForEdit = null
-                loadGoalsAndWorkouts()
-            },
-            userId = userId
+            goal = goalToEdit!!,
+            onDismiss = { goalToEdit = null },
+            onGoalUpdated = { refreshTrigger++; goalToEdit = null },
+            userId = userId!!
         )
     }
 
-    showDeleteConfirmDialog?.let { goal ->
-        AlertDialog(
-            onDismissRequest = { showDeleteConfirmDialog = null },
-            title = { Text(stringResource(R.string.delete_goal)) },
-            text = { Text(stringResource(R.string.delete_goal_confirm, goal.title)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        coroutineScope.launch {
-                            val success = deleteGoal(goal.id ?: 0)
-                            if (success) {
-                                loadGoalsAndWorkouts()
-                            }
-                            showDeleteConfirmDialog = null
-                        }
-                    }
-                ) {
-                    Text(stringResource(R.string.delete))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteConfirmDialog = null }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            }
-        )
+    if (goalToDelete != null) {
+        LaunchedEffect(goalToDelete) {
+            val success = deleteGoal(goalToDelete!!.id!!)
+            if (success) refreshTrigger++
+            goalToDelete = null
+        }
     }
-}
-
-@RequiresApi(Build.VERSION_CODES.O)
-private fun formatDate(dateString: String): String {
-    val date = LocalDate.parse(dateString, DateTimeFormatter.ISO_DATE)
-    return date.format(DateTimeFormatter.ofPattern("dd MMM yyyy"))
 }
