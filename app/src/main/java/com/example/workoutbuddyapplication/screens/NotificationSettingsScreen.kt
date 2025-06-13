@@ -26,6 +26,7 @@ import kotlinx.coroutines.launch
 
 private val NOTIFICATIONS_ENABLED_KEY = booleanPreferencesKey("notifications_enabled")
 private val GOAL_REMINDER_NOTIFICATIONS_ENABLED_KEY = booleanPreferencesKey("goal_reminder_notifications_enabled")
+private val WORKOUT_TIME_NOTIFICATION_ENABLED_KEY = booleanPreferencesKey("workout_time_notification_enabled")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,11 +36,13 @@ fun NotificationSettingsScreen(navController: NavController) {
     val coroutineScope = rememberCoroutineScope()
     var notificationsEnabled by remember { mutableStateOf(true) }
     var goalReminderEnabled by remember { mutableStateOf(false) }
+    var workoutTimeNotificationEnabled by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
         val prefs = context.dataStore.data.first()
         val enabled = prefs[NOTIFICATIONS_ENABLED_KEY] ?: true
         val goalReminder = prefs[GOAL_REMINDER_NOTIFICATIONS_ENABLED_KEY] ?: false
+        workoutTimeNotificationEnabled = prefs[WORKOUT_TIME_NOTIFICATION_ENABLED_KEY] ?: true
         notificationsEnabled = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             ContextCompat.checkSelfPermission(
                 context, Manifest.permission.POST_NOTIFICATIONS
@@ -113,6 +116,29 @@ fun NotificationSettingsScreen(navController: NavController) {
                             }
                         }
                         notificationsEnabled = checked
+                    }
+                )
+            }
+
+            // Workout time notification switch
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "Enable Workout Time Notifications",
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f)
+                )
+                Switch(
+                    checked = workoutTimeNotificationEnabled,
+                    onCheckedChange = { checked ->
+                        coroutineScope.launch {
+                            context.dataStore.edit { prefs ->
+                                prefs[WORKOUT_TIME_NOTIFICATION_ENABLED_KEY] = checked
+                            }
+                        }
+                        workoutTimeNotificationEnabled = checked
                     }
                 )
             }

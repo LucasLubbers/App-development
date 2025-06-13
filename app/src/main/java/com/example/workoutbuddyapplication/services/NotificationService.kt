@@ -27,6 +27,7 @@ object NotificationService {
 
     private val NOTIFICATIONS_ENABLED_KEY = booleanPreferencesKey("notifications_enabled")
     private val GOAL_REMINDER_NOTIFICATIONS_ENABLED_KEY = booleanPreferencesKey("goal_reminder_notifications_enabled")
+    private val WORKOUT_TIME_NOTIFICATION_ENABLED_KEY = booleanPreferencesKey("workout_time_notification_enabled")
 
     fun areNotificationsEnabled(context: Context): Boolean {
         return runBlocking {
@@ -37,6 +38,12 @@ object NotificationService {
     fun areGoalReminderNotificationsEnabled(context: Context): Boolean {
         return runBlocking {
             context.dataStore.data.first()[GOAL_REMINDER_NOTIFICATIONS_ENABLED_KEY] ?: false
+        }
+    }
+
+    fun isWorkoutTimeNotificationEnabled(context: Context): Boolean {
+        return runBlocking {
+            context.dataStore.data.first()[WORKOUT_TIME_NOTIFICATION_ENABLED_KEY] ?: true
         }
     }
 
@@ -127,6 +134,34 @@ object NotificationService {
 
         with(NotificationManagerCompat.from(context)) {
             notify(1000 + goalId, builder.build())
+        }
+    }
+
+    fun sendWorkoutTimeNotification(context: Context, contentTitle: String, contentText: String) {
+        if (!areNotificationsEnabled(context) || !isWorkoutTimeNotificationEnabled(context)) return
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val permissionCheck = ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.POST_NOTIFICATIONS
+            )
+            if (permissionCheck != PackageManager.PERMISSION_GRANTED) {
+                Log.w("NotificationService", "POST_NOTIFICATIONS permission not granted.")
+                return
+            }
+        }
+
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(contentTitle)
+            .setContentText(contentText)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(contentText))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setAutoCancel(true)
+
+        with(NotificationManagerCompat.from(context)) {
+            notify(2001, builder.build())
         }
     }
 }

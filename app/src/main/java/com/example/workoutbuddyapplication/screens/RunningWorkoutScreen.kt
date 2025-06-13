@@ -95,6 +95,7 @@ import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import com.example.workoutbuddyapplication.services.NotificationService
 
 @Composable
 fun RunningWorkoutScreen(navController: NavController) {
@@ -267,6 +268,7 @@ fun RunningWorkoutScreen(navController: NavController) {
     // Timer effect
     LaunchedEffect(isRunning) {
         val startTime = SystemClock.elapsedRealtime() - elapsedTime
+        var hasSentTimeNotification by remember { mutableStateOf(false) }
         while (isRunning) {
             elapsedTime = SystemClock.elapsedRealtime() - startTime
             delay(1000)
@@ -343,6 +345,17 @@ fun RunningWorkoutScreen(navController: NavController) {
             // Simulate elevation (between 0-50m)
             val newElevation = (Math.random() * 50).toFloat()
             elevationData.add(newElevation)
+
+            // Send notification if workout time exceeds 1 hour
+            if (!hasSentTimeNotification && elapsedTime > 3_600_000L) {
+                NotificationService.createNotificationChannel(context)
+                NotificationService.sendWorkoutTimeNotification(
+                    context,
+                    "Let op de tijd!",
+                    "Je bent al langer dan 1 uur bezig met je workout"
+                )
+                hasSentTimeNotification = true
+            }
         }
     }
     

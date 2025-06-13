@@ -95,6 +95,7 @@ import kotlinx.serialization.decodeFromString
 import com.example.workoutbuddyapplication.ui.theme.strings
 import com.example.workoutbuddyapplication.ui.theme.StringResources
 import com.example.workoutbuddyapplication.screens.StatCard
+import com.example.workoutbuddyapplication.services.NotificationService
 
 data class ExerciseSet(
     val reps: Int,
@@ -130,10 +131,13 @@ fun StrengthWorkoutScreen(navController: NavController) {
     var isRunning by remember { mutableStateOf(true) }
     var elapsedTime by remember { mutableLongStateOf(0L) }
     var calories by remember { mutableIntStateOf(0) }
-    var exerciseCalories by remember { mutableIntStateOf(0) } // Track exercise calories separately
+    var exerciseCalories by remember { mutableIntStateOf(0) }
     var currentExerciseForDevice by remember { mutableStateOf<Exercise?>(null) }
     var showExerciseSelector by remember { mutableStateOf(false) }
     var showPresetMenu by remember { mutableStateOf(false) }
+
+    // Fix: Declare hasSentTimeNotification here
+    var hasSentTimeNotification by remember { mutableStateOf(false) }
 
     // For tracking rest timer between sets
     var activeRestTimerExercise by remember { mutableStateOf<String?>(null) }
@@ -254,6 +258,17 @@ fun StrengthWorkoutScreen(navController: NavController) {
                 val timeCalories = (elapsedTime / 60000 * 5).toInt()
                 // Set the total calories (time-based + exercise-based)
                 calories = timeCalories + exerciseCalories
+            }
+
+            // Send notification if workout time exceeds 1 hour
+            if (!hasSentTimeNotification && elapsedTime > 3_600_000L) {
+                NotificationService.createNotificationChannel(context)
+                NotificationService.sendWorkoutTimeNotification(
+                    context,
+                    "Let op de tijd!",
+                    "Je bent al langer dan 1 uur bezig met je workout"
+                )
+                hasSentTimeNotification = true
             }
         }
     }

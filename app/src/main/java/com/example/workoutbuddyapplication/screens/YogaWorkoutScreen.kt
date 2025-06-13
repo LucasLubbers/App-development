@@ -23,6 +23,8 @@ import com.example.workoutbuddyapplication.ui.theme.strings
 import com.example.workoutbuddyapplication.screens.formatTime
 import com.example.workoutbuddyapplication.screens.StatCard
 import kotlinx.coroutines.delay
+import com.example.workoutbuddyapplication.services.NotificationService
+import androidx.compose.ui.platform.LocalContext
 
 data class YogaPose(
     val name: String,
@@ -154,6 +156,9 @@ fun YogaWorkoutScreen(navController: NavController) {
     var newPoseDifficulty by remember { mutableStateOf(strings.beginner) }
     var newPoseBenefits by remember { mutableStateOf("") }
 
+    val context = LocalContext.current
+    var hasSentTimeNotification by remember { mutableStateOf(false) }
+
     LaunchedEffect(isRunning) {
         val startTime = SystemClock.elapsedRealtime() - elapsedTime
         while (isRunning) {
@@ -162,6 +167,15 @@ fun YogaWorkoutScreen(navController: NavController) {
             if (isRunning) {
                 calories = (elapsedTime / 60000 * 3).toInt()
             }
+        }
+        if (!hasSentTimeNotification && elapsedTime > 3_600_000L) {
+            NotificationService.createNotificationChannel(context)
+            NotificationService.sendWorkoutTimeNotification(
+                context,
+                "Let op de tijd!",
+                "Je bent al langer dan 1 uur bezig met je workout"
+            )
+            hasSentTimeNotification = true
         }
     }
 
