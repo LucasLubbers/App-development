@@ -39,9 +39,9 @@ sealed class Screen(val route: String) {
     object RunningWorkout : Screen("running_workout")
     object StrengthWorkout : Screen("strength_workout")
     object YogaWorkout : Screen("yoga_workout")
-    object WorkoutCompleted : Screen("workout_completed/{duration}/{distance}/{calories}/{steps}") {
-        fun createRoute(duration: String, distance: String, calories: Int, steps: Int) = 
-            "workout_completed/$duration/$distance/$calories/$steps"
+    object WorkoutCompleted : Screen("workout_completed/{duration}/{distance}/{calories}") {
+        fun createRoute(duration: String, distance: String, calories: Int) =
+            "workout_completed/$duration/$distance/$calories"
     }
     object BluetoothDevice : Screen("bluetooth_device")
     object QRScanner : Screen("qr_scanner")
@@ -111,20 +111,17 @@ fun AppNavigation(navController: NavHostController) {
                     navArgument("duration") { type = NavType.StringType },
                     navArgument("distance") { type = NavType.StringType },
                     navArgument("calories") { type = NavType.IntType },
-                    navArgument("steps") { type = NavType.IntType }
                 )
             ) { backStackEntry ->
                 val duration = backStackEntry.arguments?.getString("duration") ?: "00:00"
                 val distance = backStackEntry.arguments?.getString("distance") ?: "0.00 km"
                 val calories = backStackEntry.arguments?.getInt("calories") ?: 0
-                val steps = backStackEntry.arguments?.getInt("steps") ?: 0
 
                 WorkoutCompletedScreen(
                     navController = navController,
                     duration = duration,
                     workoutDistance = distance,
-                    calories = calories,
-                    steps = steps
+                    calories = calories
                 )
             }
             composable(Screen.BluetoothDevice.route) {

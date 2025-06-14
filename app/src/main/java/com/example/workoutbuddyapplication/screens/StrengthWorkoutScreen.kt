@@ -410,7 +410,6 @@ fun StrengthWorkoutScreen(navController: NavController) {
                             duration = formattedDuration,
                             distance = "0.00 km",
                             calories = calories,
-                            steps = 0
                         )
                     )
                 },

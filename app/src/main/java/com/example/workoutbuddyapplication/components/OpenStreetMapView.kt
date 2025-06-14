@@ -87,6 +87,47 @@ fun createLocationDotDrawable(context: Context): Drawable {
     }
 }
 
+class RedLocationDotDrawable : Drawable() {
+    private val borderPaint = Paint().apply {
+        color = android.graphics.Color.WHITE
+        isAntiAlias = true
+        style = Paint.Style.FILL
+    }
+
+    private val centerPaint = Paint().apply {
+        color = Color.Red.toArgb()
+        isAntiAlias = true
+        style = Paint.Style.FILL
+    }
+
+    override fun draw(canvas: Canvas) {
+        val bounds = bounds
+        val centerX = bounds.exactCenterX()
+        val centerY = bounds.exactCenterY()
+        val radius = bounds.width() / 2f
+
+        canvas.drawCircle(centerX, centerY, radius, borderPaint)
+        canvas.drawCircle(centerX, centerY, radius * 0.6f, centerPaint)
+    }
+
+    override fun setAlpha(alpha: Int) {
+        borderPaint.alpha = alpha
+        centerPaint.alpha = alpha
+    }
+
+    override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) {
+        borderPaint.colorFilter = colorFilter
+        centerPaint.colorFilter = colorFilter
+    }
+
+    override fun getOpacity(): Int = android.graphics.PixelFormat.TRANSLUCENT
+
+    override fun getIntrinsicWidth(): Int = 60
+    override fun getIntrinsicHeight(): Int = 60
+}
+
+
+
 // Create a custom drawable with white border and blue center
 class LocationDotDrawable : Drawable() {
     private val borderPaint = Paint().apply {
@@ -240,7 +281,7 @@ fun OpenStreetMapView(
                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                     
                     // Use custom blue dot drawable
-                    icon = LocationDotDrawable().apply {
+                    icon = RedLocationDotDrawable().apply {
                         setBounds(0, 0, 60, 60)
                     }
                 }

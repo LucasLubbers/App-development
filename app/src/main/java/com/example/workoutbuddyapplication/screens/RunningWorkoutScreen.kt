@@ -1,10 +1,6 @@
 package com.example.workoutbuddyapplication.screens
 
 import android.content.Context
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
 import android.os.SystemClock
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -24,7 +20,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DirectionsRun
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -42,17 +37,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -77,10 +67,8 @@ import kotlinx.coroutines.delay
 import kotlin.math.cos
 import kotlin.math.sin
 import androidx.compose.ui.graphics.vector.ImageVector
-import com.example.workoutbuddyapplication.ui.theme.ThemeManager
 import com.example.workoutbuddyapplication.ui.theme.UnitSystem
 import com.example.workoutbuddyapplication.utils.UnitConverter
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.collectAsState
 import com.example.workoutbuddyapplication.ui.theme.UserPreferencesManager
 import com.example.workoutbuddyapplication.ui.theme.toUnitSystem
@@ -88,13 +76,15 @@ import com.example.workoutbuddyapplication.utils.LocationManager
 import com.example.workoutbuddyapplication.utils.LatLng
 import com.example.workoutbuddyapplication.components.OpenStreetMapView
 import com.example.workoutbuddyapplication.components.CartoMapStyle
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.mutableStateListOf
 import kotlinx.coroutines.launch
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.core.content.ContextCompat
+import androidx.compose.material.icons.outlined.Whatshot
 
 @Composable
 fun RunningWorkoutScreen(navController: NavController) {
@@ -103,52 +93,51 @@ fun RunningWorkoutScreen(navController: NavController) {
     val selectedUnitSystem by preferencesManager.selectedUnitSystem.collectAsState(initial = "metric")
     val unitSystem = selectedUnitSystem.toUnitSystem()
     val debugMode by preferencesManager.debugMode.collectAsState(initial = false)
-    val coroutineScope = rememberCoroutineScope()
-    
+    val speedData = remember { mutableListOf<Float>() }
+
+
     // Permission handling
-    var hasLocationPermission by remember { 
+    var hasLocationPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(
-                context, 
+                context,
                 Manifest.permission.ACCESS_FINE_LOCATION
             ) == android.content.pm.PackageManager.PERMISSION_GRANTED
         )
     }
-    
+
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         hasLocationPermission = isGranted
     }
-    
+
     // Request permission on first load
     LaunchedEffect(Unit) {
         if (!hasLocationPermission) {
             locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         }
     }
-    
+
     var isRunning by remember { mutableStateOf(true) }
     var distance by remember { mutableStateOf(0.0) }
     var pace by remember { mutableStateOf(0.0) }
-    var heartRate by remember { mutableIntStateOf(75) }
     var elapsedTime by remember { mutableLongStateOf(0L) }
     var targetDistance by remember { mutableStateOf(0.0) }
     var targetTime by remember { mutableIntStateOf(0) }
     var showGoalDialog by remember { mutableStateOf(false) }
     var targetDistanceInput by remember { mutableStateOf("") }
     var targetTimeInput by remember { mutableStateOf("") }
-    var steps by remember { mutableStateOf(0) }
     var calories by remember { mutableStateOf(0) }
     var selectedTab by remember { mutableIntStateOf(0) }
-    var useHeartRateZones by remember { mutableStateOf(false) }
-    var targetHeartRateZone by remember { mutableIntStateOf(2) } // Zone 1-5
+    var speed by remember { mutableStateOf(0.0) }
+
 
     // Real location tracking variables
     var currentLocation by remember { mutableStateOf<LatLng?>(null) }
     val routePoints = remember { mutableStateListOf<LatLng>() }
     var totalDistanceFromGPS by remember { mutableStateOf(0.0) }
-    
+
     // Location manager
     val locationManager = remember { LocationManager(context) }
 
@@ -158,88 +147,29 @@ fun RunningWorkoutScreen(navController: NavController) {
     // Simulated elevation data
     val elevationData = remember { mutableListOf<Float>() }
 
-    // Simulated heart rate data
-    val heartRateData = remember { mutableListOf<Int>() }
-
     // Simulated pace data
     val paceData = remember { mutableListOf<Float>() }
 
-    // Accelerometer setup
-    val sensorManager = remember { context.getSystemService(Context.SENSOR_SERVICE) as SensorManager }
-    val accelerometer = remember { sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) }
-
-    val sensorListener = remember {
-        object : SensorEventListener {
-            private var lastUpdate = 0L
-            private var lastX = 0f
-            private var lastY = 0f
-            private var lastZ = 0f
-            private val SHAKE_THRESHOLD = 600
-
-            override fun onSensorChanged(event: SensorEvent) {
-                val currentTime = System.currentTimeMillis()
-                if ((currentTime - lastUpdate) > 100) {
-                    val diffTime = currentTime - lastUpdate
-                    lastUpdate = currentTime
-
-                    val x = event.values[0]
-                    val y = event.values[1]
-                    val z = event.values[2]
-
-                    val speed = Math.abs(x + y + z - lastX - lastY - lastZ) / diffTime * 10000
-
-                    if (speed > SHAKE_THRESHOLD && isRunning) {
-                        // Increment step count based on accelerometer
-                        steps += 1
-
-                        // Update calories (simple estimation)
-                        calories = (steps * 0.04).toInt()
-                    }
-
-                    lastX = x
-                    lastY = y
-                    lastZ = z
-                }
-            }
-
-            override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {
-                // Not needed for this demo
-            }
-        }
-    }
-
-    // Register sensor listener
-    DisposableEffect(Unit) {
-        sensorManager.registerListener(
-            sensorListener,
-            accelerometer,
-            SensorManager.SENSOR_DELAY_NORMAL
-        )
-
-        onDispose {
-            sensorManager.unregisterListener(sensorListener)
-        }
-    }
 
     // Location tracking effect
     LaunchedEffect(isRunning, hasLocationPermission, debugMode) {
         if (isRunning && hasLocationPermission && !debugMode) { // Only use real GPS if not in debug mode
             locationManager.startLocationUpdates()
-            
+
             // Collect location updates
             launch {
                 locationManager.locationUpdates.collect { newLocation ->
                     currentLocation = newLocation
-                    
+
                     if (routePoints.isNotEmpty()) {
                         val lastPoint = routePoints.last()
                         val distanceToAdd = LocationManager.calculateDistance(lastPoint, newLocation) / 1000.0 // Convert to km
                         totalDistanceFromGPS += distanceToAdd
-                        
+
                         // Update distance with real GPS data
                         distance = totalDistanceFromGPS
                     }
-                    
+
                     routePoints.add(newLocation)
                 }
             }
@@ -247,7 +177,7 @@ fun RunningWorkoutScreen(navController: NavController) {
             locationManager.stopLocationUpdates()
         }
     }
-    
+
     // Get initial location
     LaunchedEffect(hasLocationPermission, debugMode) {
         if (debugMode) {
@@ -257,7 +187,7 @@ fun RunningWorkoutScreen(navController: NavController) {
             routePoints.add(mockLocation)
         } else if (hasLocationPermission) {
             val initialLocation = locationManager.getCurrentLocation()
-            initialLocation?.let { 
+            initialLocation?.let {
                 currentLocation = it
                 routePoints.add(it)
             }
@@ -267,6 +197,7 @@ fun RunningWorkoutScreen(navController: NavController) {
     // Timer effect
     LaunchedEffect(isRunning) {
         val startTime = SystemClock.elapsedRealtime() - elapsedTime
+        val userWeight = preferencesManager.getUserWeight()
         while (isRunning) {
             elapsedTime = SystemClock.elapsedRealtime() - startTime
             delay(1000)
@@ -275,36 +206,32 @@ fun RunningWorkoutScreen(navController: NavController) {
             if (debugMode && currentLocation != null) {
                 // Debug mode: Simulate movement around mock location (stay near Amsterdam)
                 distance += 0.0008f
-                
+
                 val lastLocation = routePoints.lastOrNull() ?: currentLocation!!
-                
+
                 // Make smaller, more controlled movements (about 1-2 meters per second)
                 val angle = Math.random() * 2 * Math.PI
                 val movementDistance = 0.00001 + Math.random() * 0.00001 // Very small movement in degrees
                 val newLat = lastLocation.latitude + (cos(angle) * movementDistance)
                 val newLng = lastLocation.longitude + (sin(angle) * movementDistance)
-                
+
                 // Ensure we stay near Amsterdam (52.3676, 4.9041) - within ~1km radius
                 val amsterdamLat = 52.3676
                 val amsterdamLng = 4.9041
                 val maxDistance = 0.01 // About 1km in degrees
-                
+
                 val finalLat = if (kotlin.math.abs(newLat - amsterdamLat) > maxDistance) {
                     amsterdamLat + (if (newLat > amsterdamLat) maxDistance else -maxDistance)
                 } else newLat
-                
+
                 val finalLng = if (kotlin.math.abs(newLng - amsterdamLng) > maxDistance) {
                     amsterdamLng + (if (newLng > amsterdamLng) maxDistance else -maxDistance)
                 } else newLng
-                
+
                 val newLocation = LatLng(finalLat, finalLng)
                 currentLocation = newLocation
                 routePoints.add(newLocation)
-                
-                // Simulate realistic steps for running (about 160-180 steps per minute)
-                val stepsPerSecond = (160 + Math.random() * 20) / 60 // 160-180 steps per minute
-                steps += (2 + Math.random() * 2).toInt() // 2-4 steps per second
-                
+
                 // Simulate realistic calories for running (about 10-15 kcal per minute for average person)
                 val minutesElapsed = elapsedTime / 60000.0
                 val expectedCalories = (minutesElapsed * (12 + Math.random() * 3)).toInt() // 12-15 kcal/min
@@ -314,7 +241,7 @@ fun RunningWorkoutScreen(navController: NavController) {
             } else if (!hasLocationPermission || (routePoints.isEmpty() && !debugMode)) {
                 // Simulate distance increase (about 3 km/h) when no GPS
                 distance += 0.0008f
-                
+
                 // Add simulated points for fallback (only if no real GPS data)
                 if (simulatedRoutePoints.isEmpty()) {
                     simulatedRoutePoints.add(Offset(500f, 500f))
@@ -328,14 +255,30 @@ fun RunningWorkoutScreen(navController: NavController) {
             }
 
             // Calculate pace (min/km)
-            if (distance > 0) {
-                pace = elapsedTime / 60000f / distance
+            if (distance > 0 && elapsedTime > 0) {
+                val hours = elapsedTime / 3_600_000.0
+                speed = distance / hours
+            } else {
+                speed = 0.0
             }
 
-            // Simulate heart rate (between 120-150 bpm)
-            val newHeartRate = (120 + (Math.random() * 30).toInt())
-            heartRate = newHeartRate
-            heartRateData.add(newHeartRate)
+            val met = when {
+                speed < 2.0 -> 0.0
+                speed < 8 -> 7.0
+                speed < 9 -> 8.3
+                speed < 10 -> 9.0
+                speed < 11 -> 9.8
+                speed < 12 -> 10.5
+                speed < 13 -> 11.0
+                else -> 11.5
+            }
+
+            if (met > 0) {
+                val caloriesPerSecond = met * userWeight / 3600.0
+                calories += caloriesPerSecond.toInt()
+            }
+
+            speedData.add(speed.toFloat())
 
             // Simulate pace data
             paceData.add(pace.toFloat())
@@ -345,7 +288,7 @@ fun RunningWorkoutScreen(navController: NavController) {
             elevationData.add(newElevation)
         }
     }
-    
+
     // Stop location updates when screen is disposed
     DisposableEffect(Unit) {
         onDispose {
@@ -375,54 +318,8 @@ fun RunningWorkoutScreen(navController: NavController) {
                         value = targetTime.toFloat(),
                         onValueChange = { targetTime = it.toInt() },
                         valueRange = 5f..180f,
-                        steps = 35
                     )
                     Text("${targetTime} minuten")
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = "Hartslagzones gebruiken",
-                            modifier = Modifier.weight(1f)
-                        )
-                        Switch(
-                            checked = useHeartRateZones,
-                            onCheckedChange = { useHeartRateZones = it }
-                        )
-                    }
-
-                    if (useHeartRateZones) {
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Text("Doelzone")
-                        TabRow(selectedTabIndex = targetHeartRateZone - 1) {
-                            for (i in 1..5) {
-                                Tab(
-                                    selected = targetHeartRateZone == i,
-                                    onClick = { targetHeartRateZone = i },
-                                    text = { Text("Zone $i") }
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Text(
-                            text = when (targetHeartRateZone) {
-                                1 -> "Zone 1: 50-60% van max HR - Herstel"
-                                2 -> "Zone 2: 60-70% van max HR - Vetverbranding"
-                                3 -> "Zone 3: 70-80% van max HR - Aerobe training"
-                                4 -> "Zone 4: 80-90% van max HR - Anaerobe training"
-                                5 -> "Zone 5: 90-100% van max HR - Maximale inspanning"
-                                else -> ""
-                            },
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
                 }
             },
             confirmButton = {
@@ -467,7 +364,7 @@ fun RunningWorkoutScreen(navController: NavController) {
                 }
 
                 FloatingActionButton(
-                    onClick = { 
+                    onClick = {
                         val formattedDuration = formatTime(elapsedTime)
                         val formattedDistance = UnitConverter.formatDistance(distance, unitSystem)
                         navController.navigate(
@@ -475,7 +372,6 @@ fun RunningWorkoutScreen(navController: NavController) {
                                 duration = formattedDuration,
                                 distance = formattedDistance,
                                 calories = calories,
-                                steps = steps
                             )
                         )
                     },
@@ -573,9 +469,9 @@ fun RunningWorkoutScreen(navController: NavController) {
             ) {
                 StatCard(
                     title = "Tempo",
-                    value = if (pace > 0) {
-                        val paceUnit = if (unitSystem == UnitSystem.IMPERIAL) "min/mi" else "min/km"
-                        String.format("%.1f %s", pace, paceUnit)
+                    value = if (speed > 0) {
+                        val speedUnit = if (unitSystem == UnitSystem.IMPERIAL) "mi/h" else "km/h"
+                        String.format("%.1f %s", speed, speedUnit)
                     } else "--:--",
                     icon = Icons.Default.Speed,
                     modifier = Modifier.weight(1f)
@@ -584,9 +480,9 @@ fun RunningWorkoutScreen(navController: NavController) {
                 Spacer(modifier = Modifier.padding(4.dp))
 
                 StatCard(
-                    title = "Hartslag",
-                    value = "$heartRate bpm",
-                    icon = Icons.Default.Favorite,
+                    title = "Calorieën",
+                    value = "$calories kcal",
+                    icon = Icons.Outlined.Whatshot,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -630,107 +526,8 @@ fun RunningWorkoutScreen(navController: NavController) {
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
-
-                        if (useHeartRateZones && heartRate != 75) {
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            Text(
-                                text = "Hartslagzone",
-                                fontWeight = FontWeight.Medium
-                            )
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            val currentZone = when (heartRate) {
-                                in 0..120 -> 1
-                                in 121..140 -> 2
-                                in 141..160 -> 3
-                                in 161..180 -> 4
-                                else -> 5
-                            }
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceEvenly
-                            ) {
-                                for (i in 1..5) {
-                                    Box(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .height(24.dp)
-                                            .background(
-                                                color = when {
-                                                    i == currentZone -> MaterialTheme.colorScheme.primary
-                                                    i == targetHeartRateZone -> MaterialTheme.colorScheme.primaryContainer
-                                                    else -> MaterialTheme.colorScheme.surfaceVariant
-                                                }
-                                            ),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = "$i",
-                                            color = when {
-                                                i == currentZone -> MaterialTheme.colorScheme.onPrimary
-                                                i == targetHeartRateZone -> MaterialTheme.colorScheme.onPrimaryContainer
-                                                else -> MaterialTheme.colorScheme.onSurfaceVariant
-                                            },
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
-                                    }
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(4.dp))
-
-                            Text(
-                                text = if (currentZone == targetHeartRateZone)
-                                    "Je zit in je doelzone!"
-                                else if (currentZone < targetHeartRateZone)
-                                    "Verhoog je intensiteit om zone $targetHeartRateZone te bereiken"
-                                else
-                                    "Verlaag je intensiteit om zone $targetHeartRateZone te bereiken",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (currentZone == targetHeartRateZone)
-                                    MaterialTheme.colorScheme.primary
-                                else
-                                    MaterialTheme.colorScheme.error
-                            )
-                        }
                     }
                 }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Secondary stats
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                SecondaryStatCard(
-                    title = "Stappen",
-                    value = steps.toString(),
-                    modifier = Modifier.weight(1f)
-                )
-
-                Spacer(modifier = Modifier.padding(4.dp))
-
-                SecondaryStatCard(
-                    title = "Calorieën",
-                    value = "$calories kcal",
-                    modifier = Modifier.weight(1f)
-                )
-
-                Spacer(modifier = Modifier.padding(4.dp))
-
-                SecondaryStatCard(
-                    title = "Gem. Tempo",
-                    value = if (pace > 0) {
-                        val paceUnit = if (unitSystem == UnitSystem.IMPERIAL) "min/mi" else "min/km"
-                        String.format("%.1f %s", pace, paceUnit)
-                    } else "--:--",
-                    modifier = Modifier.weight(1f)
-                )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -745,17 +542,7 @@ fun RunningWorkoutScreen(navController: NavController) {
                 Tab(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
-                    text = { Text("Hartslag") }
-                )
-                Tab(
-                    selected = selectedTab == 2,
-                    onClick = { selectedTab = 2 },
                     text = { Text("Tempo") }
-                )
-                Tab(
-                    selected = selectedTab == 3,
-                    onClick = { selectedTab = 3 },
-                    text = { Text("Hoogte") }
                 )
             }
 
@@ -780,7 +567,7 @@ fun RunningWorkoutScreen(navController: NavController) {
                                     modifier = Modifier.fillMaxSize(),
                                     currentLocation = currentLocation,
                                     routePoints = routePoints.toList(),
-                                    mapStyle = CartoMapStyle.POSITRON // Clean, light style perfect for running
+                                    mapStyle = CartoMapStyle.POSITRON
                                 )
                             } else {
                                 // Show fallback or request permission
@@ -792,18 +579,18 @@ fun RunningWorkoutScreen(navController: NavController) {
                                     Text("Locatie toegang nodig voor kaart")
                                     Spacer(modifier = Modifier.height(16.dp))
                                     Button(
-                                        onClick = { 
+                                        onClick = {
                                             locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
                                         }
                                     ) {
                                         Text("Toegang verlenen")
                                     }
-                                    
+
                                     // Show simulated route as fallback
                                     if (simulatedRoutePoints.isNotEmpty()) {
                                         Spacer(modifier = Modifier.height(16.dp))
                                         Text("Gesimuleerde route:")
-                                        
+
                                         Canvas(modifier = Modifier.size(200.dp)) {
                                             if (simulatedRoutePoints.size > 1) {
                                                 val path = Path()
@@ -839,28 +626,27 @@ fun RunningWorkoutScreen(navController: NavController) {
                             }
                         }
                         1 -> {
-                            // Heart rate graph
-                            if (heartRateData.isNotEmpty()) {
+                            // Observe speedData.size so Compose recomposes when new data is added
+                            val dataSize = speedData.size
+                            if (dataSize > 0) {
                                 Canvas(modifier = Modifier.fillMaxSize()) {
-                                    val maxHeartRate = 200f
-                                    val minHeartRate = 60f
+                                    val maxSpeed = if (unitSystem == UnitSystem.IMPERIAL) 12f else 20f
+                                    val minSpeed = 0f
                                     val width = size.width
                                     val height = size.height
-                                    val xStep = width / (heartRateData.size.coerceAtLeast(2) - 1)
+                                    val xStep = width / (dataSize.coerceAtLeast(2) - 1)
 
                                     // Draw horizontal grid lines
-                                    for (hr in 80..180 step 20) {
-                                        val y = height - (hr - minHeartRate) / (maxHeartRate - minHeartRate) * height
+                                    for (s in 0..maxSpeed.toInt() step 2) {
+                                        val y = height - (s - minSpeed) / (maxSpeed - minSpeed) * height
                                         drawLine(
                                             color = Color.LightGray,
                                             start = Offset(0f, y),
                                             end = Offset(width, y),
                                             strokeWidth = 1f
                                         )
-
-                                        // Draw heart rate labels
                                         drawContext.canvas.nativeCanvas.drawText(
-                                            hr.toString(),
+                                            "$s ${if (unitSystem == UnitSystem.IMPERIAL) "mi/h" else "km/h"}",
                                             10f,
                                             y - 5,
                                             androidx.compose.ui.graphics.Paint().asFrameworkPaint().apply {
@@ -870,140 +656,28 @@ fun RunningWorkoutScreen(navController: NavController) {
                                         )
                                     }
 
-                                    // Draw heart rate line
-                                    if (heartRateData.size > 1) {
+                                    // Draw speed line
+                                    if (dataSize > 1) {
                                         val path = Path()
                                         val startX = 0f
-                                        val startY = height - (heartRateData[0] - minHeartRate) / (maxHeartRate - minHeartRate) * height
+                                        val startY = height - (speedData[0].coerceIn(minSpeed, maxSpeed) - minSpeed) / (maxSpeed - minSpeed) * height
                                         path.moveTo(startX, startY)
 
-                                        for (i in 1 until heartRateData.size) {
+                                        for (i in 1 until dataSize) {
                                             val x = i * xStep
-                                            val y = height - (heartRateData[i] - minHeartRate) / (maxHeartRate - minHeartRate) * height
+                                            val y = height - (speedData[i].coerceIn(minSpeed, maxSpeed) - minSpeed) / (maxSpeed - minSpeed) * height
                                             path.lineTo(x, y)
                                         }
 
                                         drawPath(
                                             path = path,
-                                            color = Color.Red,
-                                            style = Stroke(width = 3f)
-                                        )
-                                    }
-                                }
-                            } else {
-                                Text("Nog geen hartslaggegevens beschikbaar")
-                            }
-                        }
-                        2 -> {
-                            // Pace graph
-                            if (paceData.isNotEmpty()) {
-                                Canvas(modifier = Modifier.fillMaxSize()) {
-                                    val maxPace = 10f // 10 min/km (slower)
-                                    val minPace = 3f  // 3 min/km (faster)
-                                    val width = size.width
-                                    val height = size.height
-                                    val xStep = width / (paceData.size.coerceAtLeast(2) - 1)
-
-                                    // Draw horizontal grid lines
-                                    for (p in 4..9) {
-                                        val y = height - (p - minPace) / (maxPace - minPace) * height
-                                        drawLine(
-                                            color = Color.LightGray,
-                                            start = Offset(0f, y),
-                                            end = Offset(width, y),
-                                            strokeWidth = 1f
-                                        )
-
-                                        // Draw pace labels
-                                        drawContext.canvas.nativeCanvas.drawText(
-                                            "$p min/km",
-                                            10f,
-                                            y - 5,
-                                            androidx.compose.ui.graphics.Paint().asFrameworkPaint().apply {
-                                                color = android.graphics.Color.GRAY
-                                                textSize = 30f
-                                            }
-                                        )
-                                    }
-
-                                    // Draw pace line
-                                    if (paceData.size > 1) {
-                                        val path = Path()
-                                        val startX = 0f
-                                        val startY = height - (paceData[0].coerceIn(minPace, maxPace) - minPace) / (maxPace - minPace) * height
-                                        path.moveTo(startX, startY)
-
-                                        for (i in 1 until paceData.size) {
-                                            val x = i * xStep
-                                            val y = height - (paceData[i].coerceIn(minPace, maxPace) - minPace) / (maxPace - minPace) * height
-                                            path.lineTo(x, y)
-                                        }
-
-                                        drawPath(
-                                            path = path,
-                                            color = Color.Green,
+                                            color = Color.Blue,
                                             style = Stroke(width = 3f)
                                         )
                                     }
                                 }
                             } else {
                                 Text("Nog geen tempogegevens beschikbaar")
-                            }
-                        }
-                        3 -> {
-                            // Elevation graph
-                            if (elevationData.isNotEmpty()) {
-                                Canvas(modifier = Modifier.fillMaxSize()) {
-                                    val maxElevation = 50f
-                                    val minElevation = 0f
-                                    val width = size.width
-                                    val height = size.height
-                                    val xStep = width / (elevationData.size.coerceAtLeast(2) - 1)
-
-                                    // Draw horizontal grid lines
-                                    for (e in 0..50 step 10) {
-                                        val y = height - (e - minElevation) / (maxElevation - minElevation) * height
-                                        drawLine(
-                                            color = Color.LightGray,
-                                            start = Offset(0f, y),
-                                            end = Offset(width, y),
-                                            strokeWidth = 1f
-                                        )
-
-                                        // Draw elevation labels
-                                        drawContext.canvas.nativeCanvas.drawText(
-                                            "$e m",
-                                            10f,
-                                            y - 5,
-                                            androidx.compose.ui.graphics.Paint().asFrameworkPaint().apply {
-                                                color = android.graphics.Color.GRAY
-                                                textSize = 30f
-                                            }
-                                        )
-                                    }
-
-                                    // Draw elevation line
-                                    if (elevationData.size > 1) {
-                                        val path = Path()
-                                        val startX = 0f
-                                        val startY = height - (elevationData[0] - minElevation) / (maxElevation - minElevation) * height
-                                        path.moveTo(startX, startY)
-
-                                        for (i in 1 until elevationData.size) {
-                                            val x = i * xStep
-                                            val y = height - (elevationData[i] - minElevation) / (maxElevation - minElevation) * height
-                                            path.lineTo(x, y)
-                                        }
-
-                                        drawPath(
-                                            path = path,
-                                            color = Color(0xFF8BC34A),
-                                            style = Stroke(width = 3f)
-                                        )
-                                    }
-                                }
-                            } else {
-                                Text("Nog geen hoogtegegevens beschikbaar")
                             }
                         }
                     }

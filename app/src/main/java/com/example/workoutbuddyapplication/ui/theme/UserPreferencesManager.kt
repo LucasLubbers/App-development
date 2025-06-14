@@ -11,6 +11,7 @@ import com.example.workoutbuddyapplication.screens.fetchUserProfile
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import androidx.datastore.preferences.core.doublePreferencesKey
 
 class UserPreferencesManager(private val context: Context) {
     
@@ -18,6 +19,8 @@ class UserPreferencesManager(private val context: Context) {
         private val LANGUAGE_KEY = stringPreferencesKey("user_language")
         private val UNIT_SYSTEM_KEY = stringPreferencesKey("user_unit_system")
         private val DEBUG_MODE_KEY = booleanPreferencesKey("debug_mode")
+        private val WEIGHT_KEY = doublePreferencesKey("user_weight")
+
     }
 
     val selectedLanguage: Flow<String> = context.dataStore.data.map { preferences ->
@@ -88,5 +91,17 @@ class UserPreferencesManager(private val context: Context) {
         context.dataStore.edit { preferences ->
             preferences[DEBUG_MODE_KEY] = enabled
         }
+    }
+
+    suspend fun saveUserWeight(weight: Double) {
+        context.dataStore.edit { prefs ->
+            prefs[WEIGHT_KEY] = weight
+        }
+    }
+
+    suspend fun getUserWeight(): Double {
+        return context.dataStore.data
+            .map { it[WEIGHT_KEY] ?: 70.0 }
+            .first()
     }
 } 
