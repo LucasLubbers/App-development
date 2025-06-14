@@ -35,7 +35,6 @@ fun WorkoutCompletedScreen(
     duration: String,
     workoutDistance: String,
     calories: Int,
-    steps: Int
 ) {
     val strings = strings()
     Column(
@@ -126,17 +125,6 @@ fun WorkoutCompletedScreen(
                         )
                         Text(
                             text = "$calories kcal",
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = strings.steps,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            text = "$steps",
                             fontWeight = FontWeight.Bold
                         )
                     }

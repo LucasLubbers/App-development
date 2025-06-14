@@ -1,6 +1,5 @@
 package com.example.workoutbuddyapplication.screens
 
-import android.content.Context
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -21,7 +20,6 @@ import com.example.workoutbuddyapplication.R
 import com.example.workoutbuddyapplication.components.BottomNavBar
 import com.example.workoutbuddyapplication.data.SupabaseClient
 import io.github.jan.supabase.postgrest.from
-import kotlinx.coroutines.flow.first
 import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -33,6 +31,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import com.example.workoutbuddyapplication.ui.theme.UserPreferencesManager
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.storage.storage
 
@@ -124,6 +123,7 @@ fun ProfileScreen(navController: NavController) {
     val coroutineScope = rememberCoroutineScope()
     var profileSaveMessage by remember { mutableStateOf<String?>(null) }
     var passwordSaveMessage by remember { mutableStateOf<String?>(null) }
+    var weightSaveMessage by remember { mutableStateOf<String?>(null) }
 
     var imageUri by remember { mutableStateOf<Uri?>(null) }
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) {
@@ -137,7 +137,15 @@ fun ProfileScreen(navController: NavController) {
     var isDeleting by remember { mutableStateOf(false) }
     var showDeleteSuccessScreen by remember { mutableStateOf(false) }
 
+    var weight by remember { mutableStateOf(70.0) } // Default 70kg
+    var weightInput by remember { mutableStateOf("70") }
+
+    val preferencesManager = remember { UserPreferencesManager(context) }
+
+
     LaunchedEffect(Unit) {
+        weight = preferencesManager.getUserWeight()
+        weightInput = weight.toString()
         val userId = getUserId(context)
         if (userId != null) {
             profile = fetchUserProfile(userId)
@@ -294,6 +302,42 @@ fun ProfileScreen(navController: NavController) {
                         }
 
                         profileSaveMessage?.let {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(it, color = MaterialTheme.colorScheme.primary)
+                        }
+                        Spacer(modifier = Modifier.height(32.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = weightInput,
+                                onValueChange = { weightInput = it },
+                                label = { Text("Gewicht (kg)") },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(
+                            onClick = {
+                                weightSaveMessage = null
+                                val w = weightInput.toDoubleOrNull() ?: 70.0
+                                weight = w
+                                coroutineScope.launch {
+                                    try {
+                                        preferencesManager.saveUserWeight(w)
+                                        weightSaveMessage = "Gewicht opgeslagen"
+                                    } catch (e: Exception) {
+                                        weightSaveMessage = "Opslaan mislukt"
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Opslaan")
+                        }
+
+                        weightSaveMessage?.let {
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(it, color = MaterialTheme.colorScheme.primary)
                         }
