@@ -131,7 +131,7 @@ fun RunningWorkoutScreen(navController: NavController) {
     var calories by remember { mutableStateOf(0) }
     var selectedTab by remember { mutableIntStateOf(0) }
     var speed by remember { mutableStateOf(0.0) }
-
+    var caloriesAccum by remember { mutableStateOf(0.0) }
 
     // Real location tracking variables
     var currentLocation by remember { mutableStateOf<LatLng?>(null) }
@@ -275,7 +275,8 @@ fun RunningWorkoutScreen(navController: NavController) {
 
             if (met > 0) {
                 val caloriesPerSecond = met * userWeight / 3600.0
-                calories += caloriesPerSecond.toInt()
+                caloriesAccum += caloriesPerSecond
+                calories = caloriesAccum.toInt()
             }
 
             speedData.add(speed.toFloat())
