@@ -25,33 +25,26 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -80,7 +73,6 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavController
 import com.example.workoutbuddyapplication.models.ExerciseDevice
 import com.example.workoutbuddyapplication.navigation.Screen
-import com.example.workoutbuddyapplication.models.Exercise as ExerciseModel
 import com.example.workoutbuddyapplication.models.ExerciseDTO
 import com.example.workoutbuddyapplication.data.SupabaseClient
 import com.example.workoutbuddyapplication.ui.theme.UserPreferencesManager
@@ -90,11 +82,23 @@ import com.example.workoutbuddyapplication.utils.UnitConverter
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.decodeFromString
 import com.example.workoutbuddyapplication.ui.theme.strings
 import com.example.workoutbuddyapplication.ui.theme.StringResources
-import com.example.workoutbuddyapplication.screens.StatCard
+import androidx.compose.material.icons.filled.Mic
+import android.content.Intent
+import android.os.Bundle
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
+import androidx.compose.runtime.DisposableEffect
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import kotlin.collections.get
+import kotlin.text.set
+
 
 data class ExerciseSet(
     val reps: Int,
@@ -126,7 +130,7 @@ fun StrengthWorkoutScreen(navController: NavController) {
     val preferencesManager = remember { UserPreferencesManager(context) }
     val selectedUnitSystem by preferencesManager.selectedUnitSystem.collectAsState(initial = "metric")
     val unitSystem = selectedUnitSystem.toUnitSystem()
-    
+
     var isRunning by remember { mutableStateOf(true) }
     var elapsedTime by remember { mutableLongStateOf(0L) }
     var calories by remember { mutableIntStateOf(0) }
@@ -143,17 +147,40 @@ fun StrengthWorkoutScreen(navController: NavController) {
 
     // Exercise tracking
     val exercises = remember { mutableStateListOf<Exercise>() }
-    
+
     // Available exercises from Supabase
     var availableExercises by remember { mutableStateOf<List<AvailableExercise>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
-    
+
     val coroutineScope = rememberCoroutineScope()
-    
+
     // Function to add calories from an exercise set
     val addCaloriesFromSet = { reps: Int, caloriesPerRep: Int ->
         exerciseCalories += reps * caloriesPerRep
+    }
+
+    var hasAudioPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.RECORD_AUDIO
+            ) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    val audioPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        hasAudioPermission = granted
+    }
+
+    var voiceCommandsEnabled by remember { mutableStateOf(false) }
+
+    LaunchedEffect(voiceCommandsEnabled) {
+        if (voiceCommandsEnabled && !hasAudioPermission) {
+            audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        }
     }
 
     // Fetch exercises from Supabase
@@ -165,7 +192,7 @@ fun StrengthWorkoutScreen(navController: NavController) {
                     .from("exercises")
                     .select()
                     .decodeList<ExerciseDTO>()
-                
+
                 // Convert DTOs to AvailableExercise objects
                 availableExercises = exerciseDTOs.map { dto ->
                     AvailableExercise(
@@ -297,7 +324,6 @@ fun StrengthWorkoutScreen(navController: NavController) {
     }
 
     Scaffold(
-        // Remove the floating action buttons
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -332,6 +358,18 @@ fun StrengthWorkoutScreen(navController: NavController) {
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold
                 )
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                Icon(
+                    imageVector = Icons.Default.Mic,
+                    contentDescription = "Voice Commands",
+                    tint = if (voiceCommandsEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Switch(
+                    checked = voiceCommandsEnabled,
+                    onCheckedChange = { voiceCommandsEnabled = it }
+                )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -359,7 +397,7 @@ fun StrengthWorkoutScreen(navController: NavController) {
             }
 
             Spacer(modifier = Modifier.height(40.dp))
-            
+
             // Preset toevoegen Button (Green)
             Button(
                 onClick = { showPresetMenu = true },
@@ -378,9 +416,9 @@ fun StrengthWorkoutScreen(navController: NavController) {
                     color = Color.White
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(12.dp))
-            
+
             // Add Exercises Button (Blue)
             Button(
                 onClick = { showExerciseSelector = true },
@@ -398,12 +436,12 @@ fun StrengthWorkoutScreen(navController: NavController) {
                     fontSize = 18.sp
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(12.dp))
-            
+
             // Stop Workout Button
             Button(
-                onClick = { 
+                onClick = {
                     val formattedDuration = formatTime(elapsedTime)
                     navController.navigate(
                         Screen.WorkoutCompleted.createRoute(
@@ -427,7 +465,7 @@ fun StrengthWorkoutScreen(navController: NavController) {
                     fontSize = 18.sp
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(16.dp))
 
             // Exercises
@@ -444,7 +482,7 @@ fun StrengthWorkoutScreen(navController: NavController) {
                             restTimeRemaining = duration
                             timerActive = true
                         },
-                        onSetCompleted = { reps, wasCompleted -> 
+                        onSetCompleted = { reps, wasCompleted ->
                             // Only add calories when a set is newly completed (not when unmarking)
                             if (wasCompleted) {
                                 addCaloriesFromSet(reps, exercise.caloriesPerRep)
@@ -465,6 +503,27 @@ fun StrengthWorkoutScreen(navController: NavController) {
                 }
             }
         }
+    }
+
+    if (voiceCommandsEnabled && hasAudioPermission) {
+        VoiceCommandListener(
+            enabled = true,
+            onFinishSet = {
+                val exercise = exercises.firstOrNull { ex -> ex.sets.any { !it.completed } }
+                val setIndex = exercise?.sets?.indexOfFirst { !it.completed } ?: -1
+                if (exercise != null && setIndex != -1) {
+                    val updatedSets = exercise.sets.toMutableList()
+                    updatedSets[setIndex] = updatedSets[setIndex].copy(completed = true)
+                    val exerciseIndex = exercises.indexOf(exercise)
+                    exercises[exerciseIndex] = exercise.copy(sets = updatedSets)
+                    val restTime = updatedSets[setIndex].restTime
+                    activeRestTimerExercise = exercise.name
+                    activeRestTimerSetIndex = setIndex
+                    restTimeRemaining = restTime
+                    timerActive = true
+                }
+            }
+        )
     }
 
     // Handle device scanning result
@@ -502,35 +561,8 @@ fun EnhancedExerciseCard(
     var showMenu by remember { mutableStateOf(false) }
     var showRestTimeDialog by remember { mutableStateOf(false) }
     var customRestTime by remember { mutableStateOf("") }
-    
-    // Create a mutable state list for the sets to allow adding new sets
-    val exerciseSets = remember { mutableStateListOf<ExerciseSet>().apply { addAll(exercise.sets) } }
-    
-    // Store default rest time
-    var defaultRestTimeSeconds by remember { mutableStateOf(120) } // Default 2 minutes
-    
-    // Function to add a new set
-    val addNewSet = {
-        // Clone the last set if available, otherwise create a default
-        val newSet = if (exerciseSets.isNotEmpty()) {
-            val lastSet = exerciseSets.last()
-            ExerciseSet(
-                reps = lastSet.reps,
-                weight = lastSet.weight,
-                completed = false,
-                restTime = defaultRestTimeSeconds
-            )
-        } else {
-            ExerciseSet(reps = 10, weight = 20.0, restTime = defaultRestTimeSeconds)
-        }
-        
-        // Add the new set to our local list
-        exerciseSets.add(newSet)
-        
-        // Update the exercise's sets in the parent state
-        exercise.sets = exerciseSets.toList()
-    }
-    
+    var defaultRestTimeSeconds by remember { mutableStateOf(120) }
+
     // Rest time dialog
     if (showRestTimeDialog) {
         AlertDialog(
@@ -552,7 +584,7 @@ fun EnhancedExerciseCard(
             },
             confirmButton = {
                 Button(
-                    onClick = { 
+                    onClick = {
                         val seconds = try {
                             if (customRestTime.contains(":")) {
                                 val parts = customRestTime.split(":")
@@ -565,16 +597,11 @@ fun EnhancedExerciseCard(
                         } catch (e: Exception) {
                             120
                         }
-                        
                         defaultRestTimeSeconds = seconds
-                        
-                        for (i in exerciseSets.indices) {
-                            exerciseSets[i] = exerciseSets[i].copy(restTime = seconds)
-                        }
-                        
-                        exercise.sets = exerciseSets.toList()
-                        
-                        showRestTimeDialog = false 
+                        // Update all sets' rest time
+                        val updatedSets = exercise.sets.map { it.copy(restTime = seconds) }
+                        exercise.sets = updatedSets
+                        showRestTimeDialog = false
                     }
                 ) {
                     Text(strings.updateRestTime)
@@ -595,7 +622,7 @@ fun EnhancedExerciseCard(
             .fillMaxWidth()
             .padding(vertical = 4.dp)
     ) {
-        // Exercise header with menu button
+        // Header
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -607,7 +634,6 @@ fun EnhancedExerciseCard(
                 fontSize = 18.sp,
                 color = MaterialTheme.colorScheme.primary
             )
-
             Box {
                 IconButton(
                     onClick = { showMenu = true },
@@ -619,7 +645,6 @@ fun EnhancedExerciseCard(
                         modifier = Modifier.size(18.dp)
                     )
                 }
-                
                 DropdownMenu(
                     expanded = showMenu,
                     onDismissRequest = { showMenu = false }
@@ -627,15 +652,15 @@ fun EnhancedExerciseCard(
                     DropdownMenuItem(
                         text = { Text(strings.restTime) },
                         leadingIcon = { Icon(Icons.Default.Timer, contentDescription = null) },
-                        onClick = { 
+                        onClick = {
                             showRestTimeDialog = true
-                            showMenu = false 
+                            showMenu = false
                         }
                     )
                     DropdownMenuItem(
                         text = { Text(strings.delete) },
                         leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) },
-                        onClick = { 
+                        onClick = {
                             showDeleteConfirmation = true
                             showMenu = false
                         }
@@ -646,7 +671,6 @@ fun EnhancedExerciseCard(
 
         if (expanded) {
             Spacer(modifier = Modifier.height(8.dp))
-            
             // Headers row
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -676,75 +700,68 @@ fun EnhancedExerciseCard(
                     modifier = Modifier.weight(0.8f),
                     fontSize = 12.sp
                 )
-                // Empty space for finish button
                 Spacer(modifier = Modifier.weight(0.4f))
             }
-            
             Spacer(modifier = Modifier.height(4.dp))
             Divider()
-            
+
             // Sets
-            exerciseSets.forEachIndexed { index, set ->
-                var completed by remember { mutableStateOf(set.completed) }
-                var reps by remember { mutableStateOf(set.reps.toString()) }
-                // Convert weight from kg storage to display unit
-                var weight by remember { 
-                    mutableStateOf(UnitConverter.weightFromKg(set.weight, unitSystem).toString()) 
+            exercise.sets.forEachIndexed { index, set ->
+                var completed by remember(set.completed) { mutableStateOf(set.completed) }
+                var reps by remember(set.reps) { mutableStateOf(set.reps.toString()) }
+                var weight by remember(set.weight, unitSystem) {
+                    mutableStateOf(UnitConverter.weightFromKg(set.weight, unitSystem).toString())
                 }
-                var showRestTimer by remember { mutableStateOf(false) }
-                
+
                 // Update the values in the set when they change
                 LaunchedEffect(reps, weight, completed) {
                     val weightInKg = UnitConverter.weightToKg(
-                        weight.toDoubleOrNull() ?: set.weight, 
+                        weight.toDoubleOrNull() ?: set.weight,
                         unitSystem
                     )
-                    exerciseSets[index] = set.copy(
+                    val updatedSet = set.copy(
                         reps = reps.toIntOrNull() ?: set.reps,
                         weight = weightInKg,
                         completed = completed
                     )
+                    val updatedSets = exercise.sets.toMutableList()
+                    updatedSets[index] = updatedSet
+                    exercise.sets = updatedSets
                 }
 
                 // Update weight display when unit system changes
                 LaunchedEffect(unitSystem) {
                     weight = UnitConverter.weightFromKg(set.weight, unitSystem).toString()
                 }
-                
+
                 Column(
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    // Main set row
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 4.dp)
                             .background(
-                                color = if (completed) 
+                                color = if (completed)
                                     MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                                else 
+                                else
                                     Color.Transparent,
                                 shape = RoundedCornerShape(4.dp)
                             )
                             .padding(horizontal = 4.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Set number
                         Text(
                             text = "${index + 1}",
                             modifier = Modifier.weight(0.5f),
                             fontSize = 14.sp
                         )
-                        
-                        // Previous weight/reps
                         Text(
                             text = "${UnitConverter.formatWeight(set.weight, unitSystem)}×${set.reps}",
                             modifier = Modifier.weight(1.0f),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 14.sp
                         )
-                        
-                        // Weight input - fixed
                         OutlinedTextField(
                             value = weight,
                             onValueChange = { weight = it },
@@ -753,8 +770,6 @@ fun EnhancedExerciseCard(
                             singleLine = true,
                             textStyle = TextStyle(fontSize = 14.sp)
                         )
-                        
-                        // Reps input - fixed
                         OutlinedTextField(
                             value = reps,
                             onValueChange = { reps = it },
@@ -763,29 +778,15 @@ fun EnhancedExerciseCard(
                             singleLine = true,
                             textStyle = TextStyle(fontSize = 14.sp)
                         )
-                        
-                        // Finish button
                         IconButton(
-                            onClick = { 
+                            onClick = {
                                 val wasCompleted = completed
                                 completed = !completed
-                                
-                                // Update the actual set data
-                                exerciseSets[index] = exerciseSets[index].copy(
-                                    completed = completed
-                                )
-                                
-                                // Only start rest timer when marking a set as completed (not when unmarking)
                                 if (!wasCompleted && completed) {
-                                    val restTime = exerciseSets[index].restTime
+                                    val restTime = set.restTime
                                     onStartRest(restTime, exercise.name, index)
                                 }
-
-                                // Only add calories when a set is newly completed (not when unmarking)
-                                if (wasCompleted && !completed) {
-                                    // Temporarily commenting out to fix compilation error
-                                    // addCaloriesFromSet(reps.toIntOrNull() ?: 0, exercise.caloriesPerRep)
-                                }
+                                onSetCompleted(reps.toIntOrNull() ?: set.reps, completed)
                             },
                             modifier = Modifier
                                 .weight(0.4f)
@@ -794,31 +795,41 @@ fun EnhancedExerciseCard(
                             Icon(
                                 Icons.Default.Check,
                                 contentDescription = strings.completed,
-                                tint = if (completed) 
-                                    MaterialTheme.colorScheme.primary 
-                                else 
+                                tint = if (completed)
+                                    MaterialTheme.colorScheme.primary
+                                else
                                     MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                                 modifier = Modifier.size(20.dp)
                             )
                         }
                     }
-                    
-                    // Show compact rest timer below the set if it's active
                     if (activeRestTimer && activeRestTimerSet == index) {
                         CompactRestTimer(restTimeRemaining)
                     }
                 }
-                
-                if (index < exerciseSets.size - 1) {
+                if (index < exercise.sets.size - 1) {
                     Divider(modifier = Modifier.padding(vertical = 2.dp))
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(8.dp))
-            
-            // Add set button
             OutlinedButton(
-                onClick = { addNewSet() },
+                onClick = {
+                    val newSet = if (exercise.sets.isNotEmpty()) {
+                        val lastSet = exercise.sets.last()
+                        ExerciseSet(
+                            reps = lastSet.reps,
+                            weight = lastSet.weight,
+                            completed = false,
+                            restTime = defaultRestTimeSeconds
+                        )
+                    } else {
+                        ExerciseSet(reps = 10, weight = 20.0, restTime = defaultRestTimeSeconds)
+                    }
+                    val updatedSets = exercise.sets.toMutableList()
+                    updatedSets.add(newSet)
+                    exercise.sets = updatedSets
+                },
                 modifier = Modifier.fillMaxWidth(),
                 contentPadding = PaddingValues(vertical = 6.dp)
             ) {
@@ -831,7 +842,6 @@ fun EnhancedExerciseCard(
                 Text(strings.addSet, fontSize = 14.sp)
             }
         }
-        
         Divider(modifier = Modifier.padding(top = 8.dp))
     }
 
@@ -867,7 +877,7 @@ fun CompactRestTimer(remainingSeconds: Int) {
     val minutes = remainingSeconds / 60
     val seconds = remainingSeconds % 60
     val formattedTime = String.format("%d:%02d", minutes, seconds)
-    
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -931,7 +941,7 @@ fun ExerciseSelectorDialog(
 ) {
     val strings = strings()
     var searchQuery by remember { mutableStateOf("") }
-    
+
     val filteredExercises = remember(searchQuery, availableExercises) {
         if (searchQuery.isBlank()) {
             availableExercises
@@ -973,14 +983,14 @@ fun ExerciseSelectorDialog(
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
-                    
+
                     IconButton(onClick = onDismiss) {
                         Icon(Icons.Default.Close, contentDescription = strings.close)
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 // Search field
                 OutlinedTextField(
                     value = searchQuery,
@@ -990,9 +1000,9 @@ fun ExerciseSelectorDialog(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 // Exercise list
                 if (isLoading) {
                     Box(
@@ -1049,14 +1059,14 @@ fun ExerciseItem(
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium
             )
-            
+
             Text(
                 text = "${exercise.muscleGroup} • ${exercise.equipment}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        
+
         IconButton(onClick = onExerciseClick) {
             Icon(
                 Icons.Default.Add,
@@ -1078,7 +1088,7 @@ fun PresetMenuDialog(
     val presets = remember(availableExercises, unitSystem) {
         createWorkoutPresets(availableExercises, unitSystem, strings)
     }
-    
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
@@ -1108,14 +1118,14 @@ fun PresetMenuDialog(
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
-                    
+
                     IconButton(onClick = onDismiss) {
                         Icon(Icons.Default.Close, contentDescription = strings.close)
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 // Preset list
                 LazyColumn(
                     modifier = Modifier.weight(1f)
@@ -1148,18 +1158,18 @@ fun createWorkoutPresets(
     strings: StringResources
 ): List<WorkoutPreset> {
     val presets = mutableListOf<WorkoutPreset>()
-    
+
     val exercisesByMuscle = availableExercises.groupBy { it.muscleGroup.lowercase() }
-    
-    val lightWeight = if (unitSystem == UnitSystem.IMPERIAL) 33.0 else 15.0 
-    val mediumWeight = if (unitSystem == UnitSystem.IMPERIAL) 44.0 else 20.0 
+
+    val lightWeight = if (unitSystem == UnitSystem.IMPERIAL) 33.0 else 15.0
+    val mediumWeight = if (unitSystem == UnitSystem.IMPERIAL) 44.0 else 20.0
     val heavyWeight = if (unitSystem == UnitSystem.IMPERIAL) 88.0 else 40.0
-    
+
     val pushMuscles = listOf("borst", "chest", "schouders", "shoulders", "armen", "arms", "triceps")
     val pushExercises = exercisesByMuscle.filterKeys { muscle ->
         pushMuscles.any { pushMuscle -> muscle.contains(pushMuscle, ignoreCase = true) }
     }.values.flatten().take(4)
-    
+
     if (pushExercises.isNotEmpty()) {
         presets.add(WorkoutPreset(
             name = strings.pushWorkout,
@@ -1177,12 +1187,12 @@ fun createWorkoutPresets(
             }
         ))
     }
-    
+
     val pullMuscles = listOf("rug", "back", "biceps", "bicep")
     val pullExercises = exercisesByMuscle.filterKeys { muscle ->
         pullMuscles.any { pullMuscle -> muscle.contains(pullMuscle, ignoreCase = true) }
     }.values.flatten().take(4)
-    
+
     if (pullExercises.isNotEmpty()) {
         presets.add(WorkoutPreset(
             name = strings.pullWorkout,
@@ -1200,12 +1210,12 @@ fun createWorkoutPresets(
             }
         ))
     }
-    
+
     val legMuscles = listOf("benen", "legs", "leg", "quadriceps", "hamstring", "calves")
     val legExercises = exercisesByMuscle.filterKeys { muscle ->
         legMuscles.any { legMuscle -> muscle.contains(legMuscle, ignoreCase = true) }
     }.values.flatten().take(4)
-    
+
     if (legExercises.isNotEmpty()) {
         presets.add(WorkoutPreset(
             name = strings.legWorkout,
@@ -1223,7 +1233,7 @@ fun createWorkoutPresets(
             }
         ))
     }
-    
+
     if (availableExercises.size >= 5) {
         val fullBodyExercises = availableExercises.shuffled().take(5)
         presets.add(WorkoutPreset(
@@ -1241,7 +1251,7 @@ fun createWorkoutPresets(
             }
         ))
     }
-    
+
     return presets
 }
 
@@ -1265,26 +1275,65 @@ fun PresetItem(
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(24.dp)
         )
-        
+
         Spacer(modifier = Modifier.width(16.dp))
-        
+
         Text(
             text = presetName,
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.weight(1f)
         )
-        
+
         Text(
             text = String.format(strings.exercisesCountFormat, exerciseCount),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        
+
         Icon(
             Icons.Default.Add,
             contentDescription = strings.add,
             tint = MaterialTheme.colorScheme.primary
         )
+    }
+}
+
+@Composable
+fun VoiceCommandListener(
+    enabled: Boolean,
+    onFinishSet: () -> Unit
+) {
+    val context = LocalContext.current
+    val speechRecognizer = remember { SpeechRecognizer.createSpeechRecognizer(context) }
+    val intent = remember {
+        Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+        }
+    }
+
+    DisposableEffect(enabled) {
+        if (enabled) {
+            val listener = object : RecognitionListener {
+                override fun onResults(results: Bundle?) {
+                    val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                    if (matches?.any { it.contains("stop", ignoreCase = true) } == true) {
+                        onFinishSet()
+                    }
+                    speechRecognizer.startListening(intent)
+                }
+                override fun onError(error: Int) { speechRecognizer.startListening(intent) }
+                override fun onReadyForSpeech(params: Bundle?) {}
+                override fun onBeginningOfSpeech() {}
+                override fun onRmsChanged(rmsdB: Float) {}
+                override fun onBufferReceived(buffer: ByteArray?) {}
+                override fun onEndOfSpeech() {}
+                override fun onPartialResults(partialResults: Bundle?) {}
+                override fun onEvent(eventType: Int, params: Bundle?) {}
+            }
+            speechRecognizer.setRecognitionListener(listener)
+            speechRecognizer.startListening(intent)
+        }
+        onDispose { speechRecognizer.destroy() }
     }
 }
