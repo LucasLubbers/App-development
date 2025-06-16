@@ -96,9 +96,6 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
-import kotlin.collections.get
-import kotlin.text.set
-
 
 data class ExerciseSet(
     val reps: Int,
@@ -176,6 +173,10 @@ fun StrengthWorkoutScreen(navController: NavController) {
     }
 
     var voiceCommandsEnabled by remember { mutableStateOf(false) }
+    var showStopWordDialog by remember { mutableStateOf(false) }
+    var customStopWord by remember { mutableStateOf("stop") }
+    var tempStopWord by remember { mutableStateOf(customStopWord) }
+    val isStopWordValid = tempStopWord.trim().isNotEmpty() && tempStopWord.all { it.isLetter() || it.isWhitespace() }
 
     LaunchedEffect(voiceCommandsEnabled) {
         if (voiceCommandsEnabled && !hasAudioPermission) {
@@ -368,7 +369,13 @@ fun StrengthWorkoutScreen(navController: NavController) {
                 )
                 Switch(
                     checked = voiceCommandsEnabled,
-                    onCheckedChange = { voiceCommandsEnabled = it }
+                    onCheckedChange = { checked ->
+                        if (checked) {
+                            showStopWordDialog = true
+                        } else {
+                            voiceCommandsEnabled = false
+                        }
+                    }
                 )
             }
 
@@ -505,9 +512,37 @@ fun StrengthWorkoutScreen(navController: NavController) {
         }
     }
 
+    if (showStopWordDialog) {
+        AlertDialog(
+            onDismissRequest = { showStopWordDialog = false },
+            title = { Text("Stel stopwoord in") },
+            text = {
+                OutlinedTextField(
+                    value = tempStopWord,
+                    onValueChange = { tempStopWord = it },
+                    label = { Text("Stopwoord") }
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        customStopWord = tempStopWord.trim().ifEmpty { "stop" }
+                        voiceCommandsEnabled = true
+                        showStopWordDialog = false
+                    },
+                    enabled = isStopWordValid
+                ) { Text("Bevestigen") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showStopWordDialog = false }) { Text("Annuleren") }
+            }
+        )
+    }
+
     if (voiceCommandsEnabled && hasAudioPermission) {
         VoiceCommandListener(
             enabled = true,
+            stopWord = customStopWord,
             onFinishSet = {
                 val exercise = exercises.firstOrNull { ex -> ex.sets.any { !it.completed } }
                 val setIndex = exercise?.sets?.indexOfFirst { !it.completed } ?: -1
@@ -1302,6 +1337,7 @@ fun PresetItem(
 @Composable
 fun VoiceCommandListener(
     enabled: Boolean,
+    stopWord: String,
     onFinishSet: () -> Unit
 ) {
     val context = LocalContext.current
@@ -1312,12 +1348,12 @@ fun VoiceCommandListener(
         }
     }
 
-    DisposableEffect(enabled) {
+    DisposableEffect(enabled, stopWord) {
         if (enabled) {
             val listener = object : RecognitionListener {
                 override fun onResults(results: Bundle?) {
                     val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                    if (matches?.any { it.contains("stop", ignoreCase = true) } == true) {
+                    if (matches?.any { it.contains(stopWord, ignoreCase = true) } == true) {
                         onFinishSet()
                     }
                     speechRecognizer.startListening(intent)
