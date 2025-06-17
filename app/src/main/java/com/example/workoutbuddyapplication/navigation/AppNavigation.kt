@@ -38,7 +38,7 @@ sealed class Screen(val route: String) {
     object StartWorkout : Screen("start_workout")
     object RunningWorkout : Screen("running_workout")
     object StrengthWorkout : Screen("strength_workout")
-    object YogaWorkout : Screen("yoga_workout")
+    object CyclingWorkout : Screen("cycling_workout")
     object WorkoutCompleted : Screen("workout_completed/{duration}/{distance}/{calories}") {
         fun createRoute(duration: String, distance: String, calories: Int) =
             "workout_completed/$duration/$distance/$calories"
@@ -102,8 +102,8 @@ fun AppNavigation(navController: NavHostController) {
             composable(Screen.StrengthWorkout.route) {
                 StrengthWorkoutScreen(navController = navController)
             }
-            composable(Screen.YogaWorkout.route) {
-                YogaWorkoutScreen(navController = navController)
+            composable(Screen.CyclingWorkout.route) {
+                CyclingWorkoutScreen(navController = navController)
             }
             composable(
                 route = Screen.WorkoutCompleted.route,
