@@ -93,9 +93,16 @@ import android.speech.SpeechRecognizer
 import androidx.compose.runtime.DisposableEffect
 import android.Manifest
 import android.content.pm.PackageManager
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
+import com.example.workoutbuddyapplication.models.Workout
+import io.github.jan.supabase.gotrue.auth
+import io.github.jan.supabase.postgrest.postgrest
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 data class ExerciseSet(
     val reps: Int,
@@ -120,6 +127,7 @@ data class AvailableExercise(
     val caloriesPerRep: Int = 1 // Default to 1 calorie per rep
 )
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun StrengthWorkoutScreen(navController: NavController) {
     val strings = strings()
@@ -150,6 +158,9 @@ fun StrengthWorkoutScreen(navController: NavController) {
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
 
+    // Add state for saving workout and error
+    var isSaving by remember { mutableStateOf(false) }
+    var saveError by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
 
     // Function to add calories from an exercise set
@@ -449,14 +460,40 @@ fun StrengthWorkoutScreen(navController: NavController) {
             // Stop Workout Button
             Button(
                 onClick = {
-                    val formattedDuration = formatTime(elapsedTime)
-                    navController.navigate(
-                        Screen.WorkoutCompleted.createRoute(
-                            duration = formattedDuration,
-                            distance = "0.00 km",
-                            calories = calories,
-                        )
-                    )
+                    isSaving = true
+                    saveError = null
+                    val durationMinutes = (elapsedTime / 60000).toInt()
+                    val dateString = java.time.LocalDate.now().toString()
+                    coroutineScope.launch {
+                        try {
+                            val user = SupabaseClient.client.auth.currentUserOrNull()
+                            if (user == null) {
+                                saveError = "Gebruiker niet ingelogd"
+                                isSaving = false
+                                return@launch
+                            }
+                            val workout = Workout(
+                                type = "STRENGTH",
+                                date = dateString,
+                                duration = durationMinutes,
+                                distance = null,
+                                notes = null,
+                                profileId = user.id
+                            )
+                            SupabaseClient.client.postgrest.from("workouts").insert(workout)
+                            isSaving = false
+                            navController.navigate(
+                                Screen.WorkoutCompleted.createRoute(
+                                    duration = formatTime(elapsedTime),
+                                    distance = "0.00 km",
+                                    calories = calories,
+                                )
+                            )
+                        } catch (e: Exception) {
+                            saveError = e.message
+                            isSaving = false
+                        }
+                    }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -470,6 +507,21 @@ fun StrengthWorkoutScreen(navController: NavController) {
                 Text(
                     text = strings.stopWorkout,
                     fontSize = 18.sp
+                )
+            }
+
+            if (isSaving) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+            if (saveError != null) {
+                Text(
+                    text = "Fout bij opslaan: $saveError",
+                    color = MaterialTheme.colorScheme.error
                 )
             }
 
