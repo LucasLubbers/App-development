@@ -14,8 +14,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DirectionsBike
+import androidx.compose.material.icons.automirrored.filled.DirectionsRun
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.DirectionsBike
 import androidx.compose.material.icons.filled.DirectionsRun
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.SelfImprovement
@@ -86,9 +89,16 @@ fun StartWorkoutScreen(navController: NavController) {
             ) {
                 WorkoutTypeCard(
                     type = WorkoutType.RUNNING,
-                    icon = Icons.Default.DirectionsRun,
+                    icon = Icons.AutoMirrored.Filled.DirectionsRun,
                     isSelected = selectedWorkoutType == WorkoutType.RUNNING,
                     onClick = { selectedWorkoutType = WorkoutType.RUNNING }
+                )
+
+                WorkoutTypeCard(
+                    type = WorkoutType.CYCLING,
+                    icon = Icons.AutoMirrored.Filled.DirectionsBike,
+                    isSelected = selectedWorkoutType == WorkoutType.CYCLING,
+                    onClick = { selectedWorkoutType = WorkoutType.CYCLING }
                 )
 
                 WorkoutTypeCard(
@@ -96,13 +106,6 @@ fun StartWorkoutScreen(navController: NavController) {
                     icon = Icons.Default.FitnessCenter,
                     isSelected = selectedWorkoutType == WorkoutType.STRENGTH,
                     onClick = { selectedWorkoutType = WorkoutType.STRENGTH }
-                )
-
-                WorkoutTypeCard(
-                    type = WorkoutType.YOGA,
-                    icon = Icons.Default.SelfImprovement,
-                    isSelected = selectedWorkoutType == WorkoutType.YOGA,
-                    onClick = { selectedWorkoutType = WorkoutType.YOGA }
                 )
             }
 
@@ -174,7 +177,7 @@ fun StartWorkoutScreen(navController: NavController) {
                     when (selectedWorkoutType) {
                         WorkoutType.RUNNING -> navController.navigate(Screen.RunningWorkout.route)
                         WorkoutType.STRENGTH -> navController.navigate(Screen.StrengthWorkout.route)
-                        WorkoutType.YOGA -> navController.navigate(Screen.YogaWorkout.route)
+                        WorkoutType.CYCLING -> navController.navigate(Screen.CyclingWorkout.route)
                         else -> navController.navigate(Screen.RunningWorkout.route)
                     }
                 },
@@ -183,7 +186,7 @@ fun StartWorkoutScreen(navController: NavController) {
                 val workoutTypeName = when (selectedWorkoutType) {
                     WorkoutType.RUNNING -> strings.running
                     WorkoutType.STRENGTH -> strings.strengthTraining
-                    WorkoutType.YOGA -> strings.yoga
+                    WorkoutType.CYCLING -> strings.cycling
                     else -> strings.running
                 }
                 Text("${strings.startWorkout.split(" ")[0]} $workoutTypeName")
@@ -230,7 +233,7 @@ fun WorkoutTypeCard(
             val workoutTypeName = when (type) {
                 WorkoutType.RUNNING -> strings.running
                 WorkoutType.STRENGTH -> strings.strengthTraining
-                WorkoutType.YOGA -> strings.yoga
+                WorkoutType.CYCLING -> strings.cycling
                 else -> type.displayName
             }
 

@@ -1,6 +1,5 @@
 package com.example.workoutbuddyapplication.screens
 
-import android.content.Context
 import android.os.SystemClock
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -93,29 +92,11 @@ import com.example.workoutbuddyapplication.data.SupabaseClient
 import com.example.workoutbuddyapplication.models.Workout
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.postgrest.postgrest
-import android.os.PowerManager
-
-@Composable
-fun KeepScreenOn() {
-    val context = LocalContext.current
-    DisposableEffect(Unit) {
-        val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
-        val wakeLock = powerManager.newWakeLock(
-            PowerManager.SCREEN_DIM_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
-            "WorkoutBuddy::WorkoutWakeLock"
-        )
-        wakeLock.acquire()
-        onDispose {
-            if (wakeLock.isHeld) {
-                wakeLock.release()
-            }
-        }
-    }
-}
+import androidx.compose.material.icons.automirrored.filled.DirectionsBike
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun RunningWorkoutScreen(navController: NavController) {
+fun CyclingWorkoutScreen(navController: NavController) {
     KeepScreenOn()
     val context = LocalContext.current
     val preferencesManager = remember { UserPreferencesManager(context) }
@@ -148,7 +129,7 @@ fun RunningWorkoutScreen(navController: NavController) {
         }
     }
 
-    var isRunning by remember { mutableStateOf(true) }
+    var isCycling by remember { mutableStateOf(true) }
     var distance by remember { mutableStateOf(0.0) }
     var pace by remember { mutableStateOf(0.0) }
     var elapsedTime by remember { mutableLongStateOf(0L) }
@@ -181,8 +162,8 @@ fun RunningWorkoutScreen(navController: NavController) {
 
 
     // Location tracking effect
-    LaunchedEffect(isRunning, hasLocationPermission, debugMode) {
-        if (isRunning && hasLocationPermission && !debugMode) { // Only use real GPS if not in debug mode
+    LaunchedEffect(isCycling, hasLocationPermission, debugMode) {
+        if (isCycling && hasLocationPermission && !debugMode) { // Only use real GPS if not in debug mode
             locationManager.startLocationUpdates()
 
             // Collect location updates
@@ -224,10 +205,10 @@ fun RunningWorkoutScreen(navController: NavController) {
     }
 
     // Timer effect
-    LaunchedEffect(isRunning) {
+    LaunchedEffect(isCycling) {
         val startTime = SystemClock.elapsedRealtime() - elapsedTime
         val userWeight = preferencesManager.getUserWeight()
-        while (isRunning) {
+        while (isCycling) {
             elapsedTime = SystemClock.elapsedRealtime() - startTime
             delay(1000)
 
@@ -261,17 +242,14 @@ fun RunningWorkoutScreen(navController: NavController) {
                 currentLocation = newLocation
                 routePoints.add(newLocation)
 
-                // Simulate realistic calories for running (about 10-15 kcal per minute for average person)
                 val minutesElapsed = elapsedTime / 60000.0
                 val expectedCalories = (minutesElapsed * (12 + Math.random() * 3)).toInt() // 12-15 kcal/min
                 if (calories < expectedCalories) {
                     calories = expectedCalories
                 }
             } else if (!hasLocationPermission || (routePoints.isEmpty() && !debugMode)) {
-                // Simulate distance increase (about 3 km/h) when no GPS
                 distance += 0.0008f
 
-                // Add simulated points for fallback (only if no real GPS data)
                 if (simulatedRoutePoints.isEmpty()) {
                     simulatedRoutePoints.add(Offset(500f, 500f))
                 } else {
@@ -292,14 +270,12 @@ fun RunningWorkoutScreen(navController: NavController) {
             }
 
             val met = when {
-                speed < 2.0 -> 0.0
-                speed < 8 -> 7.0
-                speed < 9 -> 8.3
-                speed < 10 -> 9.0
-                speed < 11 -> 9.8
-                speed < 12 -> 10.5
-                speed < 13 -> 11.0
-                else -> 11.5
+                speed < 8 -> 4.0
+                speed < 16 -> 6.8
+                speed < 20 -> 8.0
+                speed < 22 -> 10.0
+                speed < 25 -> 12.0
+                else -> 15.8
             }
 
             if (met > 0) {
@@ -389,12 +365,12 @@ fun RunningWorkoutScreen(navController: NavController) {
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 FloatingActionButton(
-                    onClick = { isRunning = !isRunning },
+                    onClick = { isCycling = !isCycling },
                     containerColor = MaterialTheme.colorScheme.secondaryContainer
                 ) {
                     Icon(
-                        if (isRunning) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (isRunning) "Pauzeren" else "Hervatten"
+                        if (isCycling) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = if (isCycling) "Pauzeren" else "Hervatten"
                     )
                 }
 
@@ -414,7 +390,7 @@ fun RunningWorkoutScreen(navController: NavController) {
                                     return@launch
                                 }
                                 val workout = Workout(
-                                    type = "RUNNING",
+                                    type = "CYCLING",
                                     date = dateString,
                                     duration = durationMinutes,
                                     distance = distanceKm,
@@ -466,8 +442,8 @@ fun RunningWorkoutScreen(navController: NavController) {
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        Icons.Default.DirectionsRun,
-                        contentDescription = "Hardlopen",
+                        Icons.AutoMirrored.Filled.DirectionsBike,
+                        contentDescription = "Fietsen",
                         tint = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.size(24.dp)
                     )
@@ -477,7 +453,7 @@ fun RunningWorkoutScreen(navController: NavController) {
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Hardlopen",
+                        text = "Fietsen",
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -760,90 +736,5 @@ fun RunningWorkoutScreen(navController: NavController) {
                 )
             }
         }
-    }
-}
-
-@Composable
-fun StatCard(
-    title: String,
-    value: String,
-    icon: ImageVector,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier,
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(24.dp)
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyMedium
-            )
-
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-        }
-    }
-}
-
-@Composable
-fun SecondaryStatCard(
-    title: String,
-    value: String,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier,
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodySmall
-            )
-
-            Text(
-                text = value,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium
-            )
-        }
-    }
-}
-
-fun formatTime(timeInMillis: Long): String {
-    val hours = (timeInMillis / (1000 * 60 * 60)) % 24
-    val minutes = (timeInMillis / (1000 * 60)) % 60
-    val seconds = (timeInMillis / 1000) % 60
-
-    return if (hours > 0) {
-        String.format("%d:%02d:%02d", hours, minutes, seconds)
-    } else {
-        String.format("%02d:%02d", minutes, seconds)
     }
 }
