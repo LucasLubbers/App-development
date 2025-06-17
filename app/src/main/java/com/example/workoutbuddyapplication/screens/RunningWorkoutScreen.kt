@@ -79,13 +79,24 @@ import com.example.workoutbuddyapplication.components.CartoMapStyle
 import androidx.compose.runtime.mutableStateListOf
 import kotlinx.coroutines.launch
 import android.Manifest
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.core.content.ContextCompat
 import androidx.compose.material.icons.outlined.Whatshot
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.rememberCoroutineScope
+import com.example.workoutbuddyapplication.data.SupabaseClient
+import com.example.workoutbuddyapplication.models.Workout
+import io.github.jan.supabase.gotrue.auth
+import io.github.jan.supabase.postgrest.postgrest
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun RunningWorkoutScreen(navController: NavController) {
     val context = LocalContext.current
@@ -349,6 +360,11 @@ fun RunningWorkoutScreen(navController: NavController) {
         )
     }
 
+    // Add state for saving workout and error
+    var isSaving by remember { mutableStateOf(false) }
+    var saveError by remember { mutableStateOf<String?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+
     Scaffold(
         floatingActionButton = {
             Row(
@@ -366,15 +382,41 @@ fun RunningWorkoutScreen(navController: NavController) {
 
                 FloatingActionButton(
                     onClick = {
-                        val formattedDuration = formatTime(elapsedTime)
-                        val formattedDistance = UnitConverter.formatDistance(distance, unitSystem)
-                        navController.navigate(
-                            Screen.WorkoutCompleted.createRoute(
-                                duration = formattedDuration,
-                                distance = formattedDistance,
-                                calories = calories,
-                            )
-                        )
+                        isSaving = true
+                        saveError = null
+                        val durationMinutes = (elapsedTime / 60000).toInt()
+                        val distanceKm = distance
+                        val dateString = java.time.LocalDate.now().toString()
+                        coroutineScope.launch {
+                            try {
+                                val user = SupabaseClient.client.auth.currentUserOrNull()
+                                if (user == null) {
+                                    saveError = "Gebruiker niet ingelogd"
+                                    isSaving = false
+                                    return@launch
+                                }
+                                val workout = Workout(
+                                    type = "RUNNING",
+                                    date = dateString,
+                                    duration = durationMinutes,
+                                    distance = distanceKm,
+                                    notes = null,
+                                    profileId = user.id
+                                )
+                                SupabaseClient.client.postgrest.from("workouts").insert(workout)
+                                isSaving = false
+                                navController.navigate(
+                                    Screen.WorkoutCompleted.createRoute(
+                                        duration = formatTime(elapsedTime),
+                                        distance = UnitConverter.formatDistance(distance, unitSystem),
+                                        calories = calories,
+                                    )
+                                )
+                            } catch (e: Exception) {
+                                saveError = e.message
+                                isSaving = false
+                            }
+                        }
                     },
                     containerColor = MaterialTheme.colorScheme.errorContainer
                 ) {
@@ -683,6 +725,21 @@ fun RunningWorkoutScreen(navController: NavController) {
                         }
                     }
                 }
+            }
+
+            if (isSaving) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+            if (saveError != null) {
+                Text(
+                    text = "Fout bij opslaan: $saveError",
+                    color = MaterialTheme.colorScheme.error
+                )
             }
         }
     }
