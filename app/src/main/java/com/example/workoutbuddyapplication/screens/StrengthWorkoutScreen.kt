@@ -26,7 +26,6 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FitnessCenter
-import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Timer
@@ -98,11 +97,16 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
+import androidx.compose.material3.Surface
 import com.example.workoutbuddyapplication.models.Workout
 import io.github.jan.supabase.gotrue.auth
-import io.github.jan.supabase.postgrest.postgrest
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import com.example.workoutbuddyapplication.models.Machine
+import kotlin.text.get
+import coil.compose.rememberAsyncImagePainter
+import androidx.compose.ui.window.Dialog
+import androidx.compose.foundation.clickable
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 
 data class ExerciseSet(
     val reps: Int,
@@ -188,6 +192,12 @@ fun StrengthWorkoutScreen(navController: NavController) {
     var customStopWord by remember { mutableStateOf("stop") }
     var tempStopWord by remember { mutableStateOf(customStopWord) }
     val isStopWordValid = tempStopWord.trim().isNotEmpty() && tempStopWord.all { it.isLetter() || it.isWhitespace() }
+
+    var showQRScannerDialog by remember { mutableStateOf(false) }
+    var scannedQrValue by remember { mutableStateOf<String?>(null) }
+    var showExerciseDetailDialog by remember { mutableStateOf(false) }
+    var selectedExerciseName by remember { mutableStateOf<String?>(null) }
+
 
     LaunchedEffect(voiceCommandsEnabled) {
         if (voiceCommandsEnabled && !hasAudioPermission) {
@@ -406,12 +416,34 @@ fun StrengthWorkoutScreen(navController: NavController) {
 
                 Spacer(modifier = Modifier.padding(4.dp))
 
-                StatCard(
-                    title = strings.calories,
-                    value = "$calories kcal",
-                    icon = Icons.Default.LocalFireDepartment,
-                    modifier = Modifier.weight(1f)
-                )
+                Card(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(101.dp)
+                        .clickable { showQRScannerDialog = true },
+                    shape = RoundedCornerShape(12.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .padding(vertical = 16.dp)
+                            .fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Search, // or another relevant icon
+                            contentDescription = "Scan Machine",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(32.dp)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Scan Machine",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(40.dp))
@@ -559,6 +591,162 @@ fun StrengthWorkoutScreen(navController: NavController) {
                         }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+        }
+    }
+
+    // In StrengthWorkoutScreen.kt
+
+    if (showQRScannerDialog) {
+        Dialog(onDismissRequest = { showQRScannerDialog = false }) {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 8.dp
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(400.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    QRScannerComposable(
+                        onQrCodeScanned = { qrValue ->
+                            scannedQrValue = qrValue
+                            showQRScannerDialog = false
+                        },
+                        onClose = { showQRScannerDialog = false }
+                    )
+                }
+            }
+        }
+    }
+
+    // Show machine info after scan
+    if (scannedQrValue != null) if (scannedQrValue != null) {
+        var machine by remember { mutableStateOf<Machine?>(null) }
+        var exerciseName by remember { mutableStateOf<String?>(null) }
+        var isLoading by remember { mutableStateOf(true) }
+
+        LaunchedEffect(scannedQrValue) {
+            isLoading = true
+            try {
+                // Fetch machine by ID from Supabase
+                machine = SupabaseClient.client.postgrest
+                    .from("machines?id=eq.${scannedQrValue!!.toLong()}")
+                    .select(columns = io.github.jan.supabase.postgrest.query.Columns.list("*"))
+                    .decodeSingle<Machine>()
+
+                val exerciseResult = SupabaseClient.client.postgrest
+                    .from("exercises?id=eq.${machine!!.exercise}")
+                    .select(columns = io.github.jan.supabase.postgrest.query.Columns.list("name"))
+                    .decodeSingle<Map<String, String>>()
+                exerciseName = exerciseResult["name"].toString()
+            } catch (e: Exception) {
+                machine = null
+                exerciseName = null
+                println("Error loading machine or exercise: ${e.message}")
+            }
+            isLoading = false
+        }
+
+        AlertDialog(
+            onDismissRequest = { scannedQrValue = null },
+            title = { Text(machine?.name ?: "Machine") },
+            text = {
+                if (isLoading) {
+                    CircularProgressIndicator()
+                } else if (machine != null && exerciseName != null) {
+                    Column {
+                        machine!!.image?.let { imageUrl ->
+                            androidx.compose.foundation.Image(
+                                painter = rememberAsyncImagePainter(imageUrl),
+                                contentDescription = machine!!.name,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(180.dp)
+                            )
+                            Spacer(Modifier.height(16.dp))
+                        }
+                        Text(
+                            text = "Exercise:",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(bottom = 4.dp)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+                                .clickable {
+                                    selectedExerciseName = exerciseName
+                                    showExerciseDetailDialog = true
+                                    // Do NOT set scannedQrValue = null here
+                                }
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = exerciseName!!,
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            )
+                        }
+                    }
+                } else {
+                    Text("Failed to load machine or exercise info.")
+                }
+            },
+            confirmButton = {
+                Button(onClick = { scannedQrValue = null }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+
+    if (showExerciseDetailDialog && selectedExerciseName != null) {
+        var exercise by remember { mutableStateOf<com.example.workoutbuddyapplication.models.Exercise?>(null) }
+        var isLoading by remember { mutableStateOf(true) }
+        var error by remember { mutableStateOf<String?>(null) }
+
+        LaunchedEffect(selectedExerciseName) {
+            isLoading = true
+            error = null
+            try {
+                exercise = fetchExerciseByName(selectedExerciseName!!)
+            } catch (e: Exception) {
+                error = "Could not load exercise."
+            }
+            isLoading = false
+        }
+
+        Dialog(
+            onDismissRequest = { showExerciseDetailDialog = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.background
+            ) {
+                Box(Modifier.fillMaxSize()) {
+                    when {
+                        isLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
+                        error != null -> Text(error!!, color = MaterialTheme.colorScheme.error, modifier = Modifier.align(Alignment.Center))
+                        exercise != null -> ExerciseDetailContent(exercise!!)
+                    }
+                    IconButton(
+                        onClick = { showExerciseDetailDialog = false },
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(8.dp)
+                    ) {
+                        Icon(Icons.Default.Close, contentDescription = "Close")
+                    }
                 }
             }
         }
