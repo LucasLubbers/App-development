@@ -96,6 +96,7 @@ dependencies {
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.view)
     implementation(libs.play.services.mlkit.barcode.scanning)
+    implementation("androidx.camera:camera-camera2:1.4.2")
 
     // Room
     implementation(libs.androidx.room.common.jvm)
