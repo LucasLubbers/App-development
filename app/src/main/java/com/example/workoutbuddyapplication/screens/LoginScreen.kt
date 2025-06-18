@@ -18,7 +18,7 @@ import com.example.workoutbuddyapplication.data.SupabaseClient
 import com.example.workoutbuddyapplication.navigation.Screen
 import com.example.workoutbuddyapplication.ui.theme.strings
 import com.example.workoutbuddyapplication.ui.theme.dutchStrings
-import com.example.workoutbuddyapplication.ui.theme.englishStrings
+import com.example.workoutbuddyapplication.util.EmailValidator
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.gotrue.providers.builtin.Email
 import kotlinx.coroutines.launch
@@ -52,6 +52,7 @@ fun LoginScreen(navController: NavController) {
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
     val strings = strings()
+    val emailValidator = remember { EmailValidator() }
 
     Column(
         modifier = Modifier
@@ -125,7 +126,7 @@ fun LoginScreen(navController: NavController) {
             onClick = {
                 if (email.isBlank() || password.isBlank()) {
                     errorMessage = if (strings === dutchStrings) "Vul alle velden in" else "Fill in all fields"
-                } else if (!isValidEmail(email)) {
+                } else if (!emailValidator.isValid(email)) {
                     errorMessage = if (strings === dutchStrings) "Ongeldig e-mailadres" else "Invalid email address"
                 } else {
                     isLoading = true
@@ -185,8 +186,4 @@ fun LoginScreen(navController: NavController) {
             Text(if (strings === dutchStrings) "Nog geen account? Registreer hier" else "Don't have an account? Register here")
         }
     }
-}
-
-private fun isValidEmail(email: String): Boolean {
-    return android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
 }

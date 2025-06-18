@@ -29,6 +29,7 @@ import io.github.jan.supabase.gotrue.providers.builtin.Email
 import androidx.compose.ui.platform.LocalContext
 import com.example.workoutbuddyapplication.ui.theme.strings
 import com.example.workoutbuddyapplication.ui.theme.dutchStrings
+import com.example.workoutbuddyapplication.util.EmailValidator
 
 suspend fun registerUser(email: String, password: String, name: String): Boolean = withContext(Dispatchers.IO) {
     val client = OkHttpClient()
@@ -79,6 +80,7 @@ suspend fun registerUser(email: String, password: String, name: String): Boolean
     }
 }
 
+
 @Composable
 fun SignupScreen(navController: NavController) {
     var name by remember { mutableStateOf("") }
@@ -90,6 +92,7 @@ fun SignupScreen(navController: NavController) {
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
     val strings = strings()
+    val emailValidator = remember { EmailValidator() }
 
     Column(
         modifier = Modifier
@@ -165,6 +168,10 @@ fun SignupScreen(navController: NavController) {
             onClick = {
                 if (password != confirmPassword) {
                     errorMessage = "Wachtwoorden komen niet overeen"
+                    return@Button
+                }
+                if (!emailValidator.isValid(email)) {
+                    errorMessage = "Ongeldig e-mailadres"
                     return@Button
                 }
                 coroutineScope.launch {
