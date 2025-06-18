@@ -6,7 +6,6 @@ import android.graphics.Paint
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.ShapeDrawable
 import android.graphics.drawable.shapes.OvalShape
-import android.view.MotionEvent
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,8 +17,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import org.osmdroid.config.Configuration
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory
-import org.osmdroid.tileprovider.tilesource.OnlineTileSourceBase
 import org.osmdroid.tileprovider.tilesource.XYTileSource
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
@@ -66,12 +63,11 @@ val CARTO_VOYAGER = XYTileSource(
 )
 
 enum class CartoMapStyle {
-    POSITRON,    // Light theme - great for running
-    DARK_MATTER, // Dark theme - good for night runs
-    VOYAGER      // Detailed style - colorful and informative
+    POSITRON,
+    DARK_MATTER,
+    VOYAGER
 }
 
-// Function to create a blue dot drawable like Google Maps
 fun createLocationDotDrawable(context: Context): Drawable {
     return ShapeDrawable(OvalShape()).apply {
         intrinsicWidth = 48
@@ -82,7 +78,6 @@ fun createLocationDotDrawable(context: Context): Drawable {
             isAntiAlias = true
         }
         
-        // Create a custom drawable that draws a blue circle with white border
         setBounds(0, 0, 48, 48)
     }
 }
@@ -128,7 +123,6 @@ class RedLocationDotDrawable : Drawable() {
 
 
 
-// Create a custom drawable with white border and blue center
 class LocationDotDrawable : Drawable() {
     private val borderPaint = Paint().apply {
         color = android.graphics.Color.WHITE
@@ -148,10 +142,8 @@ class LocationDotDrawable : Drawable() {
         val centerY = bounds.exactCenterY()
         val radius = bounds.width() / 2f
         
-        // Draw white border (larger circle)
         canvas.drawCircle(centerX, centerY, radius, borderPaint)
         
-        // Draw blue center (smaller circle)
         canvas.drawCircle(centerX, centerY, radius * 0.6f, centerPaint)
     }
     
@@ -168,7 +160,6 @@ class LocationDotDrawable : Drawable() {
     override fun getOpacity(): Int = android.graphics.PixelFormat.TRANSLUCENT
 }
 
-// Create a custom drawable for start marker (green with white border)
 class StartMarkerDrawable : Drawable() {
     private val borderPaint = Paint().apply {
         color = android.graphics.Color.WHITE
@@ -188,10 +179,8 @@ class StartMarkerDrawable : Drawable() {
         val centerY = bounds.exactCenterY()
         val radius = bounds.width() / 2f
         
-        // Draw white border (larger circle)
         canvas.drawCircle(centerX, centerY, radius, borderPaint)
         
-        // Draw green center (smaller circle)
         canvas.drawCircle(centerX, centerY, radius * 0.7f, centerPaint)
     }
     

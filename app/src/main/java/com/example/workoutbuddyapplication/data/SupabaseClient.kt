@@ -36,10 +36,10 @@ object SupabaseClient {
     suspend fun testConnection(): Result<Boolean> = runCatching {
         try {
             val postgrestResponse = client.postgrest.from("users").select()
-            
+
             // Then check if auth is working
             val authSession = client.auth.currentUserOrNull()
-            
+
             true
         } catch (e: Exception) {
             println("Supabase connection test failed: ${e.message}")

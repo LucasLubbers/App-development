@@ -18,10 +18,7 @@ import androidx.compose.material.icons.automirrored.filled.DirectionsBike
 import androidx.compose.material.icons.automirrored.filled.DirectionsRun
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bluetooth
-import androidx.compose.material.icons.filled.DirectionsBike
-import androidx.compose.material.icons.filled.DirectionsRun
 import androidx.compose.material.icons.filled.FitnessCenter
-import androidx.compose.material.icons.filled.SelfImprovement
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -57,16 +54,12 @@ fun StartWorkoutScreen(navController: NavController) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(strings.startWorkoutTitle) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = strings.back)
-                    }
+            TopAppBar(title = { Text(strings.startWorkoutTitle) }, navigationIcon = {
+                IconButton(onClick = { navController.navigateUp() }) {
+                    Icon(Icons.Default.ArrowBack, contentDescription = strings.back)
                 }
-            )
-        }
-    ) { paddingValues ->
+            })
+        }) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -76,37 +69,31 @@ fun StartWorkoutScreen(navController: NavController) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = strings.chooseWorkoutType,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Medium
+                text = strings.chooseWorkoutType, fontSize = 20.sp, fontWeight = FontWeight.Medium
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 WorkoutTypeCard(
                     type = WorkoutType.RUNNING,
                     icon = Icons.AutoMirrored.Filled.DirectionsRun,
                     isSelected = selectedWorkoutType == WorkoutType.RUNNING,
-                    onClick = { selectedWorkoutType = WorkoutType.RUNNING }
-                )
+                    onClick = { selectedWorkoutType = WorkoutType.RUNNING })
 
                 WorkoutTypeCard(
                     type = WorkoutType.CYCLING,
                     icon = Icons.AutoMirrored.Filled.DirectionsBike,
                     isSelected = selectedWorkoutType == WorkoutType.CYCLING,
-                    onClick = { selectedWorkoutType = WorkoutType.CYCLING }
-                )
+                    onClick = { selectedWorkoutType = WorkoutType.CYCLING })
 
                 WorkoutTypeCard(
                     type = WorkoutType.STRENGTH,
                     icon = Icons.Default.FitnessCenter,
                     isSelected = selectedWorkoutType == WorkoutType.STRENGTH,
-                    onClick = { selectedWorkoutType = WorkoutType.STRENGTH }
-                )
+                    onClick = { selectedWorkoutType = WorkoutType.STRENGTH })
             }
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -135,8 +122,7 @@ fun StartWorkoutScreen(navController: NavController) {
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = strings.bluetoothDevices,
-                                    fontWeight = FontWeight.Medium
+                                    text = strings.bluetoothDevices, fontWeight = FontWeight.Medium
                                 )
 
                                 Text(
@@ -146,9 +132,7 @@ fun StartWorkoutScreen(navController: NavController) {
                             }
 
                             Switch(
-                                checked = useBluetooth,
-                                onCheckedChange = { useBluetooth = it }
-                            )
+                                checked = useBluetooth, onCheckedChange = { useBluetooth = it })
                         }
 
                         if (useBluetooth) {
@@ -159,8 +143,7 @@ fun StartWorkoutScreen(navController: NavController) {
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Icon(
-                                    Icons.Default.Bluetooth,
-                                    contentDescription = "Bluetooth"
+                                    Icons.Default.Bluetooth, contentDescription = "Bluetooth"
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(strings.pairDevice)
@@ -180,8 +163,7 @@ fun StartWorkoutScreen(navController: NavController) {
                         WorkoutType.CYCLING -> navController.navigate(Screen.CyclingWorkout.route)
                         else -> navController.navigate(Screen.RunningWorkout.route)
                     }
-                },
-                modifier = Modifier.fillMaxWidth()
+                }, modifier = Modifier.fillMaxWidth()
             ) {
                 val workoutTypeName = when (selectedWorkoutType) {
                     WorkoutType.RUNNING -> strings.running
@@ -197,24 +179,18 @@ fun StartWorkoutScreen(navController: NavController) {
 
 @Composable
 fun WorkoutTypeCard(
-    type: WorkoutType,
-    icon: ImageVector,
-    isSelected: Boolean,
-    onClick: () -> Unit
+    type: WorkoutType, icon: ImageVector, isSelected: Boolean, onClick: () -> Unit
 ) {
     val strings = strings()
-    
+
     Card(
         modifier = Modifier
             .size(100.dp)
-            .padding(4.dp),
-        elevation = CardDefaults.cardElevation(
+            .padding(4.dp), elevation = CardDefaults.cardElevation(
             defaultElevation = if (isSelected) 8.dp else 2.dp
-        ),
-        colors = CardDefaults.cardColors(
+        ), colors = CardDefaults.cardColors(
             containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
-        ),
-        onClick = onClick
+        ), onClick = onClick
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -248,10 +224,7 @@ fun WorkoutTypeCard(
 
 @Composable
 fun TrackingOption(
-    title: String,
-    description: String,
-    isEnabled: Boolean,
-    onToggle: (Boolean) -> Unit
+    title: String, description: String, isEnabled: Boolean, onToggle: (Boolean) -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -260,19 +233,16 @@ fun TrackingOption(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = title,
-                fontWeight = FontWeight.Medium
+                text = title, fontWeight = FontWeight.Medium
             )
 
             Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall
+                text = description, style = MaterialTheme.typography.bodySmall
             )
         }
 
         Switch(
-            checked = isEnabled,
-            onCheckedChange = onToggle
+            checked = isEnabled, onCheckedChange = onToggle
         )
     }
 }

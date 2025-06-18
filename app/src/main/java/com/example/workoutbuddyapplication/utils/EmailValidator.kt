@@ -1,4 +1,4 @@
-package com.example.workoutbuddyapplication.util
+package com.example.workoutbuddyapplication.utils
 
 import android.util.Patterns
 

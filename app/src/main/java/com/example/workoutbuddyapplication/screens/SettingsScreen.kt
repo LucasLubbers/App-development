@@ -15,17 +15,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.workoutbuddyapplication.navigation.Screen
 import com.example.workoutbuddyapplication.data.SupabaseClient
 import com.example.workoutbuddyapplication.ui.theme.ThemeManager
-import com.example.workoutbuddyapplication.ui.theme.LanguageManager
-import com.example.workoutbuddyapplication.ui.theme.LocalStringResources
-import com.example.workoutbuddyapplication.ui.theme.dutchStrings
-import com.example.workoutbuddyapplication.ui.theme.englishStrings
 import com.example.workoutbuddyapplication.ui.theme.strings
-import com.example.workoutbuddyapplication.ui.theme.UnitSystem
 import io.github.jan.supabase.gotrue.auth
 import kotlinx.coroutines.launch
 import com.example.workoutbuddyapplication.ui.theme.UserPreferencesManager
@@ -36,7 +30,7 @@ fun SettingsScreen(navController: NavController) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     var showLogoutDialog by remember { mutableStateOf(false) }
-    
+
     val themeManager = remember { ThemeManager(context) }
     val preferencesManager = remember { UserPreferencesManager(context) }
     val isDarkMode by themeManager.isDarkMode.collectAsState(initial = false)
@@ -67,33 +61,26 @@ fun SettingsScreen(navController: NavController) {
                             }
                         }
                         showLogoutDialog = false
-                    }
-                ) {
+                    }) {
                     Text(strings.logout)
                 }
             },
             dismissButton = {
                 TextButton(
-                    onClick = { showLogoutDialog = false }
-                ) {
+                    onClick = { showLogoutDialog = false }) {
                     Text(strings.cancel)
                 }
-            }
-        )
+            })
     }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(strings.settings) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.back)
-                    }
+            TopAppBar(title = { Text(strings.settings) }, navigationIcon = {
+                IconButton(onClick = { navController.navigateUp() }) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.back)
                 }
-            )
-        }
-    ) { paddingValues ->
+            })
+        }) { paddingValues ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -106,8 +93,7 @@ fun SettingsScreen(navController: NavController) {
                     title = strings.editProfile,
                     subtitle = strings.editProfileSubtitle,
                     icon = Icons.Default.Person,
-                    onClick = { navController.navigate(Screen.Profile.route) }
-                )
+                    onClick = { navController.navigate(Screen.Profile.route) })
             }
 
             item {
@@ -115,8 +101,7 @@ fun SettingsScreen(navController: NavController) {
                     title = strings.notifications,
                     subtitle = strings.notificationsSubtitle,
                     icon = Icons.Default.Notifications,
-                    onClick = { navController.navigate(Screen.NotificationSettings.route) }
-                )
+                    onClick = { navController.navigate(Screen.NotificationSettings.route) })
             }
 
             item {
@@ -132,46 +117,36 @@ fun SettingsScreen(navController: NavController) {
                                     headlineContent = { Text("Nederlands") },
                                     leadingContent = {
                                         RadioButton(
-                                            selected = selectedLanguage == "nl",
-                                            onClick = {
+                                            selected = selectedLanguage == "nl", onClick = {
                                                 coroutineScope.launch {
                                                     preferencesManager.setLanguage("nl")
                                                 }
                                                 showLanguageDialog = false
+                                            })
+                                    })
+                                ListItem(headlineContent = { Text("English") }, leadingContent = {
+                                    RadioButton(
+                                        selected = selectedLanguage == "en", onClick = {
+                                            coroutineScope.launch {
+                                                preferencesManager.setLanguage("en")
                                             }
-                                        )
-                                    }
-                                )
-                                ListItem(
-                                    headlineContent = { Text("English") },
-                                    leadingContent = {
-                                        RadioButton(
-                                            selected = selectedLanguage == "en",
-                                            onClick = {
-                                                coroutineScope.launch {
-                                                    preferencesManager.setLanguage("en")
-                                                }
-                                                showLanguageDialog = false
-                                            }
-                                        )
-                                    }
-                                )
+                                            showLanguageDialog = false
+                                        })
+                                })
                             }
                         },
                         confirmButton = {
                             TextButton(onClick = { showLanguageDialog = false }) {
                                 Text(strings.close)
                             }
-                        }
-                    )
+                        })
                 }
 
                 SettingsItem(
                     title = strings.language,
                     subtitle = if (selectedLanguage == "nl") "Nederlands" else "English",
                     icon = Icons.Default.Language,
-                    onClick = { showLanguageDialog = true }
-                )
+                    onClick = { showLanguageDialog = true })
             }
 
             item {
@@ -187,46 +162,38 @@ fun SettingsScreen(navController: NavController) {
                                     headlineContent = { Text(strings.metric) },
                                     leadingContent = {
                                         RadioButton(
-                                            selected = selectedUnitSystem == "metric",
-                                            onClick = {
+                                            selected = selectedUnitSystem == "metric", onClick = {
                                                 coroutineScope.launch {
                                                     preferencesManager.setUnitSystem("metric")
                                                 }
                                                 showUnitsDialog = false
-                                            }
-                                        )
-                                    }
-                                )
+                                            })
+                                    })
                                 ListItem(
                                     headlineContent = { Text(strings.imperial) },
                                     leadingContent = {
                                         RadioButton(
-                                            selected = selectedUnitSystem == "imperial",
-                                            onClick = {
+                                            selected = selectedUnitSystem == "imperial", onClick = {
                                                 coroutineScope.launch {
                                                     preferencesManager.setUnitSystem("imperial")
                                                 }
                                                 showUnitsDialog = false
-                                            }
-                                        )
-                                    }
-                                )
+                                            })
+                                    })
                             }
                         },
                         confirmButton = {
                             TextButton(onClick = { showUnitsDialog = false }) {
                                 Text(strings.close)
                             }
-                        }
-                    )
+                        })
                 }
 
                 SettingsItem(
                     title = strings.units,
                     subtitle = if (selectedUnitSystem == "imperial") strings.imperial else strings.metric,
                     icon = Icons.Default.Straighten,
-                    onClick = { showUnitsDialog = true }
-                )
+                    onClick = { showUnitsDialog = true })
             }
 
             item {
@@ -260,13 +227,11 @@ fun SettingsScreen(navController: NavController) {
                             )
                         }
                         Switch(
-                            checked = isDarkMode,
-                            onCheckedChange = { newValue ->
+                            checked = isDarkMode, onCheckedChange = { newValue ->
                                 coroutineScope.launch {
                                     themeManager.setDarkMode(newValue)
                                 }
-                            }
-                        )
+                            })
                     }
                 }
             }
@@ -302,24 +267,21 @@ fun SettingsScreen(navController: NavController) {
                             )
                         }
                         Switch(
-                            checked = debugMode,
-                            onCheckedChange = { newValue ->
+                            checked = debugMode, onCheckedChange = { newValue ->
                                 coroutineScope.launch {
                                     preferencesManager.setDebugMode(newValue)
                                 }
-                            }
-                        )
+                            })
                     }
                 }
             }
 
             item {
                 Spacer(modifier = Modifier.height(32.dp))
-                
+
                 // Logout button
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
+                    modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.errorContainer
                     )
                 ) {
@@ -350,8 +312,7 @@ fun SettingsScreen(navController: NavController) {
                             )
                         }
                         IconButton(
-                            onClick = { showLogoutDialog = true }
-                        ) {
+                            onClick = { showLogoutDialog = true }) {
                             Icon(
                                 Icons.AutoMirrored.Filled.ExitToApp,
                                 contentDescription = strings.logout,
@@ -373,8 +334,7 @@ fun SettingsItem(
     onClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        onClick = onClick
+        modifier = Modifier.fillMaxWidth(), onClick = onClick
     ) {
         Row(
             modifier = Modifier

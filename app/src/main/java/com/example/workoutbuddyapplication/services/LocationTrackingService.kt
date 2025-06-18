@@ -55,8 +55,10 @@ class LocationTrackingService : Service() {
                     // Calculate distance if we have at least two locations
                     if (currentLocations.size >= 2) {
                         val lastIndex = currentLocations.size - 1
-                        val newDistance = _distance.value + currentLocations[lastIndex - 1]
-                            .distanceTo(currentLocations[lastIndex])
+                        val newDistance =
+                            _distance.value + currentLocations[lastIndex - 1].distanceTo(
+                                    currentLocations[lastIndex]
+                                )
                         _distance.value = newDistance
                     }
                 }
@@ -73,40 +75,30 @@ class LocationTrackingService : Service() {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
-                channelId,
-                "Workout Tracking",
-                NotificationManager.IMPORTANCE_DEFAULT
+                channelId, "Workout Tracking", NotificationManager.IMPORTANCE_DEFAULT
             )
             notificationManager.createNotificationChannel(channel)
         }
 
         val pendingIntent = PendingIntent.getActivity(
-            this,
-            0,
-            Intent(this, MainActivity::class.java),
-            PendingIntent.FLAG_IMMUTABLE
+            this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE
         )
 
-        val notification = NotificationCompat.Builder(this, channelId)
-            .setContentTitle("WorkoutBuddy")
-            .setContentText("Tracking je workout...")
-            .setSmallIcon(R.drawable.ic_menu_compass)
-            .setContentIntent(pendingIntent)
-            .build()
+        val notification =
+            NotificationCompat.Builder(this, channelId).setContentTitle("WorkoutBuddy")
+                .setContentText("Tracking je workout...").setSmallIcon(R.drawable.ic_menu_compass)
+                .setContentIntent(pendingIntent).build()
 
         startForeground(1, notification)
     }
 
     private fun startLocationUpdates() {
         val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000)
-            .setMinUpdateIntervalMillis(2000)
-            .build()
+            .setMinUpdateIntervalMillis(2000).build()
 
         try {
             fusedLocationClient.requestLocationUpdates(
-                locationRequest,
-                locationCallback,
-                Looper.getMainLooper()
+                locationRequest, locationCallback, Looper.getMainLooper()
             )
         } catch (e: SecurityException) {
             // Handle permission issues

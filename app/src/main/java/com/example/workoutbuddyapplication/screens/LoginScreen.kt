@@ -18,7 +18,7 @@ import com.example.workoutbuddyapplication.data.SupabaseClient
 import com.example.workoutbuddyapplication.navigation.Screen
 import com.example.workoutbuddyapplication.ui.theme.strings
 import com.example.workoutbuddyapplication.ui.theme.dutchStrings
-import com.example.workoutbuddyapplication.util.EmailValidator
+import com.example.workoutbuddyapplication.utils.EmailValidator
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.gotrue.providers.builtin.Email
 import kotlinx.coroutines.launch
@@ -125,9 +125,11 @@ fun LoginScreen(navController: NavController) {
         Button(
             onClick = {
                 if (email.isBlank() || password.isBlank()) {
-                    errorMessage = if (strings === dutchStrings) "Vul alle velden in" else "Fill in all fields"
+                    errorMessage =
+                        if (strings === dutchStrings) "Vul alle velden in" else "Fill in all fields"
                 } else if (!emailValidator.isValid(email)) {
-                    errorMessage = if (strings === dutchStrings) "Ongeldig e-mailadres" else "Invalid email address"
+                    errorMessage =
+                        if (strings === dutchStrings) "Ongeldig e-mailadres" else "Invalid email address"
                 } else {
                     isLoading = true
                     errorMessage = null
@@ -151,10 +153,15 @@ fun LoginScreen(navController: NavController) {
                             }
                         } catch (e: Exception) {
                             errorMessage = when {
-                                e.message?.contains("invalid login credentials", ignoreCase = true) == true ->
+                                e.message?.contains(
+                                    "invalid login credentials",
+                                    ignoreCase = true
+                                ) == true ->
                                     if (strings === dutchStrings) "Ongeldige inloggegevens" else "Invalid login credentials"
+
                                 e.message?.contains("network", ignoreCase = true) == true ->
                                     if (strings === dutchStrings) "Netwerkfout. Controleer je internetverbinding." else "Network error. Check your internet connection."
+
                                 else -> if (strings === dutchStrings) "Fout bij inloggen: ${e.message}" else "Login error: ${e.message}"
                             }
                         } finally {
