@@ -87,9 +87,15 @@ fun QRScanner(
                                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                                 .build()
                                 .also {
-                                    it.setAnalyzer(ContextCompat.getMainExecutor(ctx), { imageProxy: ImageProxy ->
-                                        processImageProxy(barcodeScanner, imageProxy, onQrCodeScanned)
-                                    })
+                                    it.setAnalyzer(
+                                        ContextCompat.getMainExecutor(ctx),
+                                        { imageProxy: ImageProxy ->
+                                            processImageProxy(
+                                                barcodeScanner,
+                                                imageProxy,
+                                                onQrCodeScanned
+                                            )
+                                        })
                                 }
 
                             try {
@@ -100,7 +106,8 @@ fun QRScanner(
                                     preview,
                                     imageAnalyzer
                                 )
-                            } catch (_: Exception) {}
+                            } catch (_: Exception) {
+                            }
                         }, ContextCompat.getMainExecutor(ctx))
                         previewView
                     },

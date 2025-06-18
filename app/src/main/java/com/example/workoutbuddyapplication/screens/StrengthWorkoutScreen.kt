@@ -37,7 +37,6 @@ import com.example.workoutbuddyapplication.data.SupabaseClient
 import com.example.workoutbuddyapplication.models.*
 import com.example.workoutbuddyapplication.navigation.Screen
 import com.example.workoutbuddyapplication.ui.theme.*
-import com.example.workoutbuddyapplication.utils.UnitConverter
 import com.example.workoutbuddyapplication.workout.StrengthSession
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.postgrest.postgrest
@@ -74,30 +73,24 @@ fun StrengthWorkoutScreen(navController: NavController) {
     val selectedUnitSystem by preferencesManager.selectedUnitSystem.collectAsState(initial = "metric")
     val unitSystem = selectedUnitSystem.toUnitSystem()
 
-    // Use StrengthSession for all workout logic
     val session = remember { StrengthSession() }
-    val isActive by session.isActive.collectAsState()
     val elapsedTime by session.elapsedTime.collectAsState()
 
     var currentExerciseForDevice by remember { mutableStateOf<Exercise?>(null) }
     var showExerciseSelector by remember { mutableStateOf(false) }
     var showPresetMenu by remember { mutableStateOf(false) }
 
-    // For tracking rest timer between sets
     var activeRestTimerExercise by remember { mutableStateOf<String?>(null) }
     var activeRestTimerSetIndex by remember { mutableIntStateOf(-1) }
     var restTimeRemaining by remember { mutableIntStateOf(0) }
     var timerActive by remember { mutableStateOf(false) }
 
-    // Exercise tracking
     val exercises = remember { mutableStateListOf<Exercise>() }
 
-    // Available exercises from Supabase
     var availableExercises by remember { mutableStateOf<List<AvailableExercise>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
 
-    // Add state for saving workout and error
     var isSaving by remember { mutableStateOf(false) }
     var saveError by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
@@ -121,7 +114,8 @@ fun StrengthWorkoutScreen(navController: NavController) {
     var showStopWordDialog by remember { mutableStateOf(false) }
     var customStopWord by remember { mutableStateOf("stop") }
     var tempStopWord by remember { mutableStateOf(customStopWord) }
-    val isStopWordValid = tempStopWord.trim().isNotEmpty() && tempStopWord.all { it.isLetter() || it.isWhitespace() }
+    val isStopWordValid =
+        tempStopWord.trim().isNotEmpty() && tempStopWord.all { it.isLetter() || it.isWhitespace() }
 
     var showQRScannerDialog by remember { mutableStateOf(false) }
     var scannedQrValue by remember { mutableStateOf<String?>(null) }
@@ -131,7 +125,6 @@ fun StrengthWorkoutScreen(navController: NavController) {
     var showNotesDialog by remember { mutableStateOf(false) }
     var workoutNotes by remember { mutableStateOf("") }
 
-    // Start session on first composition
     LaunchedEffect(Unit) { session.start() }
 
     LaunchedEffect(voiceCommandsEnabled) {
@@ -140,7 +133,6 @@ fun StrengthWorkoutScreen(navController: NavController) {
         }
     }
 
-    // Fetch exercises from Supabase
     LaunchedEffect(key1 = true) {
         coroutineScope.launch {
             try {
@@ -197,7 +189,6 @@ fun StrengthWorkoutScreen(navController: NavController) {
         }
     }
 
-    // Rest timer effect - only run when timer is actually active
     LaunchedEffect(timerActive) {
         if (timerActive && restTimeRemaining > 0) {
             while (timerActive && restTimeRemaining > 0) {
@@ -213,7 +204,6 @@ fun StrengthWorkoutScreen(navController: NavController) {
         }
     }
 
-    // Show exercise selector dialog
     if (showExerciseSelector) {
         ExerciseSelectorDialog(
             availableExercises = availableExercises,
@@ -235,7 +225,6 @@ fun StrengthWorkoutScreen(navController: NavController) {
         )
     }
 
-    // Show preset menu dialog
     if (showPresetMenu) {
         PresetMenuDialog(
             availableExercises = availableExercises,
@@ -256,7 +245,6 @@ fun StrengthWorkoutScreen(navController: NavController) {
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
-            // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -305,7 +293,6 @@ fun StrengthWorkoutScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Main stats
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -351,7 +338,6 @@ fun StrengthWorkoutScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            // Preset toevoegen Button (Green)
             Button(
                 onClick = { showPresetMenu = true },
                 modifier = Modifier
@@ -372,7 +358,6 @@ fun StrengthWorkoutScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Add Exercises Button (Blue)
             Button(
                 onClick = { showExerciseSelector = true },
                 modifier = Modifier
@@ -392,7 +377,6 @@ fun StrengthWorkoutScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Stop Workout Button
             Button(
                 onClick = { showNotesDialog = true },
                 modifier = Modifier
@@ -460,7 +444,8 @@ fun StrengthWorkoutScreen(navController: NavController) {
                                             notes = workoutNotes,
                                             profileId = user.id
                                         )
-                                        SupabaseClient.client.postgrest.from("workouts").insert(workout)
+                                        SupabaseClient.client.postgrest.from("workouts")
+                                            .insert(workout)
                                         isSaving = false
                                         session.stop()
                                         navController.navigate(
@@ -485,7 +470,6 @@ fun StrengthWorkoutScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Exercises
             LazyColumn(
                 modifier = Modifier.weight(1f)
             ) {
@@ -622,7 +606,11 @@ fun StrengthWorkoutScreen(navController: NavController) {
     }
 
     if (showExerciseDetailDialog && selectedExerciseName != null) {
-        var exercise by remember { mutableStateOf<com.example.workoutbuddyapplication.models.Exercise?>(null) }
+        var exercise by remember {
+            mutableStateOf<com.example.workoutbuddyapplication.models.Exercise?>(
+                null
+            )
+        }
         var isLoading by remember { mutableStateOf(true) }
         var error by remember { mutableStateOf<String?>(null) }
 
@@ -651,7 +639,12 @@ fun StrengthWorkoutScreen(navController: NavController) {
                 Box(Modifier.fillMaxSize()) {
                     when {
                         isLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
-                        error != null -> Text(error!!, color = MaterialTheme.colorScheme.error, modifier = Modifier.align(Alignment.Center))
+                        error != null -> Text(
+                            error!!,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+
                         exercise != null -> ExerciseDetailContent(exercise!!)
                     }
                     IconButton(
@@ -716,7 +709,6 @@ fun StrengthWorkoutScreen(navController: NavController) {
         )
     }
 
-    // Handle device scanning result
     LaunchedEffect(navController.currentBackStackEntry) {
         val result = navController.currentBackStackEntry
             ?.savedStateHandle
@@ -757,7 +749,8 @@ fun createWorkoutPresets(
     }.values.flatten().take(4)
 
     if (pushExercises.isNotEmpty()) {
-        presets.add(WorkoutPreset(
+        presets.add(
+            WorkoutPreset(
             name = strings.pushWorkout,
             exercises = pushExercises.map { exercise ->
                 Exercise(
@@ -779,7 +772,8 @@ fun createWorkoutPresets(
     }.values.flatten().take(4)
 
     if (pullExercises.isNotEmpty()) {
-        presets.add(WorkoutPreset(
+        presets.add(
+            WorkoutPreset(
             name = strings.pullWorkout,
             exercises = pullExercises.map { exercise ->
                 Exercise(
@@ -801,7 +795,8 @@ fun createWorkoutPresets(
     }.values.flatten().take(4)
 
     if (legExercises.isNotEmpty()) {
-        presets.add(WorkoutPreset(
+        presets.add(
+            WorkoutPreset(
             name = strings.legWorkout,
             exercises = legExercises.map { exercise ->
                 Exercise(
@@ -819,7 +814,8 @@ fun createWorkoutPresets(
 
     if (availableExercises.size >= 5) {
         val fullBodyExercises = availableExercises.shuffled().take(5)
-        presets.add(WorkoutPreset(
+        presets.add(
+            WorkoutPreset(
             name = strings.fullBodyWorkout,
             exercises = fullBodyExercises.map { exercise ->
                 Exercise(

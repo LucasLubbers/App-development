@@ -72,7 +72,6 @@ fun EnhancedExerciseCard(
     var customRestTime by remember { mutableStateOf("") }
     var defaultRestTimeSeconds by remember { mutableStateOf(120) }
 
-    // Rest time dialog
     if (showRestTimeDialog) {
         AlertDialog(
             onDismissRequest = { showRestTimeDialog = false },
@@ -112,7 +111,6 @@ fun EnhancedExerciseCard(
                             120
                         }
                         defaultRestTimeSeconds = seconds
-                        // Update all sets' rest time
                         val updatedSets = exercise.sets.map { it.copy(restTime = seconds) }
                         exercise.sets = updatedSets
                         showRestTimeDialog = false
@@ -136,7 +134,6 @@ fun EnhancedExerciseCard(
             .fillMaxWidth()
             .padding(vertical = 4.dp)
     ) {
-        // Header
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -185,7 +182,6 @@ fun EnhancedExerciseCard(
 
         if (expanded) {
             Spacer(modifier = Modifier.height(8.dp))
-            // Headers row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -219,7 +215,6 @@ fun EnhancedExerciseCard(
             Spacer(modifier = Modifier.height(4.dp))
             Divider()
 
-            // Sets
             exercise.sets.forEachIndexed { index, set ->
                 var completed by remember(set.completed) { mutableStateOf(set.completed) }
                 var reps by remember(set.reps) { mutableStateOf(set.reps.toString()) }
@@ -227,7 +222,6 @@ fun EnhancedExerciseCard(
                     mutableStateOf(UnitConverter.weightFromKg(set.weight, unitSystem).toString())
                 }
 
-                // Update the values in the set when they change
                 LaunchedEffect(reps, weight, completed) {
                     val weightInKg = UnitConverter.weightToKg(
                         weight.toDoubleOrNull() ?: set.weight,
@@ -243,7 +237,6 @@ fun EnhancedExerciseCard(
                     exercise.sets = updatedSets
                 }
 
-                // Update weight display when unit system changes
                 LaunchedEffect(unitSystem) {
                     weight = UnitConverter.weightFromKg(set.weight, unitSystem).toString()
                 }

@@ -63,7 +63,6 @@ fun PresetMenuDialog(
                     .fillMaxSize()
                     .padding(16.dp)
             ) {
-                // Header
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -82,7 +81,6 @@ fun PresetMenuDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Preset list
                 LazyColumn(
                     modifier = Modifier.weight(1f)
                 ) {

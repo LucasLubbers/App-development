@@ -438,19 +438,23 @@ fun CyclingWorkoutScreen(navController: NavController) {
                                             return@launch
                                         }
                                         val workout = Workout(
-                                            type = "RUNNING", // or "CYCLING"
+                                            type = "CYCLING",
                                             date = dateString,
                                             duration = durationMinutes,
                                             distance = distanceKm,
                                             notes = workoutNotes,
                                             profileId = user.id
                                         )
-                                        SupabaseClient.client.postgrest.from("workouts").insert(workout)
+                                        SupabaseClient.client.postgrest.from("workouts")
+                                            .insert(workout)
                                         isSaving = false
                                         navController.navigate(
                                             Screen.WorkoutCompleted.createRoute(
                                                 duration = formatTime(elapsedTime),
-                                                distance = UnitConverter.formatDistance(distance, unitSystem),
+                                                distance = UnitConverter.formatDistance(
+                                                    distance,
+                                                    unitSystem
+                                                ),
                                                 calories = calories,
                                                 notes = workoutNotes
                                             )

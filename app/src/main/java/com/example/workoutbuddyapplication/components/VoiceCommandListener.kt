@@ -20,7 +20,10 @@ fun VoiceCommandListener(
     val speechRecognizer = remember { SpeechRecognizer.createSpeechRecognizer(context) }
     val intent = remember {
         Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(
+                RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
+            )
         }
     }
 
@@ -34,7 +37,11 @@ fun VoiceCommandListener(
                     }
                     speechRecognizer.startListening(intent)
                 }
-                override fun onError(error: Int) { speechRecognizer.startListening(intent) }
+
+                override fun onError(error: Int) {
+                    speechRecognizer.startListening(intent)
+                }
+
                 override fun onReadyForSpeech(params: Bundle?) {}
                 override fun onBeginningOfSpeech() {}
                 override fun onRmsChanged(rmsdB: Float) {}

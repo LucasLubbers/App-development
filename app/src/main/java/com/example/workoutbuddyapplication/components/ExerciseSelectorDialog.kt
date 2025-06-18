@@ -78,7 +78,6 @@ fun ExerciseSelectorDialog(
                     .fillMaxSize()
                     .padding(16.dp)
             ) {
-                // Header
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -97,19 +96,22 @@ fun ExerciseSelectorDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Search field
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
                     placeholder = { Text(strings.searchExercises) },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = strings.search) },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = strings.search
+                        )
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Exercise list
                 if (isLoading) {
                     Box(
                         modifier = Modifier.weight(1f),
