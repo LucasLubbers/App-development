@@ -107,6 +107,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.foundation.clickable
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import com.example.workoutbuddyapplication.components.StatCard
 
 data class ExerciseSet(
     val reps: Int,
