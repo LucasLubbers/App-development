@@ -91,6 +91,9 @@ fun CyclingWorkoutScreen(navController: NavController) {
 
     var targetDistance by remember { mutableStateOf(0.0) }
 
+    var showNotesDialog by remember { mutableStateOf(false) }
+    var workoutNotes by remember { mutableStateOf("") }
+
     val speedData = remember { mutableStateListOf<Float>() }
     LaunchedEffect(speed) {
         speedData.add(speed.toFloat())
@@ -148,46 +151,7 @@ fun CyclingWorkoutScreen(navController: NavController) {
                     )
                 }
                 FloatingActionButton(
-                    onClick = {
-                        isSaving = true
-                        saveError = null
-                        val durationMinutes = (elapsedTime / 60000).toInt()
-                        val distanceKm = distance
-                        val dateString = java.time.LocalDate.now().toString()
-                        coroutineScope.launch {
-                            try {
-                                val user = SupabaseClient.client.auth.currentUserOrNull()
-                                if (user == null) {
-                                    saveError = "Gebruiker niet ingelogd"
-                                    isSaving = false
-                                    return@launch
-                                }
-                                val workout = Workout(
-                                    type = "CYCLING",
-                                    date = dateString,
-                                    duration = durationMinutes,
-                                    distance = distanceKm,
-                                    notes = null,
-                                    profileId = user.id
-                                )
-                                SupabaseClient.client.postgrest.from("workouts").insert(workout)
-                                isSaving = false
-                                navController.navigate(
-                                    Screen.WorkoutCompleted.createRoute(
-                                        duration = formatTime(elapsedTime),
-                                        distance = UnitConverter.formatDistance(
-                                            distance,
-                                            unitSystem
-                                        ),
-                                        calories = calories,
-                                    )
-                                )
-                            } catch (e: Exception) {
-                                saveError = e.message
-                                isSaving = false
-                            }
-                        }
-                    },
+                    onClick = { showNotesDialog = true },
                     containerColor = MaterialTheme.colorScheme.errorContainer
                 ) {
                     Icon(Icons.Default.Stop, contentDescription = "Stoppen")
@@ -443,6 +407,66 @@ fun CyclingWorkoutScreen(navController: NavController) {
                         }
                     }
                 }
+            }
+
+            if (showNotesDialog) {
+                AlertDialog(
+                    onDismissRequest = { showNotesDialog = false },
+                    title = { Text("Add Notes") },
+                    text = {
+                        OutlinedTextField(
+                            value = workoutNotes,
+                            onValueChange = { workoutNotes = it },
+                            label = { Text("Notes") }
+                        )
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                showNotesDialog = false
+                                isSaving = true
+                                saveError = null
+                                val durationMinutes = (elapsedTime / 60000).toInt()
+                                val distanceKm = distance
+                                val dateString = java.time.LocalDate.now().toString()
+                                coroutineScope.launch {
+                                    try {
+                                        val user = SupabaseClient.client.auth.currentUserOrNull()
+                                        if (user == null) {
+                                            saveError = "Gebruiker niet ingelogd"
+                                            isSaving = false
+                                            return@launch
+                                        }
+                                        val workout = Workout(
+                                            type = "RUNNING", // or "CYCLING"
+                                            date = dateString,
+                                            duration = durationMinutes,
+                                            distance = distanceKm,
+                                            notes = workoutNotes,
+                                            profileId = user.id
+                                        )
+                                        SupabaseClient.client.postgrest.from("workouts").insert(workout)
+                                        isSaving = false
+                                        navController.navigate(
+                                            Screen.WorkoutCompleted.createRoute(
+                                                duration = formatTime(elapsedTime),
+                                                distance = UnitConverter.formatDistance(distance, unitSystem),
+                                                calories = calories,
+                                                notes = workoutNotes
+                                            )
+                                        )
+                                    } catch (e: Exception) {
+                                        saveError = e.message
+                                        isSaving = false
+                                    }
+                                }
+                            }
+                        ) { Text("Save") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showNotesDialog = false }) { Text("Cancel") }
+                    }
+                )
             }
 
             if (isSaving) {
