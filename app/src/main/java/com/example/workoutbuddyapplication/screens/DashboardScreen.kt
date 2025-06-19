@@ -3,7 +3,6 @@ package com.example.workoutbuddyapplication.screens
 import android.annotation.SuppressLint
 import com.example.workoutbuddyapplication.models.Workout
 import com.example.workoutbuddyapplication.models.WorkoutType
-import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
@@ -12,10 +11,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsRun
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.SelfImprovement
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -54,19 +51,25 @@ fun SummaryCard(workouts: List<Workout> = emptyList(), unitSystem: UnitSystem = 
             title = strings.workouts,
             value = "$totalWorkouts",
             icon = Icons.Default.FitnessCenter,
-            modifier = Modifier.weight(1f).padding(end = 4.dp)
+            modifier = Modifier
+                .weight(1f)
+                .padding(end = 4.dp)
         )
         StatCard(
             title = strings.distance,
             value = UnitConverter.formatDistance(totalDistance, unitSystem),
             icon = Icons.AutoMirrored.Filled.DirectionsRun,
-            modifier = Modifier.weight(1f).padding(horizontal = 4.dp)
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 4.dp)
         )
         StatCard(
             title = strings.time,
             value = String.format("%.1f h", totalDuration / 60.0),
             icon = Icons.Default.Timer,
-            modifier = Modifier.weight(1f).padding(start = 4.dp)
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 4.dp)
         )
     }
 }
@@ -81,7 +84,7 @@ fun DashboardScreen(navController: NavController) {
     val selectedUnitSystem by preferencesManager.selectedUnitSystem.collectAsState(initial = "metric")
     val unitSystem = selectedUnitSystem.toUnitSystem()
     val strings = strings()
-    
+
     var workouts by remember { mutableStateOf<List<Workout>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -175,12 +178,15 @@ fun DashboardScreen(navController: NavController) {
                 isLoading -> {
                     CircularProgressIndicator()
                 }
+
                 error != null -> {
                     Text(error!!, color = MaterialTheme.colorScheme.error)
                 }
+
                 workouts.isEmpty() -> {
                     Text(strings.noWorkoutsFound)
                 }
+
                 else -> {
                     LazyColumn {
                         items(workouts.sortedByDescending { it.date }.take(5)) { workout ->
@@ -200,7 +206,11 @@ fun DashboardScreen(navController: NavController) {
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun WorkoutItem(workout: Workout, unitSystem: UnitSystem = UnitSystem.METRIC, onClick: () -> Unit = {}) {
+fun WorkoutItem(
+    workout: Workout,
+    unitSystem: UnitSystem = UnitSystem.METRIC,
+    onClick: () -> Unit = {}
+) {
     val strings = strings()
     Card(
         modifier = Modifier
@@ -231,7 +241,14 @@ fun WorkoutItem(workout: Workout, unitSystem: UnitSystem = UnitSystem.METRIC, on
                 )
                 Text(
                     text = "${workout.duration} ${strings.minutes}" +
-                            (workout.distance?.let { " | ${UnitConverter.formatDistance(it, unitSystem)}" } ?: ""),
+                            (workout.distance?.let {
+                                " | ${
+                                    UnitConverter.formatDistance(
+                                        it,
+                                        unitSystem
+                                    )
+                                }"
+                            } ?: ""),
                     style = MaterialTheme.typography.bodySmall
                 )
                 if (!workout.notes.isNullOrBlank()) {

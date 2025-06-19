@@ -33,7 +33,7 @@ class MainActivity : ComponentActivity() {
             val context = LocalContext.current
             val themeManager = remember { ThemeManager(context) }
             val isDarkMode by themeManager.isDarkMode.collectAsState(initial = false)
-            
+
             WorkoutBuddyTheme(darkTheme = isDarkMode) {
                 LanguageProvider {
                     Box(modifier = Modifier.fillMaxSize()) {
@@ -44,7 +44,7 @@ class MainActivity : ComponentActivity() {
                             val navController = rememberNavController()
                             AppNavigation(navController = navController)
                         }
-                        
+
                         // Debug indicator
                         if (DEBUG_MODE) {
                             DebugIndicator()
@@ -60,22 +60,19 @@ class MainActivity : ComponentActivity() {
 fun DebugIndicator() {
     var showDebugIndicator by remember { mutableStateOf(true) }
     val strings = strings()
-    
+
     if (showDebugIndicator) {
         Box(
-            contentAlignment = Alignment.TopEnd,
-            modifier = Modifier.fillMaxSize()
+            contentAlignment = Alignment.TopEnd, modifier = Modifier.fillMaxSize()
         ) {
             Box(
                 modifier = Modifier
                     .padding(top = 40.dp, end = 16.dp)
                     .background(Color(0xFF90EE90).copy(alpha = 0.7f))
                     .clickable { showDebugIndicator = false }
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
+                    .padding(horizontal = 16.dp, vertical = 8.dp)) {
                 Text(
-                    text = strings.debugMode,
-                    color = Color.Black.copy(alpha = 0.8f)
+                    text = strings.debugMode, color = Color.Black.copy(alpha = 0.8f)
                 )
             }
         }

@@ -16,28 +16,28 @@ object UnitConverter {
      * Convert weight from kg to lbs
      */
     fun kgToLbs(kg: Double): Double {
-        return round(kg * KG_TO_LBS * 10) / 10 // Round to 1 decimal place
+        return round(kg * KG_TO_LBS * 10) / 10
     }
 
     /**
      * Convert weight from lbs to kg
      */
     fun lbsToKg(lbs: Double): Double {
-        return round(lbs * LBS_TO_KG * 10) / 10 // Round to 1 decimal place
+        return round(lbs * LBS_TO_KG * 10) / 10
     }
 
     /**
      * Convert distance from km to miles
      */
     fun kmToMiles(km: Double): Double {
-        return round(km * KM_TO_MILES * 100) / 100 // Round to 2 decimal places
+        return round(km * KM_TO_MILES * 100) / 100
     }
 
     /**
      * Convert distance from miles to km
      */
     fun milesToKm(miles: Double): Double {
-        return round(miles * MILES_TO_KM * 100) / 100 // Round to 2 decimal places
+        return round(miles * MILES_TO_KM * 100) / 100
     }
 
     /**

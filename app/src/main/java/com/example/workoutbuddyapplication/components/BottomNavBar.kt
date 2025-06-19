@@ -19,7 +19,7 @@ fun BottomNavBar(
     navController: NavController
 ) {
     val strings = strings()
-    
+
     NavigationBar {
         NavigationBarItem(
             selected = selectedTabIndex == 0,
@@ -36,7 +36,12 @@ fun BottomNavBar(
                 onTabSelected(1)
                 navController.navigate(Screen.History.route)
             },
-            icon = { Icon(Icons.AutoMirrored.Filled.DirectionsRun, contentDescription = strings.history) },
+            icon = {
+                Icon(
+                    Icons.AutoMirrored.Filled.DirectionsRun,
+                    contentDescription = strings.history
+                )
+            },
             label = { Text(strings.history, fontSize = 9.sp) }
         )
         NavigationBarItem(

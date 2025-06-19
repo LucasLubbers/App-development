@@ -17,7 +17,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import com.example.workoutbuddyapplication.services.NotificationService
-import java.util.concurrent.TimeUnit
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import com.example.workoutbuddyapplication.ui.theme.strings
@@ -25,7 +24,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 private val NOTIFICATIONS_ENABLED_KEY = booleanPreferencesKey("notifications_enabled")
-private val GOAL_REMINDER_NOTIFICATIONS_ENABLED_KEY = booleanPreferencesKey("goal_reminder_notifications_enabled")
+private val GOAL_REMINDER_NOTIFICATIONS_ENABLED_KEY =
+    booleanPreferencesKey("goal_reminder_notifications_enabled")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,29 +59,23 @@ fun NotificationSettingsScreen(navController: NavController) {
     }
 
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-        onResult = { isGranted ->
+        contract = ActivityResultContracts.RequestPermission(), onResult = { isGranted ->
             notificationsEnabled = isGranted
             coroutineScope.launch {
                 context.dataStore.edit { prefs ->
                     prefs[NOTIFICATIONS_ENABLED_KEY] = isGranted
                 }
             }
-        }
-    )
+        })
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(strings.notifications) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.back)
-                    }
+            TopAppBar(title = { Text(strings.notifications) }, navigationIcon = {
+                IconButton(onClick = { navController.navigateUp() }) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.back)
                 }
-            )
-        }
-    ) { paddingValues ->
+            })
+        }) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -91,8 +85,7 @@ fun NotificationSettingsScreen(navController: NavController) {
         ) {
             // Main notification switch
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+                verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
                     text = "Enable Notifications",
@@ -100,8 +93,7 @@ fun NotificationSettingsScreen(navController: NavController) {
                     modifier = Modifier.weight(1f)
                 )
                 Switch(
-                    checked = notificationsEnabled,
-                    onCheckedChange = { checked ->
+                    checked = notificationsEnabled, onCheckedChange = { checked ->
                         coroutineScope.launch {
                             context.dataStore.edit { prefs ->
                                 prefs[NOTIFICATIONS_ENABLED_KEY] = checked
@@ -113,14 +105,12 @@ fun NotificationSettingsScreen(navController: NavController) {
                             }
                         }
                         notificationsEnabled = checked
-                    }
-                )
+                    })
             }
 
             // Goal reminder notification switch
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+                verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
                     text = "Enable Goal Reminder Notifications",
@@ -128,24 +118,21 @@ fun NotificationSettingsScreen(navController: NavController) {
                     modifier = Modifier.weight(1f)
                 )
                 Switch(
-                    checked = goalReminderEnabled,
-                    onCheckedChange = { checked ->
+                    checked = goalReminderEnabled, onCheckedChange = { checked ->
                         coroutineScope.launch {
                             context.dataStore.edit { prefs ->
                                 prefs[GOAL_REMINDER_NOTIFICATIONS_ENABLED_KEY] = checked
                             }
                         }
                         goalReminderEnabled = checked
-                    }
-                )
+                    })
             }
 
             Button(
                 onClick = {
                     NotificationService.createNotificationChannel(context)
                     NotificationService.sendTestNotification(context)
-                },
-                modifier = Modifier.fillMaxWidth()
+                }, modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Test Notificatie")
             }

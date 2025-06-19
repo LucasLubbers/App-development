@@ -105,7 +105,6 @@ fun AddWorkoutScreen(navController: NavController) {
                     onValueChange = { customTypeName = it },
                     label = { Text(strings.typeName) },
                     modifier = Modifier.fillMaxWidth()
-                    // Removed isError to keep the field style consistent
                 )
             }
 
@@ -183,9 +182,9 @@ fun AddWorkoutScreen(navController: NavController) {
 
             val isOtherType = selectedWorkoutType == WorkoutType.OTHER
             val canSave = !isSaving &&
-                (!isOtherType || customTypeName.isNotBlank()) &&
-                duration.toIntOrNull() != null &&
-                (selectedWorkoutType != WorkoutType.RUNNING && selectedWorkoutType != WorkoutType.CYCLING || distance.toDoubleOrNull() != null)
+                    (!isOtherType || customTypeName.isNotBlank()) &&
+                    duration.toIntOrNull() != null &&
+                    (selectedWorkoutType != WorkoutType.RUNNING && selectedWorkoutType != WorkoutType.CYCLING || distance.toDoubleOrNull() != null)
 
             Button(
                 onClick = {
@@ -203,10 +202,11 @@ fun AddWorkoutScreen(navController: NavController) {
                                 return@launch
                             }
 
-                            val workoutTypeString = if (selectedWorkoutType == WorkoutType.OTHER && customTypeName.isNotBlank())
-                                customTypeName
-                            else
-                                selectedWorkoutType.name
+                            val workoutTypeString =
+                                if (selectedWorkoutType == WorkoutType.OTHER && customTypeName.isNotBlank())
+                                    customTypeName
+                                else
+                                    selectedWorkoutType.name
 
                             val workout = Workout(
                                 type = workoutTypeString,

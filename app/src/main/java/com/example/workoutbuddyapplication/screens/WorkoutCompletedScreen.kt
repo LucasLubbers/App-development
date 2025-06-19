@@ -118,7 +118,6 @@ fun WorkoutCompletedScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Only show calories if not null
                 if (calories != null) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),

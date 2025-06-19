@@ -26,7 +26,8 @@ object NotificationService {
     private const val NOTIFICATION_ID = 1
 
     private val NOTIFICATIONS_ENABLED_KEY = booleanPreferencesKey("notifications_enabled")
-    private val GOAL_REMINDER_NOTIFICATIONS_ENABLED_KEY = booleanPreferencesKey("goal_reminder_notifications_enabled")
+    private val GOAL_REMINDER_NOTIFICATIONS_ENABLED_KEY =
+        booleanPreferencesKey("goal_reminder_notifications_enabled")
 
     fun areNotificationsEnabled(context: Context): Boolean {
         return runBlocking {
@@ -43,9 +44,7 @@ object NotificationService {
     fun createNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
-                CHANNEL_ID,
-                CHANNEL_NAME,
-                NotificationManager.IMPORTANCE_HIGH
+                CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = CHANNEL_DESC
                 setShowBadge(true)
@@ -64,8 +63,7 @@ object NotificationService {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val permissionCheck = ContextCompat.checkSelfPermission(
-                context,
-                android.Manifest.permission.POST_NOTIFICATIONS
+                context, android.Manifest.permission.POST_NOTIFICATIONS
             )
             if (permissionCheck != PackageManager.PERMISSION_GRANTED) {
                 Log.w("NotificationService", "POST_NOTIFICATIONS permission not granted.")
@@ -74,12 +72,10 @@ object NotificationService {
         }
 
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle("Aktiv")
+            .setSmallIcon(R.drawable.ic_launcher_foreground).setContentTitle("Aktiv")
             .setContentText("This is a test notification")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setDefaults(NotificationCompat.DEFAULT_ALL)
-            .setAutoCancel(true)
+            .setDefaults(NotificationCompat.DEFAULT_ALL).setAutoCancel(true)
 
         with(NotificationManagerCompat.from(context)) {
             notify(NOTIFICATION_ID, builder.build())
@@ -91,8 +87,7 @@ object NotificationService {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val permissionCheck = ContextCompat.checkSelfPermission(
-                context,
-                android.Manifest.permission.POST_NOTIFICATIONS
+                context, android.Manifest.permission.POST_NOTIFICATIONS
             )
             if (permissionCheck != PackageManager.PERMISSION_GRANTED) {
                 Log.w("NotificationService", "POST_NOTIFICATIONS permission not granted.")
@@ -104,8 +99,11 @@ object NotificationService {
             Intent.ACTION_VIEW,
             "workoutbuddy://goal/$goalId".toUri(),
             context,
-            context.packageManager.getLaunchIntentForPackage(context.packageName)?.component?.className?.let { Class.forName(it) }
-        ).apply {
+            context.packageManager.getLaunchIntentForPackage(context.packageName)?.component?.className?.let {
+                Class.forName(
+                    it
+                )
+            }).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
         val pendingIntent = PendingIntent.getActivity(
@@ -118,11 +116,11 @@ object NotificationService {
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle("Je hebt nog niet alle workout doelen behaald!")
-            .setContentText("Je hebt nog minder dan 24 uur om $goalTitle te halen")
-            .setStyle(NotificationCompat.BigTextStyle().bigText("Je hebt nog minder dan 24 uur om $goalTitle te halen"))
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setDefaults(NotificationCompat.DEFAULT_ALL)
-            .setAutoCancel(true)
+            .setContentText("Je hebt nog minder dan 24 uur om $goalTitle te halen").setStyle(
+                NotificationCompat.BigTextStyle()
+                    .bigText("Je hebt nog minder dan 24 uur om $goalTitle te halen")
+            ).setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setDefaults(NotificationCompat.DEFAULT_ALL).setAutoCancel(true)
             .setContentIntent(pendingIntent)
 
         with(NotificationManagerCompat.from(context)) {

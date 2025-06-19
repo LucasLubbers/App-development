@@ -4,7 +4,6 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
-import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.provider.Settings
@@ -133,15 +132,13 @@ fun BluetoothDeviceScreen(navController: NavController) {
                         showBluetoothDisabledDialog = false
                         val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
                         bluetoothEnableLauncher.launch(enableBtIntent)
-                    }
-                ) { Text(strings.enable) }
+                    }) { Text(strings.enable) }
             },
             dismissButton = {
                 TextButton(onClick = { showBluetoothDisabledDialog = false }) {
                     Text(strings.cancel)
                 }
-            }
-        )
+            })
     }
 
     if (showPermissionDialog) {
@@ -157,48 +154,38 @@ fun BluetoothDeviceScreen(navController: NavController) {
                             data = "package:${context.packageName}".toUri()
                         }
                         context.startActivity(intent)
-                    }
-                ) { Text(strings.settings) }
+                    }) { Text(strings.settings) }
             },
             dismissButton = {
                 TextButton(onClick = { showPermissionDialog = false }) {
                     Text(strings.cancel)
                 }
-            }
-        )
+            })
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(strings.bluetoothDevices) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = strings.back)
-                    }
-                },
-                actions = {
-                    IconButton(
-                        onClick = {
-                            if (bluetoothService.hasRequiredPermissions()) {
-                                if (bluetoothService.isBluetoothEnabled()) {
-                                    bluetoothService.startScan()
-                                } else {
-                                    showBluetoothDisabledDialog = true
-                                }
-                            } else {
-                                permissionsRequested = false
-                                requestPermissions(permissionLauncher)
-                            }
+    Scaffold(topBar = {
+        TopAppBar(title = { Text(strings.bluetoothDevices) }, navigationIcon = {
+            IconButton(onClick = { navController.navigateUp() }) {
+                Icon(Icons.Default.ArrowBack, contentDescription = strings.back)
+            }
+        }, actions = {
+            IconButton(
+                onClick = {
+                    if (bluetoothService.hasRequiredPermissions()) {
+                        if (bluetoothService.isBluetoothEnabled()) {
+                            bluetoothService.startScan()
+                        } else {
+                            showBluetoothDisabledDialog = true
                         }
-                    ) {
-                        Icon(Icons.Default.Refresh, contentDescription = strings.refresh)
+                    } else {
+                        permissionsRequested = false
+                        requestPermissions(permissionLauncher)
                     }
-                }
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { paddingValues ->
+                }) {
+                Icon(Icons.Default.Refresh, contentDescription = strings.refresh)
+            }
+        })
+    }, snackbarHost = { SnackbarHost(snackbarHostState) }) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -214,21 +201,17 @@ fun BluetoothDeviceScreen(navController: NavController) {
                     horizontalArrangement = Arrangement.Center
                 ) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        strokeWidth = 2.dp
+                        modifier = Modifier.size(24.dp), strokeWidth = 2.dp
                     )
                     Spacer(modifier = Modifier.padding(8.dp))
                     Text(
-                        text = strings.searchingDevices,
-                        style = MaterialTheme.typography.bodyLarge
+                        text = strings.searchingDevices, style = MaterialTheme.typography.bodyLarge
                     )
                 }
             }
 
             Text(
-                text = strings.availableDevices,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Medium
+                text = strings.availableDevices, fontSize = 20.sp, fontWeight = FontWeight.Medium
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -280,13 +263,12 @@ fun BluetoothDeviceScreen(navController: NavController) {
                         DeviceItem(
                             device = device,
                             isConnected = device.address == connectedDevice?.address,
-                            onConnect = { device -> 
+                            onConnect = { device ->
                                 scope.launch {
                                     bluetoothService.connectToDevice(device)
                                 }
                             },
-                            onDisconnect = { bluetoothService.disconnect() }
-                        )
+                            onDisconnect = { bluetoothService.disconnect() })
                     }
                 }
             }
@@ -310,8 +292,7 @@ fun DeviceItem(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 imageVector = if (isConnected) Icons.Default.BluetoothConnected else Icons.Default.Bluetooth,
@@ -321,19 +302,16 @@ fun DeviceItem(
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = device.name ?: "Unknown Device",
-                    fontWeight = FontWeight.Bold
+                    text = device.name ?: "Unknown Device", fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = device.address,
-                    style = MaterialTheme.typography.bodySmall
+                    text = device.address, style = MaterialTheme.typography.bodySmall
                 )
             }
             Button(
                 onClick = {
                     if (isConnected) onDisconnect() else onConnect(device)
-                },
-                colors = ButtonDefaults.buttonColors(
+                }, colors = ButtonDefaults.buttonColors(
                     containerColor = if (isConnected) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                 )
             ) {
@@ -352,8 +330,7 @@ private fun requestPermissions(launcher: ActivityResultLauncher<Array<String>>) 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         launcher.launch(
             arrayOf(
-                Manifest.permission.BLUETOOTH_SCAN,
-                Manifest.permission.BLUETOOTH_CONNECT
+                Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT
             )
         )
     } else {

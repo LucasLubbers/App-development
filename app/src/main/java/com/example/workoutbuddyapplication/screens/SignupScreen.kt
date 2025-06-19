@@ -29,55 +29,59 @@ import io.github.jan.supabase.gotrue.providers.builtin.Email
 import androidx.compose.ui.platform.LocalContext
 import com.example.workoutbuddyapplication.ui.theme.strings
 import com.example.workoutbuddyapplication.ui.theme.dutchStrings
+import com.example.workoutbuddyapplication.utils.EmailValidator
 
-suspend fun registerUser(email: String, password: String, name: String): Boolean = withContext(Dispatchers.IO) {
-    val client = OkHttpClient()
-    val json = JSONObject()
-    json.put("email", email)
-    json.put("password", password)
-    val userMeta = JSONObject()
-    userMeta.put("name", name)
-    json.put("data", userMeta)
+suspend fun registerUser(email: String, password: String, name: String): Boolean =
+    withContext(Dispatchers.IO) {
+        val client = OkHttpClient()
+        val json = JSONObject()
+        json.put("email", email)
+        json.put("password", password)
+        val userMeta = JSONObject()
+        userMeta.put("name", name)
+        json.put("data", userMeta)
 
-    val body = json.toString().toRequestBody("application/json".toMediaType())
-    val request = Request.Builder()
-        .url("https://attsgwsxdlblbqxnboqx.supabase.co/auth/v1/signup")
-        .post(body)
-        .addHeader("apikey", BuildConfig.SUPABASE_ANON_KEY)
-        .addHeader("Authorization", "Bearer ${BuildConfig.SUPABASE_ANON_KEY}")
-        .build()
+        val body = json.toString().toRequestBody("application/json".toMediaType())
+        val request = Request.Builder()
+            .url("https://attsgwsxdlblbqxnboqx.supabase.co/auth/v1/signup")
+            .post(body)
+            .addHeader("apikey", BuildConfig.SUPABASE_ANON_KEY)
+            .addHeader("Authorization", "Bearer ${BuildConfig.SUPABASE_ANON_KEY}")
+            .build()
 
-    try {
-        val response = client.newCall(request).execute()
-        val responseBody = response.body?.string()
-        if (response.isSuccessful) {
-            // Update the profile with name, language, and unit preferences
-            val updateJson = JSONObject()
-            updateJson.put("name", name)
-            updateJson.put("language", "nl") // Default to Dutch
-            updateJson.put("unit_system", "metric") // Default to metric
-            val updateBody = updateJson.toString().toRequestBody("application/json".toMediaType())
-            val updateRequest = Request.Builder()
-                .url("https://attsgwsxdlblbqxnboqx.supabase.co/rest/v1/profiles?email=eq.$email")
-                .patch(updateBody)
-                .addHeader("apikey", BuildConfig.SUPABASE_ANON_KEY)
-                .addHeader("Authorization", "Bearer ${BuildConfig.SUPABASE_ANON_KEY}")
-                .addHeader("Content-Type", "application/json")
-                .build()
-            val updateResponse = client.newCall(updateRequest).execute()
-            if (!updateResponse.isSuccessful) {
-                println("Failed to update profile: ${updateResponse.body?.string()}")
+        try {
+            val response = client.newCall(request).execute()
+            val responseBody = response.body?.string()
+            if (response.isSuccessful) {
+                // Update the profile with name, language, and unit preferences
+                val updateJson = JSONObject()
+                updateJson.put("name", name)
+                updateJson.put("language", "nl") // Default to Dutch
+                updateJson.put("unit_system", "metric") // Default to metric
+                val updateBody =
+                    updateJson.toString().toRequestBody("application/json".toMediaType())
+                val updateRequest = Request.Builder()
+                    .url("https://attsgwsxdlblbqxnboqx.supabase.co/rest/v1/profiles?email=eq.$email")
+                    .patch(updateBody)
+                    .addHeader("apikey", BuildConfig.SUPABASE_ANON_KEY)
+                    .addHeader("Authorization", "Bearer ${BuildConfig.SUPABASE_ANON_KEY}")
+                    .addHeader("Content-Type", "application/json")
+                    .build()
+                val updateResponse = client.newCall(updateRequest).execute()
+                if (!updateResponse.isSuccessful) {
+                    println("Failed to update profile: ${updateResponse.body?.string()}")
+                }
+            } else {
+                println("Supabase signup error: $responseBody")
             }
-        } else {
-            println("Supabase signup error: $responseBody")
+            response.isSuccessful
+        } catch (e: Exception) {
+            e.printStackTrace()
+            println("Supabase signup exception: ${e.message}")
+            false
         }
-        response.isSuccessful
-    } catch (e: Exception) {
-        e.printStackTrace()
-        println("Supabase signup exception: ${e.message}")
-        false
     }
-}
+
 
 @Composable
 fun SignupScreen(navController: NavController) {
@@ -90,6 +94,7 @@ fun SignupScreen(navController: NavController) {
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
     val strings = strings()
+    val emailValidator = remember { EmailValidator() }
 
     Column(
         modifier = Modifier
@@ -165,6 +170,10 @@ fun SignupScreen(navController: NavController) {
             onClick = {
                 if (password != confirmPassword) {
                     errorMessage = "Wachtwoorden komen niet overeen"
+                    return@Button
+                }
+                if (!emailValidator.isValid(email)) {
+                    errorMessage = "Ongeldig e-mailadres"
                     return@Button
                 }
                 coroutineScope.launch {
