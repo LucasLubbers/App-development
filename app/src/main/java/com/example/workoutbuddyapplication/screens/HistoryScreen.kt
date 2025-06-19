@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,6 +32,8 @@ import java.time.format.TextStyle
 import java.util.Locale
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.workoutbuddyapplication.navigation.Screen
+import com.example.workoutbuddyapplication.ui.theme.strings
 import com.example.workoutbuddyapplication.viewmodel.HistoryViewModel
 
 suspend fun fetchWorkouts(userId: String): List<Workout> = withContext(Dispatchers.IO) {
@@ -68,6 +71,7 @@ suspend fun fetchWorkouts(userId: String): List<Workout> = withContext(Dispatche
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun HistoryScreen(navController: NavController, selectedLanguage: String) {
@@ -116,6 +120,19 @@ fun HistoryScreen(navController: NavController, selectedLanguage: String) {
     }
 
     Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Workout Geschiedenis") },
+                actions = {
+                    IconButton(onClick = { navController.navigate(Screen.Settings.route) }) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = strings().settings
+                        )
+                    }
+                }
+            )
+        },
         bottomBar = {
             BottomNavBar(
                 selectedTabIndex = selectedTabIndex,
@@ -130,16 +147,10 @@ fun HistoryScreen(navController: NavController, selectedLanguage: String) {
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
-            Text(
-                text = "Workout Geschiedenis",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold
-            )
-
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 16.dp, top = 16.dp),
+                    .padding(bottom = 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
