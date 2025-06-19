@@ -30,6 +30,7 @@ import java.time.format.TextStyle
 import java.util.Locale
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.workoutbuddyapplication.components.CalendarMonthViewStyled
 import com.example.workoutbuddyapplication.navigation.Screen
 import com.example.workoutbuddyapplication.ui.theme.strings
 import com.example.workoutbuddyapplication.viewmodel.HistoryViewModel
