@@ -38,7 +38,6 @@ import com.example.workoutbuddyapplication.ui.theme.toUnitSystem
 import com.example.workoutbuddyapplication.utils.UnitConverter
 import com.example.workoutbuddyapplication.viewmodel.RunningWorkoutViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlinx.coroutines.launch
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -83,7 +82,6 @@ fun RunningWorkoutScreen(navController: NavController) {
     LaunchedEffect(speed) { speedData.add(speed.toFloat()) }
     LaunchedEffect(Unit) { session.start() }
 
-    // Permissions
     var hasLocationPermission by remember { mutableStateOf(false) }
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()

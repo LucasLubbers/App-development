@@ -63,8 +63,4 @@ class StrengthSession : WorkoutSession {
     override fun setTargetDistance(target: Double) {
         // Not used for strength workouts
     }
-
-    fun addExerciseCalories(caloriesToAdd: Int) {
-        _calories.value += caloriesToAdd
-    }
 }
