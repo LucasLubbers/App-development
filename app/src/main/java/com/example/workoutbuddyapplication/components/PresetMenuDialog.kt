@@ -29,7 +29,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.workoutbuddyapplication.screens.AvailableExercise
 import com.example.workoutbuddyapplication.screens.Exercise
-import com.example.workoutbuddyapplication.screens.createWorkoutPresets
 import com.example.workoutbuddyapplication.ui.theme.UnitSystem
 import com.example.workoutbuddyapplication.ui.theme.strings
 

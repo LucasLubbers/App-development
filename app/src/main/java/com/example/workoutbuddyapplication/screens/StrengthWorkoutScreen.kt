@@ -30,15 +30,14 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.workoutbuddyapplication.components.*
-import com.example.workoutbuddyapplication.data.SupabaseClient
 import com.example.workoutbuddyapplication.models.*
 import com.example.workoutbuddyapplication.navigation.Screen
 import com.example.workoutbuddyapplication.ui.theme.*
-import com.example.workoutbuddyapplication.workout.StrengthSession
-import io.github.jan.supabase.gotrue.auth
+import com.example.workoutbuddyapplication.viewmodels.StrengthWorkoutViewModel
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -66,14 +65,17 @@ data class AvailableExercise(
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun StrengthWorkoutScreen(navController: NavController) {
+fun StrengthWorkoutScreen(
+    navController: NavController,
+    viewModel: StrengthWorkoutViewModel = viewModel()
+) {
     val strings = strings()
     val context = LocalContext.current
     val preferencesManager = remember { UserPreferencesManager(context) }
     val selectedUnitSystem by preferencesManager.selectedUnitSystem.collectAsState(initial = "metric")
     val unitSystem = selectedUnitSystem.toUnitSystem()
 
-    val session = remember { StrengthSession() }
+    val session = viewModel.session
     val elapsedTime by session.elapsedTime.collectAsState()
 
     var currentExerciseForDevice by remember { mutableStateOf<Exercise?>(null) }
@@ -91,8 +93,10 @@ fun StrengthWorkoutScreen(navController: NavController) {
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
 
-    var isSaving by remember { mutableStateOf(false) }
-    var saveError by remember { mutableStateOf<String?>(null) }
+    val isSaving by viewModel.isSaving.collectAsState()
+    val saveError by viewModel.saveError.collectAsState()
+    val workoutNotes by viewModel.workoutNotes.collectAsState()
+
     val coroutineScope = rememberCoroutineScope()
 
     var hasAudioPermission by remember {
@@ -123,7 +127,6 @@ fun StrengthWorkoutScreen(navController: NavController) {
     var selectedExerciseName by remember { mutableStateOf<String?>(null) }
 
     var showNotesDialog by remember { mutableStateOf(false) }
-    var workoutNotes by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) { session.start() }
 
@@ -136,7 +139,7 @@ fun StrengthWorkoutScreen(navController: NavController) {
     LaunchedEffect(key1 = true) {
         coroutineScope.launch {
             try {
-                val exerciseDTOs = SupabaseClient.client.postgrest
+                val exerciseDTOs = com.example.workoutbuddyapplication.data.SupabaseClient.client.postgrest
                     .from("exercises")
                     .select()
                     .decodeList<ExerciseDTO>()
@@ -416,7 +419,7 @@ fun StrengthWorkoutScreen(navController: NavController) {
                     text = {
                         OutlinedTextField(
                             value = workoutNotes,
-                            onValueChange = { workoutNotes = it },
+                            onValueChange = { viewModel.setWorkoutNotes(it) },
                             label = { Text("Notes") }
                         )
                     },
@@ -424,40 +427,13 @@ fun StrengthWorkoutScreen(navController: NavController) {
                         Button(
                             onClick = {
                                 showNotesDialog = false
-                                isSaving = true
-                                saveError = null
-                                val durationMinutes = (elapsedTime / 60000).toInt()
-                                val dateString = java.time.LocalDate.now().toString()
-                                coroutineScope.launch {
-                                    try {
-                                        val user = SupabaseClient.client.auth.currentUserOrNull()
-                                        if (user == null) {
-                                            saveError = "Gebruiker niet ingelogd"
-                                            isSaving = false
-                                            return@launch
-                                        }
-                                        val workout = Workout(
-                                            type = "STRENGTH",
-                                            date = dateString,
-                                            duration = durationMinutes,
-                                            distance = null,
-                                            notes = workoutNotes,
-                                            profileId = user.id
+                                viewModel.saveWorkout(elapsedTime) { duration, notes ->
+                                    navController.navigate(
+                                        Screen.StrengthWorkoutCompleted.createRoute(
+                                            duration = formatTime(elapsedTime),
+                                            notes = notes
                                         )
-                                        SupabaseClient.client.postgrest.from("workouts")
-                                            .insert(workout)
-                                        isSaving = false
-                                        session.stop()
-                                        navController.navigate(
-                                            Screen.StrengthWorkoutCompleted.createRoute(
-                                                duration = formatTime(elapsedTime),
-                                                notes = workoutNotes
-                                            )
-                                        )
-                                    } catch (e: Exception) {
-                                        saveError = e.message
-                                        isSaving = false
-                                    }
+                                    )
                                 }
                             }
                         ) { Text("Save") }
@@ -534,12 +510,12 @@ fun StrengthWorkoutScreen(navController: NavController) {
         LaunchedEffect(scannedQrValue) {
             isLoading = true
             try {
-                machine = SupabaseClient.client.postgrest
+                machine = com.example.workoutbuddyapplication.data.SupabaseClient.client.postgrest
                     .from("machines?id=eq.${scannedQrValue!!.toLong()}")
                     .select(columns = io.github.jan.supabase.postgrest.query.Columns.list("*"))
                     .decodeSingle<Machine>()
 
-                val exerciseResult = SupabaseClient.client.postgrest
+                val exerciseResult = com.example.workoutbuddyapplication.data.SupabaseClient.client.postgrest
                     .from("exercises?id=eq.${machine!!.exercise}")
                     .select(columns = io.github.jan.supabase.postgrest.query.Columns.list("name"))
                     .decodeSingle<Map<String, String>>()
@@ -723,112 +699,4 @@ fun StrengthWorkoutScreen(navController: NavController) {
             }
         }
     }
-}
-
-data class WorkoutPreset(
-    val name: String,
-    val exercises: List<Exercise>
-)
-
-fun createWorkoutPresets(
-    availableExercises: List<AvailableExercise>,
-    unitSystem: UnitSystem,
-    strings: StringResources
-): List<WorkoutPreset> {
-    val presets = mutableListOf<WorkoutPreset>()
-
-    val exercisesByMuscle = availableExercises.groupBy { it.muscleGroup.lowercase() }
-
-    val lightWeight = if (unitSystem == UnitSystem.IMPERIAL) 33.0 else 15.0
-    val mediumWeight = if (unitSystem == UnitSystem.IMPERIAL) 44.0 else 20.0
-    val heavyWeight = if (unitSystem == UnitSystem.IMPERIAL) 88.0 else 40.0
-
-    val pushMuscles = listOf("borst", "chest", "schouders", "shoulders", "armen", "arms", "triceps")
-    val pushExercises = exercisesByMuscle.filterKeys { muscle ->
-        pushMuscles.any { pushMuscle -> muscle.contains(pushMuscle, ignoreCase = true) }
-    }.values.flatten().take(4)
-
-    if (pushExercises.isNotEmpty()) {
-        presets.add(
-            WorkoutPreset(
-            name = strings.pushWorkout,
-            exercises = pushExercises.map { exercise ->
-                Exercise(
-                    name = exercise.name,
-                    muscleGroup = exercise.muscleGroup,
-                    sets = listOf(
-                        ExerciseSet(reps = 10, weight = mediumWeight),
-                        ExerciseSet(reps = 10, weight = mediumWeight),
-                        ExerciseSet(reps = 10, weight = mediumWeight)
-                    )
-                )
-            }
-        ))
-    }
-
-    val pullMuscles = listOf("rug", "back", "biceps", "bicep")
-    val pullExercises = exercisesByMuscle.filterKeys { muscle ->
-        pullMuscles.any { pullMuscle -> muscle.contains(pullMuscle, ignoreCase = true) }
-    }.values.flatten().take(4)
-
-    if (pullExercises.isNotEmpty()) {
-        presets.add(
-            WorkoutPreset(
-            name = strings.pullWorkout,
-            exercises = pullExercises.map { exercise ->
-                Exercise(
-                    name = exercise.name,
-                    muscleGroup = exercise.muscleGroup,
-                    sets = listOf(
-                        ExerciseSet(reps = 12, weight = lightWeight),
-                        ExerciseSet(reps = 12, weight = lightWeight),
-                        ExerciseSet(reps = 12, weight = lightWeight)
-                    )
-                )
-            }
-        ))
-    }
-
-    val legMuscles = listOf("benen", "legs", "leg", "quadriceps", "hamstring", "calves")
-    val legExercises = exercisesByMuscle.filterKeys { muscle ->
-        legMuscles.any { legMuscle -> muscle.contains(legMuscle, ignoreCase = true) }
-    }.values.flatten().take(4)
-
-    if (legExercises.isNotEmpty()) {
-        presets.add(
-            WorkoutPreset(
-            name = strings.legWorkout,
-            exercises = legExercises.map { exercise ->
-                Exercise(
-                    name = exercise.name,
-                    muscleGroup = exercise.muscleGroup,
-                    sets = listOf(
-                        ExerciseSet(reps = 12, weight = heavyWeight),
-                        ExerciseSet(reps = 12, weight = heavyWeight),
-                        ExerciseSet(reps = 10, weight = heavyWeight)
-                    )
-                )
-            }
-        ))
-    }
-
-    if (availableExercises.size >= 5) {
-        val fullBodyExercises = availableExercises.shuffled().take(5)
-        presets.add(
-            WorkoutPreset(
-            name = strings.fullBodyWorkout,
-            exercises = fullBodyExercises.map { exercise ->
-                Exercise(
-                    name = exercise.name,
-                    muscleGroup = exercise.muscleGroup,
-                    sets = listOf(
-                        ExerciseSet(reps = 10, weight = mediumWeight),
-                        ExerciseSet(reps = 10, weight = mediumWeight)
-                    )
-                )
-            }
-        ))
-    }
-
-    return presets
 }
