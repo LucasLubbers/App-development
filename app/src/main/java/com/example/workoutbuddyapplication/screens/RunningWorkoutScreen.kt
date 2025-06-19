@@ -183,7 +183,12 @@ fun RunningWorkoutScreen(navController: NavController) {
                     )
                     if (targetDistance > 0) {
                         Text(
-                            text = "Goal: ${UnitConverter.formatDistance(targetDistance, unitSystem)}",
+                            text = "Goal: ${
+                                UnitConverter.formatDistance(
+                                    targetDistance,
+                                    unitSystem
+                                )
+                            }",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -263,7 +268,12 @@ fun RunningWorkoutScreen(navController: NavController) {
                                 style = MaterialTheme.typography.bodySmall
                             )
                             Text(
-                                text = "${UnitConverter.formatDistance(targetDistance, unitSystem)}",
+                                text = "${
+                                    UnitConverter.formatDistance(
+                                        targetDistance,
+                                        unitSystem
+                                    )
+                                }",
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
@@ -322,6 +332,7 @@ fun RunningWorkoutScreen(navController: NavController) {
                                 }
                             }
                         }
+
                         1 -> {
                             val dataSize = speedData.size
                             if (dataSize > 0) {

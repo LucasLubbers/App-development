@@ -89,7 +89,6 @@ fun AddWorkoutScreen(navController: NavController) {
                         val workoutTypeName = when (workoutType) {
                             WorkoutType.RUNNING -> strings.running
                             WorkoutType.STRENGTH -> strings.strengthTraining
-                            WorkoutType.YOGA -> strings.yoga
                             else -> workoutType.displayName
                         }
                         Text(

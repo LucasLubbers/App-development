@@ -31,10 +31,6 @@ import java.time.LocalDate
 import java.time.Year
 import java.time.temporal.ChronoUnit
 import java.time.temporal.IsoFields
-import kotlin.compareTo
-import kotlin.div
-import kotlin.text.toDouble
-import kotlin.text.toLong
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -108,9 +104,8 @@ fun StatsScreen(navController: NavController) {
     val running = filteredWorkouts.count { it.workoutTypeEnum == WorkoutType.RUNNING }
     val cycling = filteredWorkouts.count { it.workoutTypeEnum == WorkoutType.CYCLING }
     val strength = filteredWorkouts.count { it.workoutTypeEnum == WorkoutType.STRENGTH }
-    val yoga = filteredWorkouts.count { it.workoutTypeEnum == WorkoutType.YOGA }
     val other = filteredWorkouts.count { it.workoutTypeEnum == WorkoutType.OTHER }
-    val totalForDist = running + cycling + strength + yoga + other
+    val totalForDist = running + cycling + strength + other
     fun percent(count: Int) = if (totalForDist > 0) (count * 100 / totalForDist) else 0
 
     Scaffold(
@@ -230,7 +225,6 @@ fun StatsScreen(navController: NavController) {
                         running = percent(running),
                         cycling = percent(cycling),
                         strength = percent(strength),
-                        yoga = percent(yoga),
                         other = percent(other)
                     )
                 }
@@ -493,15 +487,13 @@ fun StatsSummaryCard(title: String, value: String, subtitle: String, modifier: M
 }
 
 @Composable
-fun WorkoutTypeDistribution(running: Int, cycling: Int, strength: Int, yoga: Int, other: Int) {
+fun WorkoutTypeDistribution(running: Int, cycling: Int, strength: Int, other: Int) {
     Column {
         WorkoutTypeBar("Hardlopen", running, MaterialTheme.colorScheme.primary)
         Spacer(modifier = Modifier.height(8.dp))
         WorkoutTypeBar("Fietsen", cycling, MaterialTheme.colorScheme.primary)
         Spacer(modifier = Modifier.height(8.dp))
         WorkoutTypeBar("Krachttraining", strength, MaterialTheme.colorScheme.secondary)
-        Spacer(modifier = Modifier.height(8.dp))
-        WorkoutTypeBar("Yoga", yoga, MaterialTheme.colorScheme.tertiary)
         Spacer(modifier = Modifier.height(8.dp))
         WorkoutTypeBar("Overig", other, MaterialTheme.colorScheme.surfaceVariant)
     }

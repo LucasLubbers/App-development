@@ -77,7 +77,10 @@ class CyclingWorkoutViewModel(
                 session.stop()
                 onSuccess(
                     com.example.workoutbuddyapplication.screens.formatTime(elapsedTime),
-                    com.example.workoutbuddyapplication.utils.UnitConverter.formatDistance(distance, unitSystem),
+                    com.example.workoutbuddyapplication.utils.UnitConverter.formatDistance(
+                        distance,
+                        unitSystem
+                    ),
                     calories,
                     _workoutNotes.value
                 )

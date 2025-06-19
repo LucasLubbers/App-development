@@ -139,10 +139,11 @@ fun StrengthWorkoutScreen(
     LaunchedEffect(key1 = true) {
         coroutineScope.launch {
             try {
-                val exerciseDTOs = com.example.workoutbuddyapplication.data.SupabaseClient.client.postgrest
-                    .from("exercises")
-                    .select()
-                    .decodeList<ExerciseDTO>()
+                val exerciseDTOs =
+                    com.example.workoutbuddyapplication.data.SupabaseClient.client.postgrest
+                        .from("exercises")
+                        .select()
+                        .decodeList<ExerciseDTO>()
 
                 availableExercises = exerciseDTOs.map { dto ->
                     AvailableExercise(
@@ -515,10 +516,11 @@ fun StrengthWorkoutScreen(
                     .select(columns = io.github.jan.supabase.postgrest.query.Columns.list("*"))
                     .decodeSingle<Machine>()
 
-                val exerciseResult = com.example.workoutbuddyapplication.data.SupabaseClient.client.postgrest
-                    .from("exercises?id=eq.${machine!!.exercise}")
-                    .select(columns = io.github.jan.supabase.postgrest.query.Columns.list("name"))
-                    .decodeSingle<Map<String, String>>()
+                val exerciseResult =
+                    com.example.workoutbuddyapplication.data.SupabaseClient.client.postgrest
+                        .from("exercises?id=eq.${machine!!.exercise}")
+                        .select(columns = io.github.jan.supabase.postgrest.query.Columns.list("name"))
+                        .decodeSingle<Map<String, String>>()
                 exerciseName = exerciseResult["name"].toString()
             } catch (e: Exception) {
                 machine = null

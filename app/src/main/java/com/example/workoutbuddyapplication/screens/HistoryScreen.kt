@@ -10,8 +10,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -32,6 +30,8 @@ import java.time.Month
 import java.time.format.TextStyle
 import java.util.Locale
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.workoutbuddyapplication.viewmodel.HistoryViewModel
 
 suspend fun fetchWorkouts(userId: String): List<Workout> = withContext(Dispatchers.IO) {
     val client = OkHttpClient()
@@ -72,32 +72,32 @@ suspend fun fetchWorkouts(userId: String): List<Workout> = withContext(Dispatche
 @Composable
 fun HistoryScreen(navController: NavController, selectedLanguage: String) {
     val context = LocalContext.current
-    var workouts by remember { mutableStateOf<List<Workout>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(true) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var selectedTabIndex by remember { mutableStateOf(1) }
-    var showCalendarView by remember { mutableStateOf(false) }
-    var calendarMonth by remember { mutableStateOf(LocalDate.now().withDayOfMonth(1)) }
+    val viewModel: HistoryViewModel = viewModel(
+        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                @Suppress("UNCHECKED_CAST")
+                return HistoryViewModel() as T
+            }
+        }
+    )
 
-    // Filter state
+    val workouts by viewModel.workouts.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val error by viewModel.error.collectAsState()
+    val selectedType by viewModel.selectedType.collectAsState()
+    val showCalendarView by viewModel.showCalendarView.collectAsState()
+    val calendarMonth by viewModel.calendarMonth.collectAsState()
+
+    var selectedTabIndex by remember { mutableStateOf(1) }
     var expanded by remember { mutableStateOf(false) }
-    var selectedType by remember { mutableStateOf<WorkoutType?>(null) }
 
     LaunchedEffect(Unit) {
-        isLoading = true
-        error = null
         val userId = getUserId(context)
         if (userId != null) {
-            val result = fetchWorkouts(userId)
-            if (result.isNotEmpty()) {
-                workouts = result
-            } else {
-                error = "No workouts found or failed to fetch."
-            }
+            viewModel.fetchWorkouts(userId, ::fetchWorkouts)
         } else {
-            error = "User not logged in."
+            viewModel.setSelectedType(null)
         }
-        isLoading = false
     }
 
     val filteredWorkouts = selectedType?.let { type ->
@@ -136,7 +136,6 @@ fun HistoryScreen(navController: NavController, selectedLanguage: String) {
                 fontWeight = FontWeight.Bold
             )
 
-            // Row with calendar/list toggle and type selection
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -155,7 +154,7 @@ fun HistoryScreen(navController: NavController, selectedLanguage: String) {
                         DropdownMenuItem(
                             text = { Text("Alle types") },
                             onClick = {
-                                selectedType = null
+                                viewModel.setSelectedType(null)
                                 expanded = false
                             }
                         )
@@ -163,7 +162,7 @@ fun HistoryScreen(navController: NavController, selectedLanguage: String) {
                             DropdownMenuItem(
                                 text = { Text(type.displayName) },
                                 onClick = {
-                                    selectedType = type
+                                    viewModel.setSelectedType(type)
                                     expanded = false
                                 }
                             )
@@ -171,7 +170,7 @@ fun HistoryScreen(navController: NavController, selectedLanguage: String) {
                     }
                 }
 
-                Button(onClick = { showCalendarView = !showCalendarView }) {
+                Button(onClick = { viewModel.toggleCalendarView() }) {
                     Text(if (showCalendarView) "Lijst" else "Kalender")
                 }
             }
@@ -191,16 +190,18 @@ fun HistoryScreen(navController: NavController, selectedLanguage: String) {
 
                 else -> {
                     if (showCalendarView) {
-                        // Calendar navigation row
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             IconButton(onClick = {
-                                calendarMonth = calendarMonth.minusMonths(1)
+                                viewModel.setCalendarMonth(calendarMonth.minusMonths(1))
                             }) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Previous month")
+                                Icon(
+                                    Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Previous month"
+                                )
                             }
                             Text(
                                 text = "${
@@ -212,13 +213,15 @@ fun HistoryScreen(navController: NavController, selectedLanguage: String) {
                                 style = MaterialTheme.typography.titleMedium
                             )
                             IconButton(onClick = {
-                                calendarMonth = calendarMonth.plusMonths(1)
+                                viewModel.setCalendarMonth(calendarMonth.plusMonths(1))
                             }) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next month")
+                                Icon(
+                                    Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = "Next month"
+                                )
                             }
                         }
                         Spacer(modifier = Modifier.height(8.dp))
-                        // Show calendar with workout days highlighted
                         val monthWorkouts = filteredWorkouts.filter {
                             val date = LocalDate.parse(it.date)
                             date.year == calendarMonth.year && date.monthValue == calendarMonth.monthValue
@@ -249,7 +252,11 @@ fun HistoryScreen(navController: NavController, selectedLanguage: String) {
                                 items(monthWorkouts) { workout ->
                                     WorkoutItem(
                                         workout = workout,
-                                        onClick = { navController.navigate("workoutDetail/${workout.id}/1") }
+                                        onClick = if (workout.workoutTypeEnum == WorkoutType.STRENGTH) {
+                                            { navController.navigate("workoutDetail/${workout.id}/1") }
+                                        } else {
+                                            {}
+                                        }
                                     )
                                     Spacer(modifier = Modifier.height(8.dp))
                                 }

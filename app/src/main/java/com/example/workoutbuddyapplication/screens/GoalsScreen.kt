@@ -148,7 +148,7 @@ fun EditGoalDialog(
     // Filter goal types based on workout type
     val availableGoalTypes = when (selectedWorkoutType) {
         null -> emptyList()
-        WorkoutType.STRENGTH, WorkoutType.YOGA -> listOf(GoalType.COUNT, GoalType.TIME)
+        WorkoutType.STRENGTH -> listOf(GoalType.COUNT, GoalType.TIME)
         else -> listOf(GoalType.COUNT, GoalType.DISTANCE, GoalType.TIME, GoalType.CALORIES)
     }
 
@@ -367,7 +367,7 @@ fun AddGoalDialog(
     // Filter goal types based on workout type
     val availableGoalTypes = when (selectedWorkoutType) {
         null -> emptyList()
-        WorkoutType.STRENGTH, WorkoutType.YOGA -> listOf(GoalType.COUNT, GoalType.TIME)
+        WorkoutType.STRENGTH -> listOf(GoalType.COUNT, GoalType.TIME)
         else -> listOf(GoalType.COUNT, GoalType.DISTANCE, GoalType.TIME, GoalType.CALORIES)
     }
 
