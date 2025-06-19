@@ -45,7 +45,8 @@ class WorkoutRepositoryImpl : WorkoutRepository {
                 id = obj.getInt("id"),
                 type = obj.getString("type"),
                 date = obj.getString("date"),
-                duration = if (obj.get("duration") is String) obj.getString("duration").toInt() else obj.getInt("duration"),
+                duration = if (obj.get("duration") is String) obj.getString("duration")
+                    .toInt() else obj.getInt("duration"),
                 distance = if (obj.isNull("distance")) null else {
                     when (val distanceValue = obj.get("distance")) {
                         is String -> distanceValue.toDouble()
@@ -63,48 +64,49 @@ class WorkoutRepositoryImpl : WorkoutRepository {
         }
     }
 
-    private suspend fun fetchExercisesForWorkout(workoutId: Int): List<WorkoutExerciseWithDetails> = withContext(Dispatchers.IO) {
-        val client = OkHttpClient()
-        val request = Request.Builder()
-            .url("https://attsgwsxdlblbqxnboqx.supabase.co/rest/v1/workout_exercises?workout_id=eq.$workoutId&select=*,exercise:exercises(*)")
-            .addHeader("apikey", BuildConfig.SUPABASE_ANON_KEY)
-            .addHeader("Authorization", "Bearer ${BuildConfig.SUPABASE_ANON_KEY}")
-            .build()
-        val response = client.newCall(request).execute()
-        val responseBody = response.body?.string() ?: return@withContext emptyList()
-        val jsonArray = JSONArray(responseBody)
-        val result = mutableListOf<WorkoutExerciseWithDetails>()
-        for (i in 0 until jsonArray.length()) {
-            val obj = jsonArray.getJSONObject(i)
-            val exerciseObj = obj.getJSONObject("exercise")
-            val exercise = Exercise(
-                name = exerciseObj.getString("name"),
-                force = exerciseObj.optString("force", ""),
-                level = exerciseObj.optString("level", ""),
-                mechanic = exerciseObj.optString("mechanic", ""),
-                equipment = exerciseObj.optString("equipment", ""),
-                primaryMuscles = exerciseObj.optJSONArray("primary_muscles")?.let { arr ->
-                    List(arr.length()) { arr.getString(it) }
-                } ?: emptyList(),
-                secondaryMuscles = exerciseObj.optJSONArray("secondary_muscles")?.let { arr ->
-                    List(arr.length()) { arr.getString(it) }
-                } ?: emptyList(),
-                instructions = exerciseObj.optJSONArray("instructions")?.let { arr ->
-                    List(arr.length()) { arr.getString(it) }
-                } ?: emptyList(),
-                category = exerciseObj.optString("category", "")
-            )
-            result.add(
-                WorkoutExerciseWithDetails(
-                    exercise = exercise,
-                    sets = if (obj.isNull("sets")) null else obj.getInt("sets"),
-                    reps = if (obj.isNull("reps")) null else obj.getInt("reps"),
-                    weight = if (obj.isNull("weight")) null else obj.getDouble("weight"),
-                    notes = if (obj.isNull("notes")) null else obj.getString("notes"),
-                    restTime = if (obj.isNull("rest_time")) null else obj.getInt("rest_time")
+    private suspend fun fetchExercisesForWorkout(workoutId: Int): List<WorkoutExerciseWithDetails> =
+        withContext(Dispatchers.IO) {
+            val client = OkHttpClient()
+            val request = Request.Builder()
+                .url("https://attsgwsxdlblbqxnboqx.supabase.co/rest/v1/workout_exercises?workout_id=eq.$workoutId&select=*,exercise:exercises(*)")
+                .addHeader("apikey", BuildConfig.SUPABASE_ANON_KEY)
+                .addHeader("Authorization", "Bearer ${BuildConfig.SUPABASE_ANON_KEY}")
+                .build()
+            val response = client.newCall(request).execute()
+            val responseBody = response.body?.string() ?: return@withContext emptyList()
+            val jsonArray = JSONArray(responseBody)
+            val result = mutableListOf<WorkoutExerciseWithDetails>()
+            for (i in 0 until jsonArray.length()) {
+                val obj = jsonArray.getJSONObject(i)
+                val exerciseObj = obj.getJSONObject("exercise")
+                val exercise = Exercise(
+                    name = exerciseObj.getString("name"),
+                    force = exerciseObj.optString("force", ""),
+                    level = exerciseObj.optString("level", ""),
+                    mechanic = exerciseObj.optString("mechanic", ""),
+                    equipment = exerciseObj.optString("equipment", ""),
+                    primaryMuscles = exerciseObj.optJSONArray("primary_muscles")?.let { arr ->
+                        List(arr.length()) { arr.getString(it) }
+                    } ?: emptyList(),
+                    secondaryMuscles = exerciseObj.optJSONArray("secondary_muscles")?.let { arr ->
+                        List(arr.length()) { arr.getString(it) }
+                    } ?: emptyList(),
+                    instructions = exerciseObj.optJSONArray("instructions")?.let { arr ->
+                        List(arr.length()) { arr.getString(it) }
+                    } ?: emptyList(),
+                    category = exerciseObj.optString("category", "")
                 )
-            )
+                result.add(
+                    WorkoutExerciseWithDetails(
+                        exercise = exercise,
+                        sets = if (obj.isNull("sets")) null else obj.getInt("sets"),
+                        reps = if (obj.isNull("reps")) null else obj.getInt("reps"),
+                        weight = if (obj.isNull("weight")) null else obj.getDouble("weight"),
+                        notes = if (obj.isNull("notes")) null else obj.getString("notes"),
+                        restTime = if (obj.isNull("rest_time")) null else obj.getInt("rest_time")
+                    )
+                )
+            }
+            result
         }
-        result
-    }
 }
