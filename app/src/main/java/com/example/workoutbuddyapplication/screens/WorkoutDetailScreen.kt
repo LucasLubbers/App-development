@@ -1,7 +1,6 @@
 package com.example.workoutbuddyapplication.screens
 
 import com.example.workoutbuddyapplication.models.Workout
-import com.example.workoutbuddyapplication.models.WorkoutType
 import androidx.compose.foundation.clickable
 import androidx.compose.runtime.*
 import androidx.compose.material3.*
@@ -16,112 +15,16 @@ import androidx.compose.material.icons.filled.SelfImprovement
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import kotlinx.coroutines.withContext
-import com.example.workoutbuddyapplication.BuildConfig
-import kotlinx.coroutines.Dispatchers
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import org.json.JSONArray
-import java.time.LocalDate
-import com.example.workoutbuddyapplication.models.Exercise
 import androidx.compose.ui.Alignment
 import com.example.workoutbuddyapplication.components.BottomNavBar
+import com.example.workoutbuddyapplication.data.WorkoutRepositoryImpl
 import com.example.workoutbuddyapplication.models.WorkoutExerciseWithDetails
 import com.example.workoutbuddyapplication.navigation.Screen
 import com.example.workoutbuddyapplication.ui.theme.strings
-
-suspend fun fetchWorkoutById(workoutId: Int): Workout? = withContext(Dispatchers.IO) {
-    val client = OkHttpClient()
-    val request = Request.Builder()
-        .url("https://attsgwsxdlblbqxnboqx.supabase.co/rest/v1/workouts?id=eq.$workoutId&select=*")
-        .addHeader("apikey", BuildConfig.SUPABASE_ANON_KEY)
-        .addHeader("Authorization", "Bearer ${BuildConfig.SUPABASE_ANON_KEY}")
-        .build()
-    
-    try {
-        val response = client.newCall(request).execute()
-        val responseBody = response.body?.string() ?: return@withContext null
-        
-        if (!response.isSuccessful) {
-            println("Error fetching workout: HTTP ${response.code}")
-            return@withContext null
-        }
-        
-        val jsonArray = JSONArray(responseBody)
-        if (jsonArray.length() == 0) {
-            println("No workout found with id: $workoutId")
-            return@withContext null
-        }
-        
-        val obj = jsonArray.getJSONObject(0)
-        println("Fetched workout data: $obj")
-        
-        Workout(
-            id = obj.getInt("id"),
-            type = obj.getString("type"),
-            date = obj.getString("date"),
-            duration = if (obj.get("duration") is String) obj.getString("duration").toInt() else obj.getInt("duration"),
-            distance = if (obj.isNull("distance")) null else {
-                when (val distanceValue = obj.get("distance")) {
-                    is String -> distanceValue.toDouble()
-                    is Number -> distanceValue.toDouble()
-                    else -> null
-                }
-            },
-            notes = if (obj.isNull("notes")) null else obj.getString("notes"),
-            profileId = if (obj.isNull("profile_id")) null else obj.getString("profile_id")
-        )
-    } catch (e: Exception) {
-        println("Error parsing workout data: ${e.message}")
-        e.printStackTrace()
-        null
-    }
-}
-
-suspend fun fetchExercisesForWorkout(workoutId: Int): List<WorkoutExerciseWithDetails> = withContext(Dispatchers.IO) {
-    val client = OkHttpClient()
-    val request = Request.Builder()
-        .url("https://attsgwsxdlblbqxnboqx.supabase.co/rest/v1/workout_exercises?workout_id=eq.$workoutId&select=*,exercise:exercises(*)")
-        .addHeader("apikey", BuildConfig.SUPABASE_ANON_KEY)
-        .addHeader("Authorization", "Bearer ${BuildConfig.SUPABASE_ANON_KEY}")
-        .build()
-    val response = client.newCall(request).execute()
-    val responseBody = response.body?.string() ?: return@withContext emptyList()
-    val jsonArray = JSONArray(responseBody)
-    val result = mutableListOf<WorkoutExerciseWithDetails>()
-    for (i in 0 until jsonArray.length()) {
-        val obj = jsonArray.getJSONObject(i)
-        val exerciseObj = obj.getJSONObject("exercise")
-        val exercise = Exercise(
-            name = exerciseObj.getString("name"),
-            force = exerciseObj.optString("force", ""),
-            level = exerciseObj.optString("level", ""),
-            mechanic = exerciseObj.optString("mechanic", ""),
-            equipment = exerciseObj.optString("equipment", ""),
-            primaryMuscles = exerciseObj.optJSONArray("primary_muscles")?.let { arr ->
-                List(arr.length()) { arr.getString(it) }
-            } ?: emptyList(),
-            secondaryMuscles = exerciseObj.optJSONArray("secondary_muscles")?.let { arr ->
-                List(arr.length()) { arr.getString(it) }
-            } ?: emptyList(),
-            instructions = exerciseObj.optJSONArray("instructions")?.let { arr ->
-                List(arr.length()) { arr.getString(it) }
-            } ?: emptyList(),
-            category = exerciseObj.optString("category", "")
-        )
-        result.add(
-            WorkoutExerciseWithDetails(
-                exercise = exercise,
-                sets = if (obj.isNull("sets")) null else obj.getInt("sets"),
-                reps = if (obj.isNull("reps")) null else obj.getInt("reps"),
-                weight = if (obj.isNull("weight")) null else obj.getDouble("weight"),
-                notes = if (obj.isNull("notes")) null else obj.getString("notes"),
-                restTime = if (obj.isNull("rest_time")) null else obj.getInt("rest_time")
-            )
-        )
-    }
-    result
-}
+import com.example.workoutbuddyapplication.viewmodel.WorkoutDetailViewModel
+import com.example.workoutbuddyapplication.viewmodel.WorkoutDetailViewModelFactory
+import com.example.workoutbuddyapplication.data.SupabaseClient
+import io.github.jan.supabase.gotrue.auth
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -131,22 +34,30 @@ fun WorkoutDetailScreen(
     selectedTabIndex: Int
 ) {
     val strings = strings()
-    var workout by remember { mutableStateOf<Workout?>(null) }
-    var exercises by remember { mutableStateOf<List<WorkoutExerciseWithDetails>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(true) }
-    var error by remember { mutableStateOf<String?>(null) }
+    val user = remember { SupabaseClient.client.auth.currentUserOrNull() }
+    if (user == null) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("You are not logged in.")
+        }
+        return
+    }
+    val profileId = user.id
+
+    val viewModel: WorkoutDetailViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
+        factory = WorkoutDetailViewModelFactory(WorkoutRepositoryImpl(profileId))
+    )
+
+    val workout by viewModel.workout.collectAsState()
+    val exercises by viewModel.exercises.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val error by viewModel.error.collectAsState()
     var currentTabIndex by remember { mutableIntStateOf(selectedTabIndex) }
 
     LaunchedEffect(workoutId) {
-        isLoading = true
-        error = null
-        try {
-            workout = fetchWorkoutById(workoutId)
-            exercises = fetchExercisesForWorkout(workoutId)
-        } catch (e: Exception) {
-            error = strings.failedToLoadWorkoutDetails
-        }
-        isLoading = false
+        viewModel.loadWorkoutDetails(workoutId, strings.failedToLoadWorkoutDetails)
     }
 
     Scaffold(
@@ -155,7 +66,10 @@ fun WorkoutDetailScreen(
                 title = { Text(strings.workoutDetails) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
                     }
                 }
             )
@@ -178,43 +92,58 @@ fun WorkoutDetailScreen(
                 error != null -> Text(error!!, color = MaterialTheme.colorScheme.error)
                 workout == null -> Text(strings.workoutNotFound)
                 else -> {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 16.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = workout!!.workoutTypeEnum.icon,
-                                contentDescription = workout!!.workoutTypeEnum.displayName,
-                                modifier = Modifier.size(40.dp)
-                            )
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Column {
-                                Text(
-                                    text = workout!!.workoutTypeEnum.displayName,
-                                    style = MaterialTheme.typography.titleLarge
-                                )
-                                Text("${strings.date}: ${workout!!.date}")
-                                Text("${strings.duration}: ${workout!!.duration} ${strings.minutes}")
-                                workout!!.distance?.let { Text("${strings.distance}: $it km") }
-                                workout!!.notes?.let { Text("${strings.notes}: $it") }
-                            }
-                        }
-                    }
-                    Text("${strings.exercises}:", style = MaterialTheme.typography.titleMedium)
-                    LazyColumn {
-                        items(exercises) { item ->
-                            WorkoutExerciseDetailCard(item, navController)
-                            Spacer(modifier = Modifier.height(8.dp))
-                        }
-                    }
+                    WorkoutDetailContent(
+                        workout = workout!!,
+                        exercises = exercises,
+                        navController = navController
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun WorkoutDetailContent(
+    workout: Workout,
+    exercises: List<WorkoutExerciseWithDetails>,
+    navController: NavController
+) {
+    val strings = strings()
+    Column {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(bottom = 16.dp)
+        ) {
+            Icon(
+                imageVector = when (workout.type) {
+                    "RUNNING" -> Icons.AutoMirrored.Filled.DirectionsRun
+                    "STRENGTH" -> Icons.Filled.FitnessCenter
+                    else -> Icons.Filled.SelfImprovement
+                },
+                contentDescription = null,
+                modifier = Modifier.size(32.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = workout.type,
+                style = MaterialTheme.typography.titleLarge
+            )
+        }
+        Text("${strings.date}: ${workout.date}")
+        Text("${strings.duration}: ${workout.duration} min")
+        workout.distance?.let { Text("${strings.distance}: $it km") }
+        workout.notes?.takeIf { it.isNotBlank() }?.let { Text("${strings.notes}: $it") }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        if (exercises.isNotEmpty()) {
+            Text(strings.exercises, style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(8.dp))
+            LazyColumn {
+                items(exercises) { item ->
+                    WorkoutExerciseDetailCard(item, navController)
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
             }
         }

@@ -19,7 +19,6 @@ enum class GoalType(val displayName: String) {
     COUNT("Aantal"),
     DISTANCE("Afstand"),
     TIME("Tijd"),
-    CALORIES("Calorieën"),
     OTHER("Anders");
 
     companion object {

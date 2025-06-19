@@ -31,7 +31,6 @@ enum class WorkoutType(val displayName: String, val icon: ImageVector) {
     RUNNING("Hardlopen", Icons.AutoMirrored.Filled.DirectionsRun),
     CYCLING("Fietsen", Icons.AutoMirrored.Filled.DirectionsBike),
     STRENGTH("Krachttraining", Icons.Filled.FitnessCenter),
-    YOGA("Yoga", Icons.Filled.SelfImprovement),
     OTHER("Anders", Icons.Filled.QuestionMark);
 
     companion object {

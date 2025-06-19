@@ -33,8 +33,9 @@ import com.example.workoutbuddyapplication.ui.theme.strings
 fun WorkoutCompletedScreen(
     navController: NavController,
     duration: String,
-    workoutDistance: String,
-    calories: Int,
+    workoutDistance: String? = null,
+    calories: Int? = null,
+    notes: String? = null
 ) {
     val strings = strings()
     Column(
@@ -100,34 +101,53 @@ fun WorkoutCompletedScreen(
                         )
                     }
 
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = strings.distance,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            text = workoutDistance,
-                            fontWeight = FontWeight.Bold
-                        )
+                    // Only show distance if not null
+                    if (workoutDistance != null) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = strings.distance,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Text(
+                                text = workoutDistance,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = strings.calories,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            text = "$calories kcal",
-                            fontWeight = FontWeight.Bold
-                        )
+                if (calories != null) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = strings.calories,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Text(
+                                text = "$calories kcal",
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                if (!notes.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Notes:",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = notes,
+                        fontWeight = FontWeight.Normal
+                    )
                 }
             }
         }

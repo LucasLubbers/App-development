@@ -1,6 +1,7 @@
-package com.example.workoutbuddyapplication.screens
+package com.example.workoutbuddyapplication.components
 
 import android.Manifest
+import android.content.pm.PackageManager
 import android.util.Size
 import android.view.ViewGroup
 import androidx.camera.core.CameraSelector
@@ -22,14 +23,16 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.OptIn
 import androidx.camera.core.ExperimentalGetImage
+import androidx.camera.core.Preview
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
+import com.google.mlkit.vision.barcode.BarcodeScanner
 import com.google.mlkit.vision.barcode.common.Barcode
 
 @Composable
-fun QRScannerComposable(
+fun QRScanner(
     onQrCodeScanned: (String) -> Unit,
     onClose: () -> Unit
 ) {
@@ -40,7 +43,7 @@ fun QRScannerComposable(
             ContextCompat.checkSelfPermission(
                 context,
                 Manifest.permission.CAMERA
-            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            ) == PackageManager.PERMISSION_GRANTED
         )
     }
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
@@ -74,7 +77,7 @@ fun QRScannerComposable(
                         val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
                         cameraProviderFuture.addListener({
                             val cameraProvider = cameraProviderFuture.get()
-                            val preview = androidx.camera.core.Preview.Builder()
+                            val preview = Preview.Builder()
                                 .build()
                                 .also { it.setSurfaceProvider(previewView.surfaceProvider) }
 
@@ -84,9 +87,15 @@ fun QRScannerComposable(
                                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                                 .build()
                                 .also {
-                                    it.setAnalyzer(ContextCompat.getMainExecutor(ctx), { imageProxy: ImageProxy ->
-                                        processImageProxy(barcodeScanner, imageProxy, onQrCodeScanned)
-                                    })
+                                    it.setAnalyzer(
+                                        ContextCompat.getMainExecutor(ctx),
+                                        { imageProxy: ImageProxy ->
+                                            processImageProxy(
+                                                barcodeScanner,
+                                                imageProxy,
+                                                onQrCodeScanned
+                                            )
+                                        })
                                 }
 
                             try {
@@ -97,7 +106,8 @@ fun QRScannerComposable(
                                     preview,
                                     imageAnalyzer
                                 )
-                            } catch (_: Exception) {}
+                            } catch (_: Exception) {
+                            }
                         }, ContextCompat.getMainExecutor(ctx))
                         previewView
                     },
@@ -120,7 +130,7 @@ fun QRScannerComposable(
 
 @OptIn(ExperimentalGetImage::class)
 private fun processImageProxy(
-    scanner: com.google.mlkit.vision.barcode.BarcodeScanner,
+    scanner: BarcodeScanner,
     imageProxy: ImageProxy,
     onQrCodeScanned: (String) -> Unit
 ) {

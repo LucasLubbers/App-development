@@ -31,6 +31,7 @@ import com.example.workoutbuddyapplication.ui.theme.UnitSystem
 import com.example.workoutbuddyapplication.utils.UnitConverter
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.platform.LocalContext
+import com.example.workoutbuddyapplication.components.StatCard
 import com.example.workoutbuddyapplication.ui.theme.strings
 import com.example.workoutbuddyapplication.ui.theme.UserPreferencesManager
 import com.example.workoutbuddyapplication.ui.theme.toUnitSystem

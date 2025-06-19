@@ -1,8 +1,14 @@
 package com.example.workoutbuddyapplication.screens
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -12,146 +18,76 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.workoutbuddyapplication.R
 import com.example.workoutbuddyapplication.components.BottomNavBar
-import com.example.workoutbuddyapplication.data.SupabaseClient
-import io.github.jan.supabase.postgrest.from
-import io.github.jan.supabase.postgrest.query.Columns
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.ui.text.style.TextAlign
-import kotlinx.coroutines.launch
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import com.example.workoutbuddyapplication.ui.theme.UserPreferencesManager
-import io.github.jan.supabase.gotrue.auth
-import io.github.jan.supabase.storage.storage
-
-@Serializable
-data class UserProfile(
-    val name: String?,
-    val email: String,
-    @SerialName("picture")
-    val pictureUrl: String?,
-    val language: String? = "nl", // Default to Dutch
-    @SerialName("unit_system")
-    val unitSystem: String? = "metric" // Default to metric
-)
-
-fun getProfileImageUrl(url: String?, version: Int): String? {
-    return url?.let { "$it?v=$version" }
-}
-
-suspend fun fetchUserProfile(userId: String): UserProfile? {
-    return SupabaseClient.client
-        .from("profiles")
-        .select(Columns.list("name", "email", "picture", "language", "unit_system")) {
-            filter {
-                eq("id", userId)
-            }
-        }
-        .decodeList<UserProfile>()
-        .firstOrNull()
-}
-
-suspend fun updateUserProfile(userId: String, name: String, pictureUrl: String? = null): Boolean {
-    val updateMap = mutableMapOf("name" to name)
-    if (pictureUrl != null) updateMap["picture"] = pictureUrl
-    return try {
-        SupabaseClient.client
-            .from("profiles")
-            .update(updateMap) {
-                filter { eq("id", userId) }
-            }
-        true
-    } catch (e: Exception) {
-        e.printStackTrace()
-        false
-    }
-}
-
-suspend fun updateUserLanguage(userId: String, language: String): Boolean {
-    return try {
-        SupabaseClient.client
-            .from("profiles")
-            .update(mapOf("language" to language)) {
-                filter { eq("id", userId) }
-            }
-        true
-    } catch (e: Exception) {
-        e.printStackTrace()
-        false
-    }
-}
-
-suspend fun updateUserUnitSystem(userId: String, unitSystem: String): Boolean {
-    return try {
-        SupabaseClient.client
-            .from("profiles")
-            .update(mapOf("unit_system" to unitSystem)) {
-                filter { eq("id", userId) }
-            }
-        true
-    } catch (e: Exception) {
-        e.printStackTrace()
-        false
-    }
-}
+import com.example.workoutbuddyapplication.navigation.Screen
+import com.example.workoutbuddyapplication.viewmodel.ProfileViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(navController: NavController) {
     val context = LocalContext.current
+    val viewModel: ProfileViewModel = viewModel(
+        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                @Suppress("UNCHECKED_CAST")
+                return ProfileViewModel(context) as T
+            }
+        }
+    )
+
+    val profile by viewModel.profile.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val nameInput by viewModel.nameInput.collectAsState()
+    val weightInput by viewModel.weightInput.collectAsState()
+    val weightSaveMessage by viewModel.weightSaveMessage.collectAsState()
+    val profileSaveMessage by viewModel.profileSaveMessage.collectAsState()
+    val imageUri by viewModel.imageUri.collectAsState()
+    val imageVersion by viewModel.imageVersion.collectAsState()
+    val currentPassword by viewModel.currentPassword.collectAsState()
+    val newPassword by viewModel.newPassword.collectAsState()
+    val confirmNewPassword by viewModel.confirmNewPassword.collectAsState()
+    val passwordSaveMessage by viewModel.passwordSaveMessage.collectAsState()
+    val showDeleteDialog by viewModel.showDeleteDialog.collectAsState()
+    val deletePassword by viewModel.deletePassword.collectAsState()
+    val deleteAccountMessage by viewModel.deleteAccountMessage.collectAsState()
+    val isDeleting by viewModel.isDeleting.collectAsState()
+    val showDeleteSuccessScreen by viewModel.showDeleteSuccessScreen.collectAsState()
+
     var selectedTabIndex by remember { mutableStateOf(4) }
-    var profile by remember { mutableStateOf<UserProfile?>(null) }
-    var isLoading by remember { mutableStateOf(true) }
 
-    var nameInput by remember { mutableStateOf("") }
+    val imagePicker =
+        rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+            viewModel.setImageUri(uri)
+        }
 
-    var currentPassword by remember { mutableStateOf("") }
-    var newPassword by remember { mutableStateOf("") }
-    var confirmNewPassword by remember { mutableStateOf("") }
-
-    val coroutineScope = rememberCoroutineScope()
-    var profileSaveMessage by remember { mutableStateOf<String?>(null) }
-    var passwordSaveMessage by remember { mutableStateOf<String?>(null) }
-    var weightSaveMessage by remember { mutableStateOf<String?>(null) }
-
-    var imageUri by remember { mutableStateOf<Uri?>(null) }
-    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) {
-            uri: Uri? -> imageUri = uri
-    }
-    var imageVersion by remember { mutableStateOf(0) }
-
-    var showDeleteDialog by remember { mutableStateOf(false) }
-    var deletePassword by remember { mutableStateOf("") }
-    var deleteAccountMessage by remember { mutableStateOf<String?>(null) }
-    var isDeleting by remember { mutableStateOf(false) }
-    var showDeleteSuccessScreen by remember { mutableStateOf(false) }
-
-    var weight by remember { mutableStateOf(70.0) } // Default 70kg
-    var weightInput by remember { mutableStateOf("70") }
-
-    val preferencesManager = remember { UserPreferencesManager(context) }
-
+    var userId by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
-        weight = preferencesManager.getUserWeight()
-        weightInput = weight.toString()
+        userId = getUserId(context)
+        userId?.let { viewModel.loadProfile(it) }
+    }
+
+    LaunchedEffect(Unit) {
         val userId = getUserId(context)
         if (userId != null) {
-            profile = fetchUserProfile(userId)
-            nameInput = profile?.name ?: ""
+            viewModel.loadProfile(userId)
         }
-        isLoading = false
+    }
+
+    LaunchedEffect(imageUri) {
+        val userId = getUserId(context)
+        if (userId != null && imageUri != null) {
+            viewModel.uploadProfileImage(userId, imageUri)
+        }
     }
 
     Scaffold(
@@ -159,7 +95,7 @@ fun ProfileScreen(navController: NavController) {
             TopAppBar(
                 title = { Text("Profiel") },
                 actions = {
-                    IconButton(onClick = { /* Navigate to settings */ }) {
+                    IconButton(onClick = { navController.navigate(Screen.Settings.route) }) {
                         Icon(Icons.Default.Settings, contentDescription = "Settings")
                     }
                 }
@@ -186,7 +122,6 @@ fun ProfileScreen(navController: NavController) {
             if (isLoading) {
                 CircularProgressIndicator()
             } else {
-                // Profile Card
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -206,8 +141,12 @@ fun ProfileScreen(navController: NavController) {
                             val painter = if (profile?.pictureUrl.isNullOrBlank()) {
                                 painterResource(id = R.drawable.aktiv_logo)
                             } else {
-                                rememberAsyncImagePainter(getProfileImageUrl(profile?.pictureUrl,
-                                    imageVersion))
+                                rememberAsyncImagePainter(
+                                    viewModel.getProfileImageUrl(
+                                        profile?.pictureUrl,
+                                        imageVersion
+                                    )
+                                )
                             }
                             Image(
                                 painter = painter,
@@ -238,33 +177,11 @@ fun ProfileScreen(navController: NavController) {
                                     onClick = { imagePicker.launch("image/*") },
                                     modifier = Modifier.fillMaxWidth(0.7f)
                                 ) {
-                                    Text("Upload Foto", modifier = Modifier.fillMaxWidth(),
-                                        textAlign = TextAlign.Center)
-                                }
-
-                                imageUri?.let { uri ->
-                                    LaunchedEffect(uri) {
-                                        val userId = getUserId(context)
-                                        if (userId != null) {
-                                            val inputStream = context.contentResolver.
-                                            openInputStream(uri)
-                                            val bytes = inputStream?.readBytes()
-                                            inputStream?.close()
-                                            if (bytes != null) {
-                                                val fileName = "$userId.jpg"
-                                                SupabaseClient.client.storage.from(
-                                                    "profile-pictures").upload(fileName,
-                                                    bytes, upsert = true)
-                                                val publicUrl = SupabaseClient.client.storage.from(
-                                                    "profile-pictures").publicUrl(fileName)
-                                                updateUserProfile(userId, nameInput, publicUrl)
-                                                profile = fetchUserProfile(userId)
-                                                imageVersion++
-                                                profileSaveMessage = "Profielfoto bijgewerkt"
-                                            }
-                                        }
-                                        imageUri = null
-                                    }
+                                    Text(
+                                        "Upload Foto",
+                                        modifier = Modifier.fillMaxWidth(),
+                                        textAlign = TextAlign.Center
+                                    )
                                 }
                             }
                         }
@@ -275,7 +192,7 @@ fun ProfileScreen(navController: NavController) {
                         ) {
                             OutlinedTextField(
                                 value = nameInput,
-                                onValueChange = { nameInput = it },
+                                onValueChange = { viewModel.setNameInput(it) },
                                 label = { Text("Naam") },
                                 modifier = Modifier.weight(1f)
                             )
@@ -283,24 +200,12 @@ fun ProfileScreen(navController: NavController) {
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(
                             onClick = {
-                                coroutineScope.launch {
-                                    val userId = getUserId(context)
-                                    if (userId != null) {
-                                        val profileSuccess = updateUserProfile(userId, nameInput)
-                                        if (profileSuccess) {
-                                            profile = fetchUserProfile(userId)
-                                            profileSaveMessage = "Profiel bijgewerkt"
-                                        } else {
-                                            profileSaveMessage = "Bijwerken mislukt"
-                                        }
-                                    }
-                                }
+                                userId?.let { viewModel.saveProfile(it) }
                             },
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text("Opslaan")
                         }
-
                         profileSaveMessage?.let {
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(it, color = MaterialTheme.colorScheme.primary)
@@ -312,31 +217,19 @@ fun ProfileScreen(navController: NavController) {
                         ) {
                             OutlinedTextField(
                                 value = weightInput,
-                                onValueChange = { weightInput = it },
+                                onValueChange = { viewModel.setWeightInput(it) },
                                 label = { Text("Gewicht (kg)") },
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                             )
                         }
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(
-                            onClick = {
-                                weightSaveMessage = null
-                                val w = weightInput.toDoubleOrNull() ?: 70.0
-                                weight = w
-                                coroutineScope.launch {
-                                    try {
-                                        preferencesManager.saveUserWeight(w)
-                                        weightSaveMessage = "Gewicht opgeslagen"
-                                    } catch (e: Exception) {
-                                        weightSaveMessage = "Opslaan mislukt"
-                                    }
-                                }
-                            },
+                            onClick = { viewModel.saveWeight() },
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text("Opslaan")
                         }
-
                         weightSaveMessage?.let {
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(it, color = MaterialTheme.colorScheme.primary)
@@ -346,7 +239,6 @@ fun ProfileScreen(navController: NavController) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Password Change Card
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -366,7 +258,7 @@ fun ProfileScreen(navController: NavController) {
                         Spacer(modifier = Modifier.height(16.dp))
                         OutlinedTextField(
                             value = currentPassword,
-                            onValueChange = { currentPassword = it },
+                            onValueChange = { viewModel.setCurrentPassword(it) },
                             label = { Text("Huidig Wachtwoord") },
                             visualTransformation = PasswordVisualTransformation(),
                             modifier = Modifier.fillMaxWidth()
@@ -374,7 +266,7 @@ fun ProfileScreen(navController: NavController) {
                         Spacer(modifier = Modifier.height(12.dp))
                         OutlinedTextField(
                             value = newPassword,
-                            onValueChange = { newPassword = it },
+                            onValueChange = { viewModel.setNewPassword(it) },
                             label = { Text("Nieuw Wachtwoord") },
                             visualTransformation = PasswordVisualTransformation(),
                             modifier = Modifier.fillMaxWidth()
@@ -382,7 +274,7 @@ fun ProfileScreen(navController: NavController) {
                         Spacer(modifier = Modifier.height(12.dp))
                         OutlinedTextField(
                             value = confirmNewPassword,
-                            onValueChange = { confirmNewPassword = it },
+                            onValueChange = { viewModel.setConfirmNewPassword(it) },
                             label = { Text("Bevestig Nieuw Wachtwoord") },
                             visualTransformation = PasswordVisualTransformation(),
                             modifier = Modifier.fillMaxWidth()
@@ -390,29 +282,8 @@ fun ProfileScreen(navController: NavController) {
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(
                             onClick = {
-                                coroutineScope.launch {
-                                    passwordSaveMessage = null
-                                    if (newPassword != confirmNewPassword) {
-                                        passwordSaveMessage = "Wachtwoorden komen niet overeen"
-                                        return@launch
-                                    }
-                                    try {
-                                        SupabaseClient.client.auth.signInWith(
-                                            io.github.jan.supabase.gotrue.providers.builtin.Email
-                                        ) {
-                                            email = profile?.email ?: ""
-                                            password = currentPassword
-                                        }
-                                        SupabaseClient.client.auth.modifyUser {
-                                            password = newPassword
-                                        }
-                                        passwordSaveMessage = "Wachtwoord succesvol gewijzigd"
-                                        currentPassword = ""
-                                        newPassword = ""
-                                        confirmNewPassword = ""
-                                    } catch (e: Exception) {
-                                        passwordSaveMessage = "Wachtwoord wijzigen mislukt"
-                                    }
+                                profile?.email?.let { email ->
+                                    viewModel.changePassword(email)
                                 }
                             },
                             modifier = Modifier.fillMaxWidth()
@@ -421,15 +292,16 @@ fun ProfileScreen(navController: NavController) {
                         }
                         passwordSaveMessage?.let {
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text(it, color = if (it.contains("succesvol")) MaterialTheme.
-                            colorScheme.primary else MaterialTheme.colorScheme.error)
+                            Text(
+                                it,
+                                color = if (it.contains("succesvol")) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                            )
                         }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Delete Account Card
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -444,19 +316,20 @@ fun ProfileScreen(navController: NavController) {
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Button(
-                            onClick = { showDeleteDialog = true },
+                            onClick = { viewModel.setShowDeleteDialog(true) },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.error
                             ),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Verwijder Account", color = MaterialTheme.
-                            colorScheme.onError)
+                            Text("Verwijder Account", color = MaterialTheme.colorScheme.onError)
                         }
                         deleteAccountMessage?.let {
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text(it, color = if (it.contains("succesvol")) MaterialTheme.
-                            colorScheme.primary else MaterialTheme.colorScheme.error)
+                            Text(
+                                it,
+                                color = if (it.contains("succesvol")) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                            )
                         }
                     }
                 }
@@ -464,13 +337,11 @@ fun ProfileScreen(navController: NavController) {
         }
     }
 
-    // Delete Account Dialog
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = {
-                showDeleteDialog = false
-                deletePassword = ""
-                deleteAccountMessage = null
+                viewModel.setShowDeleteDialog(false)
+                viewModel.setDeletePassword("")
             },
             title = { Text("Account verwijderen") },
             text = {
@@ -479,7 +350,7 @@ fun ProfileScreen(navController: NavController) {
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
                         value = deletePassword,
-                        onValueChange = { deletePassword = it },
+                        onValueChange = { viewModel.setDeletePassword(it) },
                         label = { Text("Wachtwoord") },
                         visualTransformation = PasswordVisualTransformation(),
                         singleLine = true,
@@ -498,23 +369,8 @@ fun ProfileScreen(navController: NavController) {
             confirmButton = {
                 TextButton(
                     onClick = {
-                        coroutineScope.launch {
-                            isDeleting = true
-                            deleteAccountMessage = null
-                            try {
-                                SupabaseClient.client.auth.signInWith(
-                                    io.github.jan.supabase.gotrue.providers.builtin.Email
-                                ) {
-                                    email = profile?.email ?: ""
-                                    password = deletePassword
-                                }
-                                showDeleteDialog = false
-                                deletePassword = ""
-                                showDeleteSuccessScreen = true
-                            } catch (e: Exception) {
-                                deleteAccountMessage = "Onjuist wachtwoord."
-                            }
-                            isDeleting = false
+                        profile?.email?.let { email ->
+                            viewModel.deleteAccount(email)
                         }
                     },
                     enabled = deletePassword.isNotBlank() && !isDeleting
@@ -525,9 +381,8 @@ fun ProfileScreen(navController: NavController) {
             dismissButton = {
                 TextButton(
                     onClick = {
-                        showDeleteDialog = false
-                        deletePassword = ""
-                        deleteAccountMessage = null
+                        viewModel.setShowDeleteDialog(false)
+                        viewModel.setDeletePassword("")
                     }
                 ) {
                     Text("Annuleren")
@@ -538,11 +393,11 @@ fun ProfileScreen(navController: NavController) {
 
     if (showDeleteSuccessScreen) {
         AlertDialog(
-            onDismissRequest = { showDeleteSuccessScreen = false },
+            onDismissRequest = { viewModel.setShowDeleteSuccessScreen(false) },
             title = { Text("Account verwijderen") },
             text = { Text("Het verzoek om je account te verwijderen is verstuurd.") },
             confirmButton = {
-                TextButton(onClick = { showDeleteSuccessScreen = false }) {
+                TextButton(onClick = { viewModel.setShowDeleteSuccessScreen(false) }) {
                     Text("OK")
                 }
             }

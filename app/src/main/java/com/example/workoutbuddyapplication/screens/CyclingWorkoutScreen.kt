@@ -1,98 +1,43 @@
 package com.example.workoutbuddyapplication.screens
 
-import android.os.SystemClock
+import KeepScreenOn
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DirectionsRun
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.Whatshot
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.workoutbuddyapplication.components.CartoMapStyle
+import com.example.workoutbuddyapplication.components.OpenStreetMapView
+import com.example.workoutbuddyapplication.components.StatCard
 import com.example.workoutbuddyapplication.navigation.Screen
-import kotlinx.coroutines.delay
-import kotlin.math.cos
-import kotlin.math.sin
-import androidx.compose.ui.graphics.vector.ImageVector
 import com.example.workoutbuddyapplication.ui.theme.UnitSystem
-import com.example.workoutbuddyapplication.utils.UnitConverter
-import androidx.compose.runtime.collectAsState
 import com.example.workoutbuddyapplication.ui.theme.UserPreferencesManager
 import com.example.workoutbuddyapplication.ui.theme.toUnitSystem
-import com.example.workoutbuddyapplication.utils.LocationManager
-import com.example.workoutbuddyapplication.utils.LatLng
-import com.example.workoutbuddyapplication.components.OpenStreetMapView
-import com.example.workoutbuddyapplication.components.CartoMapStyle
-import androidx.compose.runtime.mutableStateListOf
-import kotlinx.coroutines.launch
-import android.Manifest
-import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.RequiresApi
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
-import androidx.core.content.ContextCompat
-import androidx.compose.material.icons.outlined.Whatshot
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.runtime.rememberCoroutineScope
-import com.example.workoutbuddyapplication.data.SupabaseClient
-import com.example.workoutbuddyapplication.models.Workout
-import io.github.jan.supabase.gotrue.auth
-import io.github.jan.supabase.postgrest.postgrest
-import androidx.compose.material.icons.automirrored.filled.DirectionsBike
+import com.example.workoutbuddyapplication.utils.UnitConverter
+import com.example.workoutbuddyapplication.viewmodel.CyclingWorkoutViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -103,321 +48,103 @@ fun CyclingWorkoutScreen(navController: NavController) {
     val selectedUnitSystem by preferencesManager.selectedUnitSystem.collectAsState(initial = "metric")
     val unitSystem = selectedUnitSystem.toUnitSystem()
     val debugMode by preferencesManager.debugMode.collectAsState(initial = false)
-    val speedData = remember { mutableListOf<Float>() }
 
+    val viewModel: CyclingWorkoutViewModel = viewModel(
+        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                @Suppress("UNCHECKED_CAST")
+                return CyclingWorkoutViewModel(context, preferencesManager, debugMode) as T
+            }
+        }
+    )
 
-    // Permission handling
-    var hasLocationPermission by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-        )
-    }
+    val session = viewModel.session
 
+    var showGoalDialog by remember { mutableStateOf(false) }
+    var targetDistanceInput by remember { mutableStateOf("") }
+    var selectedTab by remember { mutableIntStateOf(0) }
+
+    val isSaving by viewModel.isSaving.collectAsState()
+    val saveError by viewModel.saveError.collectAsState()
+    val workoutNotes by viewModel.workoutNotes.collectAsState()
+    val targetDistance by viewModel.targetDistance.collectAsState()
+
+    val isActive by session.isActive.collectAsState()
+    val distance by session.distance.collectAsState()
+    val elapsedTime by session.elapsedTime.collectAsState()
+    val calories by session.calories.collectAsState()
+    val speed by session.speed.collectAsState()
+    val routePoints by session.routePoints.collectAsState()
+
+    var showNotesDialog by remember { mutableStateOf(false) }
+
+    val speedData = remember { mutableStateListOf<Float>() }
+    LaunchedEffect(speed) { speedData.add(speed.toFloat()) }
+    LaunchedEffect(Unit) { session.start() }
+
+    var hasLocationPermission by remember { mutableStateOf(false) }
     val locationPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
+        ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         hasLocationPermission = isGranted
     }
-
-    // Request permission on first load
     LaunchedEffect(Unit) {
-        if (!hasLocationPermission) {
-            locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-        }
-    }
-
-    var isCycling by remember { mutableStateOf(true) }
-    var distance by remember { mutableStateOf(0.0) }
-    var pace by remember { mutableStateOf(0.0) }
-    var elapsedTime by remember { mutableLongStateOf(0L) }
-    var targetDistance by remember { mutableStateOf(0.0) }
-    var targetTime by remember { mutableIntStateOf(0) }
-    var showGoalDialog by remember { mutableStateOf(false) }
-    var targetDistanceInput by remember { mutableStateOf("") }
-    var targetTimeInput by remember { mutableStateOf("") }
-    var calories by remember { mutableStateOf(0) }
-    var selectedTab by remember { mutableIntStateOf(0) }
-    var speed by remember { mutableStateOf(0.0) }
-    var caloriesAccum by remember { mutableStateOf(0.0) }
-
-    // Real location tracking variables
-    var currentLocation by remember { mutableStateOf<LatLng?>(null) }
-    val routePoints = remember { mutableStateListOf<LatLng>() }
-    var totalDistanceFromGPS by remember { mutableStateOf(0.0) }
-
-    // Location manager
-    val locationManager = remember { LocationManager(context) }
-
-    // Simulated route points for the map (keeping as fallback)
-    val simulatedRoutePoints = remember { mutableListOf<Offset>() }
-
-    // Simulated elevation data
-    val elevationData = remember { mutableListOf<Float>() }
-
-    // Simulated pace data
-    val paceData = remember { mutableListOf<Float>() }
-
-
-    // Location tracking effect
-    LaunchedEffect(isCycling, hasLocationPermission, debugMode) {
-        if (isCycling && hasLocationPermission && !debugMode) { // Only use real GPS if not in debug mode
-            locationManager.startLocationUpdates()
-
-            // Collect location updates
-            launch {
-                locationManager.locationUpdates.collect { newLocation ->
-                    currentLocation = newLocation
-
-                    if (routePoints.isNotEmpty()) {
-                        val lastPoint = routePoints.last()
-                        val distanceToAdd = LocationManager.calculateDistance(lastPoint, newLocation) / 1000.0 // Convert to km
-                        totalDistanceFromGPS += distanceToAdd
-
-                        // Update distance with real GPS data
-                        distance = totalDistanceFromGPS
-                    }
-
-                    routePoints.add(newLocation)
-                }
-            }
-        } else {
-            locationManager.stopLocationUpdates()
-        }
-    }
-
-    // Get initial location
-    LaunchedEffect(hasLocationPermission, debugMode) {
-        if (debugMode) {
-            // Use mock location for testing (Amsterdam coordinates)
-            val mockLocation = LatLng(52.3676, 4.9041)
-            currentLocation = mockLocation
-            routePoints.add(mockLocation)
-        } else if (hasLocationPermission) {
-            val initialLocation = locationManager.getCurrentLocation()
-            initialLocation?.let {
-                currentLocation = it
-                routePoints.add(it)
-            }
-        }
-    }
-
-    // Timer effect
-    LaunchedEffect(isCycling) {
-        val startTime = SystemClock.elapsedRealtime() - elapsedTime
-        val userWeight = preferencesManager.getUserWeight()
-        while (isCycling) {
-            elapsedTime = SystemClock.elapsedRealtime() - startTime
-            delay(1000)
-
-            // Use real GPS distance if available, otherwise simulate
-            if (debugMode && currentLocation != null) {
-                // Debug mode: Simulate movement around mock location (stay near Amsterdam)
-                distance += 0.0008f
-
-                val lastLocation = routePoints.lastOrNull() ?: currentLocation!!
-
-                // Make smaller, more controlled movements (about 1-2 meters per second)
-                val angle = Math.random() * 2 * Math.PI
-                val movementDistance = 0.00001 + Math.random() * 0.00001 // Very small movement in degrees
-                val newLat = lastLocation.latitude + (cos(angle) * movementDistance)
-                val newLng = lastLocation.longitude + (sin(angle) * movementDistance)
-
-                // Ensure we stay near Amsterdam (52.3676, 4.9041) - within ~1km radius
-                val amsterdamLat = 52.3676
-                val amsterdamLng = 4.9041
-                val maxDistance = 0.01 // About 1km in degrees
-
-                val finalLat = if (kotlin.math.abs(newLat - amsterdamLat) > maxDistance) {
-                    amsterdamLat + (if (newLat > amsterdamLat) maxDistance else -maxDistance)
-                } else newLat
-
-                val finalLng = if (kotlin.math.abs(newLng - amsterdamLng) > maxDistance) {
-                    amsterdamLng + (if (newLng > amsterdamLng) maxDistance else -maxDistance)
-                } else newLng
-
-                val newLocation = LatLng(finalLat, finalLng)
-                currentLocation = newLocation
-                routePoints.add(newLocation)
-
-                val minutesElapsed = elapsedTime / 60000.0
-                val expectedCalories = (minutesElapsed * (12 + Math.random() * 3)).toInt() // 12-15 kcal/min
-                if (calories < expectedCalories) {
-                    calories = expectedCalories
-                }
-            } else if (!hasLocationPermission || (routePoints.isEmpty() && !debugMode)) {
-                distance += 0.0008f
-
-                if (simulatedRoutePoints.isEmpty()) {
-                    simulatedRoutePoints.add(Offset(500f, 500f))
-                } else {
-                    val lastPoint = simulatedRoutePoints.last()
-                    val angle = Math.random() * 2 * Math.PI
-                    val newX = lastPoint.x + (cos(angle) * 10).toFloat()
-                    val newY = lastPoint.y + (sin(angle) * 10).toFloat()
-                    simulatedRoutePoints.add(Offset(newX, newY))
-                }
-            }
-
-            // Calculate pace (min/km)
-            if (distance > 0 && elapsedTime > 0) {
-                val hours = elapsedTime / 3_600_000.0
-                speed = distance / hours
-            } else {
-                speed = 0.0
-            }
-
-            val met = when {
-                speed < 8 -> 4.0
-                speed < 16 -> 6.8
-                speed < 20 -> 8.0
-                speed < 22 -> 10.0
-                speed < 25 -> 12.0
-                else -> 15.8
-            }
-
-            if (met > 0) {
-                val caloriesPerSecond = met * userWeight / 3600.0
-                caloriesAccum += caloriesPerSecond
-                calories = caloriesAccum.toInt()
-            }
-
-            speedData.add(speed.toFloat())
-
-            // Simulate pace data
-            paceData.add(pace.toFloat())
-
-            // Simulate elevation (between 0-50m)
-            val newElevation = (Math.random() * 50).toFloat()
-            elevationData.add(newElevation)
-        }
-    }
-
-    // Stop location updates when screen is disposed
-    DisposableEffect(Unit) {
-        onDispose {
-            locationManager.stopLocationUpdates()
-        }
+        locationPermissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
     }
 
     if (showGoalDialog) {
         AlertDialog(
             onDismissRequest = { showGoalDialog = false },
-            title = { Text("Stel je doel in") },
+            title = { Text("Set your goal") },
             text = {
                 Column {
-                    Text("Afstand (km)")
+                    Text("Distance (${UnitConverter.getDistanceUnit(unitSystem)})")
                     OutlinedTextField(
                         value = targetDistanceInput,
                         onValueChange = { targetDistanceInput = it },
-                        label = { Text("Doel afstand (${UnitConverter.getDistanceUnit(unitSystem)})") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        label = { Text("Target distance") },
+                        keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth()
                     )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Text("Tijd (minuten)")
-                    Slider(
-                        value = targetTime.toFloat(),
-                        onValueChange = { targetTime = it.toInt() },
-                        valueRange = 5f..180f,
-                    )
-                    Text("${targetTime} minuten")
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        // Convert input to km for storage
                         val distanceInKm = UnitConverter.distanceToKm(
                             targetDistanceInput.toDoubleOrNull() ?: 5.0,
                             unitSystem
                         )
-                        targetDistance = distanceInKm
-                        targetTime = targetTimeInput.toIntOrNull() ?: 30
+                        viewModel.setTargetDistance(distanceInKm)
                         showGoalDialog = false
                     }
-                ) {
-                    Text("Bevestigen")
-                }
+                ) { Text("Confirm") }
             },
             dismissButton = {
-                TextButton(
-                    onClick = { showGoalDialog = false }
-                ) {
-                    Text("Annuleren")
-                }
+                TextButton(onClick = { showGoalDialog = false }) { Text("Cancel") }
             }
         )
     }
 
-    // Add state for saving workout and error
-    var isSaving by remember { mutableStateOf(false) }
-    var saveError by remember { mutableStateOf<String?>(null) }
-    val coroutineScope = rememberCoroutineScope()
-
     Scaffold(
         floatingActionButton = {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 FloatingActionButton(
-                    onClick = { isCycling = !isCycling },
+                    onClick = {
+                        if (isActive) session.pause() else session.start()
+                    },
                     containerColor = MaterialTheme.colorScheme.secondaryContainer
                 ) {
                     Icon(
-                        if (isCycling) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (isCycling) "Pauzeren" else "Hervatten"
+                        if (isActive) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = if (isActive) "Pause" else "Resume"
                     )
                 }
-
                 FloatingActionButton(
-                    onClick = {
-                        isSaving = true
-                        saveError = null
-                        val durationMinutes = (elapsedTime / 60000).toInt()
-                        val distanceKm = distance
-                        val dateString = java.time.LocalDate.now().toString()
-                        coroutineScope.launch {
-                            try {
-                                val user = SupabaseClient.client.auth.currentUserOrNull()
-                                if (user == null) {
-                                    saveError = "Gebruiker niet ingelogd"
-                                    isSaving = false
-                                    return@launch
-                                }
-                                val workout = Workout(
-                                    type = "CYCLING",
-                                    date = dateString,
-                                    duration = durationMinutes,
-                                    distance = distanceKm,
-                                    notes = null,
-                                    profileId = user.id
-                                )
-                                SupabaseClient.client.postgrest.from("workouts").insert(workout)
-                                isSaving = false
-                                navController.navigate(
-                                    Screen.WorkoutCompleted.createRoute(
-                                        duration = formatTime(elapsedTime),
-                                        distance = UnitConverter.formatDistance(distance, unitSystem),
-                                        calories = calories,
-                                    )
-                                )
-                            } catch (e: Exception) {
-                                saveError = e.message
-                                isSaving = false
-                            }
-                        }
-                    },
+                    onClick = { showNotesDialog = true },
                     containerColor = MaterialTheme.colorScheme.errorContainer
                 ) {
-                    Icon(
-                        Icons.Default.Stop,
-                        contentDescription = "Stoppen"
-                    )
+                    Icon(Icons.Default.Stop, contentDescription = "Stop")
                 }
             }
         }
@@ -429,7 +156,6 @@ fun CyclingWorkoutScreen(navController: NavController) {
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -442,70 +168,62 @@ fun CyclingWorkoutScreen(navController: NavController) {
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        Icons.AutoMirrored.Filled.DirectionsBike,
-                        contentDescription = "Fietsen",
+                        Icons.Default.DirectionsBike,
+                        contentDescription = "Cycling",
                         tint = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.size(24.dp)
                     )
                 }
-
                 Spacer(modifier = Modifier.padding(8.dp))
-
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Fietsen",
+                        text = "Cycling",
                         fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                     )
-
                     if (targetDistance > 0) {
                         Text(
-                            text = "Doel: ${UnitConverter.formatDistance(targetDistance, unitSystem)} in ${targetTime} min",
+                            text = "Goal: ${
+                                UnitConverter.formatDistance(
+                                    targetDistance,
+                                    unitSystem
+                                )
+                            }",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
-
-                Button(
-                    onClick = { showGoalDialog = true }
-                ) {
-                    Text("Doel instellen")
-                }
+                Button(onClick = { showGoalDialog = true }) { Text("Set Goal") }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Main stats in a 2x2 grid
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 StatCard(
-                    title = "Tijd",
+                    title = "Time",
                     value = formatTime(elapsedTime),
                     icon = Icons.Default.Timer,
                     modifier = Modifier.weight(1f)
                 )
-
                 Spacer(modifier = Modifier.padding(4.dp))
-
                 StatCard(
-                    title = "Afstand",
+                    title = "Distance",
                     value = UnitConverter.formatDistance(distance, unitSystem),
                     icon = Icons.Default.LocationOn,
                     modifier = Modifier.weight(1f)
                 )
             }
-
             Spacer(modifier = Modifier.height(8.dp))
-
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 StatCard(
-                    title = "Tempo",
+                    title = "Speed",
                     value = if (speed > 0) {
                         val speedUnit = if (unitSystem == UnitSystem.IMPERIAL) "mi/h" else "km/h"
                         String.format("%.1f %s", speed, speedUnit)
@@ -513,21 +231,17 @@ fun CyclingWorkoutScreen(navController: NavController) {
                     icon = Icons.Default.Speed,
                     modifier = Modifier.weight(1f)
                 )
-
                 Spacer(modifier = Modifier.padding(4.dp))
-
                 StatCard(
-                    title = "Calorieën",
+                    title = "Calories",
                     value = "$calories kcal",
                     icon = Icons.Outlined.Whatshot,
                     modifier = Modifier.weight(1f)
                 )
             }
 
-            // Progress towards goal
             if (targetDistance > 0) {
                 Spacer(modifier = Modifier.height(16.dp))
-
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -536,19 +250,15 @@ fun CyclingWorkoutScreen(navController: NavController) {
                         modifier = Modifier.padding(16.dp)
                     ) {
                         Text(
-                            text = "Voortgang naar doel",
-                            fontWeight = FontWeight.Medium
+                            text = "Progress to goal",
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
                         )
-
                         Spacer(modifier = Modifier.height(8.dp))
-
                         LinearProgressIndicator(
                             progress = { (distance / targetDistance).coerceIn(0.0, 1.0).toFloat() },
                             modifier = Modifier.fillMaxWidth()
                         )
-
                         Spacer(modifier = Modifier.height(8.dp))
-
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
@@ -557,9 +267,13 @@ fun CyclingWorkoutScreen(navController: NavController) {
                                 text = "${UnitConverter.formatDistance(distance, unitSystem)}",
                                 style = MaterialTheme.typography.bodySmall
                             )
-
                             Text(
-                                text = "${UnitConverter.formatDistance(targetDistance, unitSystem)}",
+                                text = "${
+                                    UnitConverter.formatDistance(
+                                        targetDistance,
+                                        unitSystem
+                                    )
+                                }",
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
@@ -569,7 +283,6 @@ fun CyclingWorkoutScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Tabs for different data views
             TabRow(selectedTabIndex = selectedTab) {
                 Tab(
                     selected = selectedTab == 0,
@@ -579,13 +292,11 @@ fun CyclingWorkoutScreen(navController: NavController) {
                 Tab(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
-                    text = { Text("Tempo") }
+                    text = { Text("Speed") }
                 )
             }
-
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Content based on selected tab
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -598,111 +309,78 @@ fun CyclingWorkoutScreen(navController: NavController) {
                 ) {
                     when (selectedTab) {
                         0 -> {
-                            // OpenStreetMap with real location tracking
                             if (hasLocationPermission) {
                                 OpenStreetMapView(
                                     modifier = Modifier.fillMaxSize(),
-                                    currentLocation = currentLocation,
-                                    routePoints = routePoints.toList(),
+                                    currentLocation = routePoints.lastOrNull(),
+                                    routePoints = routePoints,
                                     mapStyle = CartoMapStyle.POSITRON
                                 )
                             } else {
-                                // Show fallback or request permission
                                 Column(
                                     modifier = Modifier.fillMaxSize(),
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.Center
                                 ) {
-                                    Text("Locatie toegang nodig voor kaart")
+                                    Text("Location permission required for map")
                                     Spacer(modifier = Modifier.height(16.dp))
                                     Button(
                                         onClick = {
-                                            locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                                            locationPermissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
                                         }
-                                    ) {
-                                        Text("Toegang verlenen")
-                                    }
-
-                                    // Show simulated route as fallback
-                                    if (simulatedRoutePoints.isNotEmpty()) {
-                                        Spacer(modifier = Modifier.height(16.dp))
-                                        Text("Gesimuleerde route:")
-
-                                        Canvas(modifier = Modifier.size(200.dp)) {
-                                            if (simulatedRoutePoints.size > 1) {
-                                                val path = Path()
-                                                path.moveTo(simulatedRoutePoints[0].x, simulatedRoutePoints[0].y)
-
-                                                for (i in 1 until simulatedRoutePoints.size) {
-                                                    path.lineTo(simulatedRoutePoints[i].x, simulatedRoutePoints[i].y)
-                                                }
-
-                                                drawPath(
-                                                    path = path,
-                                                    color = Color.Blue,
-                                                    style = Stroke(width = 5f)
-                                                )
-
-                                                // Draw start point
-                                                drawCircle(
-                                                    color = Color.Green,
-                                                    radius = 10f,
-                                                    center = simulatedRoutePoints.first()
-                                                )
-
-                                                // Draw current position
-                                                drawCircle(
-                                                    color = Color.Red,
-                                                    radius = 10f,
-                                                    center = simulatedRoutePoints.last()
-                                                )
-                                            }
-                                        }
-                                    }
+                                    ) { Text("Grant access") }
                                 }
                             }
                         }
+
                         1 -> {
-                            // Observe speedData.size so Compose recomposes when new data is added
                             val dataSize = speedData.size
                             if (dataSize > 0) {
                                 Canvas(modifier = Modifier.fillMaxSize()) {
-                                    val maxSpeed = if (unitSystem == UnitSystem.IMPERIAL) 12f else 20f
+                                    val maxSpeed =
+                                        if (unitSystem == UnitSystem.IMPERIAL) 12f else 20f
                                     val minSpeed = 0f
                                     val width = size.width
                                     val height = size.height
                                     val xStep = width / (dataSize.coerceAtLeast(2) - 1)
+                                    val speedUnit =
+                                        if (unitSystem == UnitSystem.IMPERIAL) "mi/h" else "km/h"
 
-                                    // Draw horizontal grid lines
                                     for (s in 0..maxSpeed.toInt() step 2) {
-                                        val y = height - (s - minSpeed) / (maxSpeed - minSpeed) * height
+                                        val y =
+                                            height - (s - minSpeed) / (maxSpeed - minSpeed) * height
                                         drawLine(
                                             color = Color.LightGray,
-                                            start = Offset(0f, y),
-                                            end = Offset(width, y),
+                                            start = androidx.compose.ui.geometry.Offset(0f, y),
+                                            end = androidx.compose.ui.geometry.Offset(width, y),
                                             strokeWidth = 1f
                                         )
                                         drawContext.canvas.nativeCanvas.drawText(
-                                            "$s ${if (unitSystem == UnitSystem.IMPERIAL) "mi/h" else "km/h"}",
+                                            "$s $speedUnit",
                                             10f,
                                             y - 5,
-                                            androidx.compose.ui.graphics.Paint().asFrameworkPaint().apply {
+                                            android.graphics.Paint().apply {
                                                 color = android.graphics.Color.GRAY
                                                 textSize = 30f
                                             }
                                         )
                                     }
 
-                                    // Draw speed line
                                     if (dataSize > 1) {
                                         val path = Path()
                                         val startX = 0f
-                                        val startY = height - (speedData[0].coerceIn(minSpeed, maxSpeed) - minSpeed) / (maxSpeed - minSpeed) * height
+                                        val startY = height - (speedData[0].coerceIn(
+                                            minSpeed,
+                                            maxSpeed
+                                        ) - minSpeed) / (maxSpeed - minSpeed) * height
                                         path.moveTo(startX, startY)
 
                                         for (i in 1 until dataSize) {
                                             val x = i * xStep
-                                            val y = height - (speedData[i].coerceIn(minSpeed, maxSpeed) - minSpeed) / (maxSpeed - minSpeed) * height
+                                            val y = height - (speedData[i].coerceIn(
+                                                minSpeed,
+                                                maxSpeed
+                                            ) - minSpeed) / (maxSpeed - minSpeed) * height
                                             path.lineTo(x, y)
                                         }
 
@@ -714,11 +392,50 @@ fun CyclingWorkoutScreen(navController: NavController) {
                                     }
                                 }
                             } else {
-                                Text("Nog geen tempogegevens beschikbaar")
+                                Text("No speed data available yet")
                             }
                         }
                     }
                 }
+            }
+
+            if (showNotesDialog) {
+                AlertDialog(
+                    onDismissRequest = { showNotesDialog = false },
+                    title = { Text("Add Notes") },
+                    text = {
+                        OutlinedTextField(
+                            value = workoutNotes,
+                            onValueChange = { viewModel.setWorkoutNotes(it) },
+                            label = { Text("Notes") }
+                        )
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                showNotesDialog = false
+                                viewModel.saveWorkout(
+                                    elapsedTime = elapsedTime,
+                                    distance = distance,
+                                    calories = calories,
+                                    unitSystem = unitSystem
+                                ) { duration, formattedDistance, calories, notes ->
+                                    navController.navigate(
+                                        Screen.WorkoutCompleted.createRoute(
+                                            duration = duration,
+                                            distance = formattedDistance,
+                                            calories = calories,
+                                            notes = notes
+                                        )
+                                    )
+                                }
+                            }
+                        ) { Text("Save") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showNotesDialog = false }) { Text("Cancel") }
+                    }
+                )
             }
 
             if (isSaving) {
@@ -731,7 +448,7 @@ fun CyclingWorkoutScreen(navController: NavController) {
             }
             if (saveError != null) {
                 Text(
-                    text = "Fout bij opslaan: $saveError",
+                    text = "Error saving: $saveError",
                     color = MaterialTheme.colorScheme.error
                 )
             }
