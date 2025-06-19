@@ -44,16 +44,19 @@ sealed class Screen(val route: String) {
         fun createRoute(duration: String, distance: String, calories: Int, notes: String) =
             "workout_completed/$duration/$distance/$calories/${Uri.encode(notes)}"
     }
+
     object StrengthWorkoutCompleted : Screen("strength_workout_completed/{duration}/{notes}") {
         fun createRoute(duration: String, notes: String) =
             "strength_workout_completed/$duration/${Uri.encode(notes)}"
     }
+
     object BluetoothDevice : Screen("bluetooth_device")
     object QRScanner : Screen("qr_scanner")
     object Exercises : Screen("exercises")
     object ExerciseDetail : Screen("exercise_detail/{exerciseName}") {
         fun createRoute(exerciseName: String) = "exercise_detail/$exerciseName"
     }
+
     object Profile : Screen("profile")
 }
 
@@ -131,7 +134,7 @@ fun AppNavigation(navController: NavHostController) {
                     navArgument("duration") { type = NavType.StringType },
                     navArgument("distance") { type = NavType.StringType },
                     navArgument("calories") { type = NavType.IntType },
-                    navArgument("notes") { type = NavType.StringType}
+                    navArgument("notes") { type = NavType.StringType }
                 )
             ) { backStackEntry ->
                 val duration = backStackEntry.arguments?.getString("duration") ?: "00:00"
@@ -171,7 +174,11 @@ fun AppNavigation(navController: NavHostController) {
             ) { backStackEntry ->
                 val workoutId = backStackEntry.arguments?.getInt("workoutId") ?: return@composable
                 val selectedTabIndex = backStackEntry.arguments?.getInt("selectedTabIndex") ?: 0
-                WorkoutDetailScreen(navController = navController, workoutId = workoutId, selectedTabIndex = selectedTabIndex)
+                WorkoutDetailScreen(
+                    navController = navController,
+                    workoutId = workoutId,
+                    selectedTabIndex = selectedTabIndex
+                )
             }
             composable(
                 route = Screen.ExerciseDetail.route,
@@ -179,7 +186,8 @@ fun AppNavigation(navController: NavHostController) {
                     navArgument("exerciseName") { type = NavType.StringType }
                 )
             ) { backStackEntry ->
-                val exerciseName = backStackEntry.arguments?.getString("exerciseName") ?: return@composable
+                val exerciseName =
+                    backStackEntry.arguments?.getString("exerciseName") ?: return@composable
                 val loadExercise = remember(context) {
                     { name: String ->
                         try {

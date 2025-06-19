@@ -34,6 +34,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.workoutbuddyapplication.components.*
+import com.example.workoutbuddyapplication.data.ExerciseRepository.fetchExerciseByName
 import com.example.workoutbuddyapplication.models.*
 import com.example.workoutbuddyapplication.navigation.Screen
 import com.example.workoutbuddyapplication.ui.theme.*
