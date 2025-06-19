@@ -27,21 +27,17 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import com.example.workoutbuddyapplication.components.CartoMapStyle
 import com.example.workoutbuddyapplication.components.OpenStreetMapView
 import com.example.workoutbuddyapplication.components.StatCard
-import com.example.workoutbuddyapplication.data.SupabaseClient
-import com.example.workoutbuddyapplication.models.Workout
 import com.example.workoutbuddyapplication.navigation.Screen
 import com.example.workoutbuddyapplication.ui.theme.UnitSystem
 import com.example.workoutbuddyapplication.ui.theme.UserPreferencesManager
 import com.example.workoutbuddyapplication.ui.theme.toUnitSystem
 import com.example.workoutbuddyapplication.utils.UnitConverter
-import com.example.workoutbuddyapplication.workout.RunningSession
-import io.github.jan.supabase.gotrue.auth
-import io.github.jan.supabase.postgrest.postgrest
+import com.example.workoutbuddyapplication.viewmodel.RunningWorkoutViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -54,33 +50,25 @@ fun RunningWorkoutScreen(navController: NavController) {
     val unitSystem = selectedUnitSystem.toUnitSystem()
     val debugMode by preferencesManager.debugMode.collectAsState(initial = false)
 
-    val session = remember { RunningSession(context, preferencesManager, debugMode) }
+    val viewModel: RunningWorkoutViewModel = viewModel(
+        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                @Suppress("UNCHECKED_CAST")
+                return RunningWorkoutViewModel(context, preferencesManager, debugMode) as T
+            }
+        }
+    )
+
+    val session = viewModel.session
 
     var showGoalDialog by remember { mutableStateOf(false) }
     var targetDistanceInput by remember { mutableStateOf("") }
     var selectedTab by remember { mutableIntStateOf(0) }
-    var isSaving by remember { mutableStateOf(false) }
-    var saveError by remember { mutableStateOf<String?>(null) }
-    val coroutineScope = rememberCoroutineScope()
 
-    var hasLocationPermission by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(
-                context,
-                android.Manifest.permission.ACCESS_FINE_LOCATION
-            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-        )
-    }
-    val locationPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        hasLocationPermission = isGranted
-    }
-    LaunchedEffect(Unit) {
-        if (!hasLocationPermission) {
-            locationPermissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
-        }
-    }
+    val isSaving by viewModel.isSaving.collectAsState()
+    val saveError by viewModel.saveError.collectAsState()
+    val workoutNotes by viewModel.workoutNotes.collectAsState()
+    val targetDistance by viewModel.targetDistance.collectAsState()
 
     val isActive by session.isActive.collectAsState()
     val distance by session.distance.collectAsState()
@@ -89,29 +77,34 @@ fun RunningWorkoutScreen(navController: NavController) {
     val speed by session.speed.collectAsState()
     val routePoints by session.routePoints.collectAsState()
 
-    var targetDistance by remember { mutableStateOf(0.0) }
-
     var showNotesDialog by remember { mutableStateOf(false) }
-    var workoutNotes by remember { mutableStateOf("") }
 
     val speedData = remember { mutableStateListOf<Float>() }
-    LaunchedEffect(speed) {
-        speedData.add(speed.toFloat())
-    }
-
+    LaunchedEffect(speed) { speedData.add(speed.toFloat()) }
     LaunchedEffect(Unit) { session.start() }
+
+    // Permissions
+    var hasLocationPermission by remember { mutableStateOf(false) }
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        hasLocationPermission = isGranted
+    }
+    LaunchedEffect(Unit) {
+        locationPermissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
+    }
 
     if (showGoalDialog) {
         AlertDialog(
             onDismissRequest = { showGoalDialog = false },
-            title = { Text("Stel je doel in") },
+            title = { Text("Set your goal") },
             text = {
                 Column {
-                    Text("Afstand (km)")
+                    Text("Distance (${UnitConverter.getDistanceUnit(unitSystem)})")
                     OutlinedTextField(
                         value = targetDistanceInput,
                         onValueChange = { targetDistanceInput = it },
-                        label = { Text("Doel afstand (${UnitConverter.getDistanceUnit(unitSystem)})") },
+                        label = { Text("Target distance") },
                         keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -124,14 +117,13 @@ fun RunningWorkoutScreen(navController: NavController) {
                             targetDistanceInput.toDoubleOrNull() ?: 5.0,
                             unitSystem
                         )
-                        session.setTargetDistance(distanceInKm)
-                        targetDistance = distanceInKm
+                        viewModel.setTargetDistance(distanceInKm)
                         showGoalDialog = false
                     }
-                ) { Text("Bevestigen") }
+                ) { Text("Confirm") }
             },
             dismissButton = {
-                TextButton(onClick = { showGoalDialog = false }) { Text("Annuleren") }
+                TextButton(onClick = { showGoalDialog = false }) { Text("Cancel") }
             }
         )
     }
@@ -147,14 +139,14 @@ fun RunningWorkoutScreen(navController: NavController) {
                 ) {
                     Icon(
                         if (isActive) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (isActive) "Pauzeren" else "Hervatten"
+                        contentDescription = if (isActive) "Pause" else "Resume"
                     )
                 }
                 FloatingActionButton(
                     onClick = { showNotesDialog = true },
                     containerColor = MaterialTheme.colorScheme.errorContainer
                 ) {
-                    Icon(Icons.Default.Stop, contentDescription = "Stoppen")
+                    Icon(Icons.Default.Stop, contentDescription = "Stop")
                 }
             }
         }
@@ -179,7 +171,7 @@ fun RunningWorkoutScreen(navController: NavController) {
                 ) {
                     Icon(
                         Icons.Default.DirectionsRun,
-                        contentDescription = "Hardlopen",
+                        contentDescription = "Running",
                         tint = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.size(24.dp)
                     )
@@ -187,24 +179,19 @@ fun RunningWorkoutScreen(navController: NavController) {
                 Spacer(modifier = Modifier.padding(8.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Hardlopen",
+                        text = "Running",
                         fontSize = 24.sp,
                         fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                     )
                     if (targetDistance > 0) {
                         Text(
-                            text = "Doel: ${
-                                UnitConverter.formatDistance(
-                                    targetDistance,
-                                    unitSystem
-                                )
-                            }",
+                            text = "Goal: ${UnitConverter.formatDistance(targetDistance, unitSystem)}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
-                Button(onClick = { showGoalDialog = true }) { Text("Doel instellen") }
+                Button(onClick = { showGoalDialog = true }) { Text("Set Goal") }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -214,14 +201,14 @@ fun RunningWorkoutScreen(navController: NavController) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 StatCard(
-                    title = "Tijd",
+                    title = "Time",
                     value = formatTime(elapsedTime),
                     icon = Icons.Default.Timer,
                     modifier = Modifier.weight(1f)
                 )
                 Spacer(modifier = Modifier.padding(4.dp))
                 StatCard(
-                    title = "Afstand",
+                    title = "Distance",
                     value = UnitConverter.formatDistance(distance, unitSystem),
                     icon = Icons.Default.LocationOn,
                     modifier = Modifier.weight(1f)
@@ -233,7 +220,7 @@ fun RunningWorkoutScreen(navController: NavController) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 StatCard(
-                    title = "Tempo",
+                    title = "Speed",
                     value = if (speed > 0) {
                         val speedUnit = if (unitSystem == UnitSystem.IMPERIAL) "mi/h" else "km/h"
                         String.format("%.1f %s", speed, speedUnit)
@@ -243,7 +230,7 @@ fun RunningWorkoutScreen(navController: NavController) {
                 )
                 Spacer(modifier = Modifier.padding(4.dp))
                 StatCard(
-                    title = "Calorieën",
+                    title = "Calories",
                     value = "$calories kcal",
                     icon = Icons.Outlined.Whatshot,
                     modifier = Modifier.weight(1f)
@@ -260,7 +247,7 @@ fun RunningWorkoutScreen(navController: NavController) {
                         modifier = Modifier.padding(16.dp)
                     ) {
                         Text(
-                            text = "Voortgang naar doel",
+                            text = "Progress to goal",
                             fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
                         )
                         Spacer(modifier = Modifier.height(8.dp))
@@ -278,12 +265,7 @@ fun RunningWorkoutScreen(navController: NavController) {
                                 style = MaterialTheme.typography.bodySmall
                             )
                             Text(
-                                text = "${
-                                    UnitConverter.formatDistance(
-                                        targetDistance,
-                                        unitSystem
-                                    )
-                                }",
+                                text = "${UnitConverter.formatDistance(targetDistance, unitSystem)}",
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
@@ -302,7 +284,7 @@ fun RunningWorkoutScreen(navController: NavController) {
                 Tab(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
-                    text = { Text("Tempo") }
+                    text = { Text("Speed") }
                 )
             }
             Spacer(modifier = Modifier.height(16.dp))
@@ -332,17 +314,16 @@ fun RunningWorkoutScreen(navController: NavController) {
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.Center
                                 ) {
-                                    Text("Locatie toegang nodig voor kaart")
+                                    Text("Location permission required for map")
                                     Spacer(modifier = Modifier.height(16.dp))
                                     Button(
                                         onClick = {
                                             locationPermissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
                                         }
-                                    ) { Text("Toegang verlenen") }
+                                    ) { Text("Grant access") }
                                 }
                             }
                         }
-
                         1 -> {
                             val dataSize = speedData.size
                             if (dataSize > 0) {
@@ -402,7 +383,7 @@ fun RunningWorkoutScreen(navController: NavController) {
                                     }
                                 }
                             } else {
-                                Text("Nog geen tempogegevens beschikbaar")
+                                Text("No speed data available yet")
                             }
                         }
                     }
@@ -416,7 +397,7 @@ fun RunningWorkoutScreen(navController: NavController) {
                     text = {
                         OutlinedTextField(
                             value = workoutNotes,
-                            onValueChange = { workoutNotes = it },
+                            onValueChange = { viewModel.setWorkoutNotes(it) },
                             label = { Text("Notes") }
                         )
                     },
@@ -424,45 +405,20 @@ fun RunningWorkoutScreen(navController: NavController) {
                         Button(
                             onClick = {
                                 showNotesDialog = false
-                                isSaving = true
-                                saveError = null
-                                val durationMinutes = (elapsedTime / 60000).toInt()
-                                val distanceKm = distance
-                                val dateString = java.time.LocalDate.now().toString()
-                                coroutineScope.launch {
-                                    try {
-                                        val user = SupabaseClient.client.auth.currentUserOrNull()
-                                        if (user == null) {
-                                            saveError = "Gebruiker niet ingelogd"
-                                            isSaving = false
-                                            return@launch
-                                        }
-                                        val workout = Workout(
-                                            type = "RUNNING",
-                                            date = dateString,
-                                            duration = durationMinutes,
-                                            distance = distanceKm,
-                                            notes = workoutNotes,
-                                            profileId = user.id
+                                viewModel.saveWorkout(
+                                    elapsedTime = elapsedTime,
+                                    distance = distance,
+                                    calories = calories,
+                                    unitSystem = unitSystem
+                                ) { duration, formattedDistance, calories, notes ->
+                                    navController.navigate(
+                                        Screen.WorkoutCompleted.createRoute(
+                                            duration = duration,
+                                            distance = formattedDistance,
+                                            calories = calories,
+                                            notes = notes
                                         )
-                                        SupabaseClient.client.postgrest.from("workouts")
-                                            .insert(workout)
-                                        isSaving = false
-                                        navController.navigate(
-                                            Screen.WorkoutCompleted.createRoute(
-                                                duration = formatTime(elapsedTime),
-                                                distance = UnitConverter.formatDistance(
-                                                    distance,
-                                                    unitSystem
-                                                ),
-                                                calories = calories,
-                                                notes = workoutNotes
-                                            )
-                                        )
-                                    } catch (e: Exception) {
-                                        saveError = e.message
-                                        isSaving = false
-                                    }
+                                    )
                                 }
                             }
                         ) { Text("Save") }
@@ -483,7 +439,7 @@ fun RunningWorkoutScreen(navController: NavController) {
             }
             if (saveError != null) {
                 Text(
-                    text = "Fout bij opslaan: $saveError",
+                    text = "Error saving: $saveError",
                     color = MaterialTheme.colorScheme.error
                 )
             }

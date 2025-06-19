@@ -1,4 +1,4 @@
-package com.example.workoutbuddyapplication.viewmodels
+package com.example.workoutbuddyapplication.viewmodel
 
 import android.os.Build
 import androidx.annotation.RequiresApi

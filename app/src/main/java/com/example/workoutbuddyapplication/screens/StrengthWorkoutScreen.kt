@@ -37,7 +37,7 @@ import com.example.workoutbuddyapplication.components.*
 import com.example.workoutbuddyapplication.models.*
 import com.example.workoutbuddyapplication.navigation.Screen
 import com.example.workoutbuddyapplication.ui.theme.*
-import com.example.workoutbuddyapplication.viewmodels.StrengthWorkoutViewModel
+import com.example.workoutbuddyapplication.viewmodel.StrengthWorkoutViewModel
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
