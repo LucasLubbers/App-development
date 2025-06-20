@@ -1,24 +1,25 @@
 package com.example.workoutbuddyapplication.screens
 
-import Workout
+import com.example.workoutbuddyapplication.models.Workout
+import com.example.workoutbuddyapplication.models.WorkoutType
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DirectionsRun
-import androidx.compose.material.icons.filled.FitnessCenter
-import androidx.compose.material.icons.filled.SelfImprovement
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.workoutbuddyapplication.navigation.Screen
 import com.example.workoutbuddyapplication.BuildConfig
+import com.example.workoutbuddyapplication.components.BottomNavBar
+import java.time.LocalDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -27,11 +28,17 @@ import org.json.JSONArray
 import java.time.Month
 import java.time.format.TextStyle
 import java.util.Locale
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.workoutbuddyapplication.components.CalendarMonthViewStyled
+import com.example.workoutbuddyapplication.navigation.Screen
+import com.example.workoutbuddyapplication.ui.theme.strings
+import com.example.workoutbuddyapplication.viewmodel.HistoryViewModel
 
-suspend fun fetchWorkouts(): List<Workout> = withContext(Dispatchers.IO) {
+suspend fun fetchWorkouts(userId: String): List<Workout> = withContext(Dispatchers.IO) {
     val client = OkHttpClient()
     val request = Request.Builder()
-        .url("https://attsgwsxdlblbqxnboqx.supabase.co/rest/v1/workouts?select=*")
+        .url("https://attsgwsxdlblbqxnboqx.supabase.co/rest/v1/workouts?profile_id=eq.$userId&select=*")
         .addHeader("apikey", BuildConfig.SUPABASE_ANON_KEY)
         .addHeader("Authorization", "Bearer ${BuildConfig.SUPABASE_ANON_KEY}")
         .build()
@@ -47,11 +54,12 @@ suspend fun fetchWorkouts(): List<Workout> = withContext(Dispatchers.IO) {
             workouts.add(
                 Workout(
                     id = obj.getInt("id"),
-                    type = WorkoutType.fromString(obj.getString("type")),
-                    date = java.time.LocalDate.parse(obj.getString("date")),
+                    type = obj.getString("type"),
+                    date = obj.getString("date"),
                     duration = obj.getInt("duration"),
                     distance = if (obj.isNull("distance")) null else obj.getDouble("distance"),
-                    notes = if (obj.isNull("notes")) null else obj.getString("notes")
+                    notes = if (obj.isNull("notes")) null else obj.getString("notes"),
+                    profileId = obj.getString("profile_id")
                 )
             )
         }
@@ -62,70 +70,74 @@ suspend fun fetchWorkouts(): List<Workout> = withContext(Dispatchers.IO) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun HistoryScreen(navController: NavController) {
-    var workouts by remember { mutableStateOf<List<Workout>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(true) }
-    var error by remember { mutableStateOf<String?>(null) }
+fun HistoryScreen(navController: NavController, selectedLanguage: String) {
+    val context = LocalContext.current
+    val viewModel: HistoryViewModel = viewModel(
+        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                @Suppress("UNCHECKED_CAST")
+                return HistoryViewModel() as T
+            }
+        }
+    )
+
+    val workouts by viewModel.workouts.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val error by viewModel.error.collectAsState()
+    val selectedType by viewModel.selectedType.collectAsState()
+    val showCalendarView by viewModel.showCalendarView.collectAsState()
+    val calendarMonth by viewModel.calendarMonth.collectAsState()
+
     var selectedTabIndex by remember { mutableStateOf(1) }
+    var expanded by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        isLoading = true
-        error = null
-        val result = fetchWorkouts()
-        if (result.isNotEmpty()) {
-            workouts = result
+        val userId = getUserId(context)
+        if (userId != null) {
+            viewModel.fetchWorkouts(userId, ::fetchWorkouts)
         } else {
-            error = "No workouts found or failed to fetch."
+            viewModel.setSelectedType(null)
         }
-        isLoading = false
     }
 
-    val workoutsByMonth = workouts.groupBy {
-        Month.of(it.date.monthValue).getDisplayName(TextStyle.FULL, Locale.getDefault()) + " " + it.date.year
+    val filteredWorkouts = selectedType?.let { type ->
+        workouts.filter { it.workoutTypeEnum == type }
+    } ?: workouts
+
+    val sortedWorkouts = filteredWorkouts.sortedByDescending { it.date }
+
+    val workoutsByMonth = sortedWorkouts.groupBy {
+        val localDate = LocalDate.parse(it.date)
+        Pair(localDate.year, localDate.monthValue)
+    }
+
+    val monthsOrdered = workoutsByMonth.keys.sortedByDescending { (year, month) ->
+        year * 100 + month
     }
 
     Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Workout Geschiedenis") },
+                actions = {
+                    IconButton(onClick = { navController.navigate(Screen.Settings.route) }) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = strings().settings
+                        )
+                    }
+                }
+            )
+        },
         bottomBar = {
-            NavigationBar {
-                NavigationBarItem(
-                    selected = selectedTabIndex == 0,
-                    onClick = {
-                        selectedTabIndex = 0
-                        navController.navigate(Screen.Dashboard.route)
-                    },
-                    icon = { Icon(Icons.Default.FitnessCenter, contentDescription = "Dashboard") },
-                    label = { Text("Dashboard") }
-                )
-                NavigationBarItem(
-                    selected = selectedTabIndex == 1,
-                    onClick = {
-                        selectedTabIndex = 1
-                        navController.navigate(Screen.History.route)
-                    },
-                    icon = { Icon(Icons.Default.DirectionsRun, contentDescription = "Geschiedenis") },
-                    label = { Text("Geschiedenis") }
-                )
-                NavigationBarItem(
-                    selected = selectedTabIndex == 2,
-                    onClick = {
-                        selectedTabIndex = 2
-                        navController.navigate(Screen.Exercises.route)
-                    },
-                    icon = { Icon(Icons.Default.FitnessCenter, contentDescription = "Oefeningen") },
-                    label = { Text("Oefeningen") }
-                )
-                NavigationBarItem(
-                    selected = selectedTabIndex == 3,
-                    onClick = {
-                        selectedTabIndex = 3
-                        navController.navigate(Screen.Stats.route)
-                    },
-                    icon = { Icon(Icons.Default.SelfImprovement, contentDescription = "Statistieken") },
-                    label = { Text("Statistieken") }
-                )
-            }
+            BottomNavBar(
+                selectedTabIndex = selectedTabIndex,
+                onTabSelected = { selectedTabIndex = it },
+                navController = navController
+            )
         }
     ) { paddingValues ->
         Column(
@@ -134,43 +146,130 @@ fun HistoryScreen(navController: NavController) {
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
-            Text(
-                text = "Workout Geschiedenis",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box {
+                    Button(onClick = { expanded = true }) {
+                        Text(selectedType?.displayName ?: "Alle types")
+                    }
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Alle types") },
+                            onClick = {
+                                viewModel.setSelectedType(null)
+                                expanded = false
+                            }
+                        )
+                        WorkoutType.values().forEach { type ->
+                            DropdownMenuItem(
+                                text = { Text(type.displayName) },
+                                onClick = {
+                                    viewModel.setSelectedType(type)
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
 
-            Spacer(modifier = Modifier.height(16.dp))
+                Button(onClick = { viewModel.toggleCalendarView() }) {
+                    Text(if (showCalendarView) "Lijst" else "Kalender")
+                }
+            }
 
             when {
                 isLoading -> {
                     CircularProgressIndicator()
                 }
+
                 error != null -> {
                     Text(error!!, color = MaterialTheme.colorScheme.error)
                 }
-                workouts.isEmpty() -> {
+
+                filteredWorkouts.isEmpty() -> {
                     Text("No workouts found.")
                 }
+
                 else -> {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        workoutsByMonth.forEach { (month, workouts) ->
-                            item {
-                                Text(
-                                    text = month,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    modifier = Modifier.padding(vertical = 8.dp)
+                    if (showCalendarView) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(onClick = {
+                                viewModel.setCalendarMonth(calendarMonth.minusMonths(1))
+                            }) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Previous month"
                                 )
                             }
-                            items(workouts.sortedByDescending { it.date }) { workout ->
-
-                                WorkoutItem(
-                                    workout = workout,
-                                    onClick = { navController.navigate("workoutDetail/${workout.id}/1") }
+                            Text(
+                                text = "${
+                                    calendarMonth.month.getDisplayName(
+                                        TextStyle.FULL,
+                                        Locale(selectedLanguage)
+                                    )
+                                } ${calendarMonth.year}",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            IconButton(onClick = {
+                                viewModel.setCalendarMonth(calendarMonth.plusMonths(1))
+                            }) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = "Next month"
                                 )
-                                Spacer(modifier = Modifier.height(8.dp))
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        val monthWorkouts = filteredWorkouts.filter {
+                            val date = LocalDate.parse(it.date)
+                            date.year == calendarMonth.year && date.monthValue == calendarMonth.monthValue
+                        }
+                        CalendarMonthViewStyled(
+                            year = calendarMonth.year,
+                            month = calendarMonth.monthValue,
+                            workoutDays = monthWorkouts.map { LocalDate.parse(it.date).dayOfMonth }
+                        )
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            monthsOrdered.forEach { (year, month) ->
+                                val monthLocale = Locale(selectedLanguage)
+                                val monthName =
+                                    Month.of(month).getDisplayName(TextStyle.FULL, monthLocale)
+                                val header = "$monthName $year"
+                                val monthWorkouts =
+                                    workoutsByMonth[Pair(year, month)] ?: emptyList()
+                                item {
+                                    Text(
+                                        text = header,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        modifier = Modifier.padding(vertical = 8.dp)
+                                    )
+                                }
+                                items(monthWorkouts) { workout ->
+                                    WorkoutItem(
+                                        workout = workout,
+                                        onClick = if (workout.workoutTypeEnum == WorkoutType.STRENGTH) {
+                                            { navController.navigate("workoutDetail/${workout.id}/1") }
+                                        } else {
+                                            {}
+                                        }
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                }
                             }
                         }
                     }

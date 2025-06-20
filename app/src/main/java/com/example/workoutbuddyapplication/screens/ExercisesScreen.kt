@@ -26,9 +26,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.background
+import com.example.workoutbuddyapplication.components.BottomNavBar
 import io.github.jan.supabase.postgrest.postgrest
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.decodeFromString
 
 @OptIn(ExperimentalMaterial3Api::class)
 @RequiresApi(Build.VERSION_CODES.O)
@@ -41,13 +40,13 @@ fun ExercisesScreen(navController: NavController) {
     var selectedCategory by remember { mutableStateOf("Any Category") }
     var showBodyPartDialog by remember { mutableStateOf(false) }
     var showCategoryDialog by remember { mutableStateOf(false) }
-    
+
     var exercises by remember { mutableStateOf<List<Exercise>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
-    
+
     val coroutineScope = rememberCoroutineScope()
-    
+
     // Fetch exercises from Supabase
     LaunchedEffect(key1 = true) {
         coroutineScope.launch {
@@ -56,7 +55,7 @@ fun ExercisesScreen(navController: NavController) {
                     .from("exercises")
                     .select()
                     .decodeList<ExerciseDTO>()
-                
+
                 // Convert DTOs to Exercise model objects
                 exercises = exerciseDTOs.map { dto ->
                     Exercise(
@@ -77,12 +76,12 @@ fun ExercisesScreen(navController: NavController) {
             }
         }
     }
-    
+
     // Extract unique body parts and categories
     val bodyParts = remember(exercises) {
         exercises.flatMap { it.primaryMuscles }.distinct().sorted()
     }
-    
+
     val categories = remember(exercises) {
         exercises.map { it.category }.distinct().sorted()
     }
@@ -93,11 +92,11 @@ fun ExercisesScreen(navController: NavController) {
             title = { Text("Select Body Part") },
             text = {
                 LazyColumn {
-                    item { 
+                    item {
                         TextButton(
-                            onClick = { 
+                            onClick = {
                                 selectedBodyPart = "Any Body Part"
-                                showBodyPartDialog = false 
+                                showBodyPartDialog = false
                             }
                         ) {
                             Text("Any Body Part")
@@ -125,11 +124,11 @@ fun ExercisesScreen(navController: NavController) {
             title = { Text("Select Category") },
             text = {
                 LazyColumn {
-                    item { 
+                    item {
                         TextButton(
-                            onClick = { 
+                            onClick = {
                                 selectedCategory = "Any Category"
-                                showCategoryDialog = false 
+                                showCategoryDialog = false
                             }
                         ) {
                             Text("Any Category")
@@ -137,9 +136,9 @@ fun ExercisesScreen(navController: NavController) {
                     }
                     items(categories) { category ->
                         TextButton(
-                            onClick = { 
+                            onClick = {
                                 selectedCategory = category
-                                showCategoryDialog = false 
+                                showCategoryDialog = false
                             }
                         ) {
                             Text(category)
@@ -157,25 +156,25 @@ fun ExercisesScreen(navController: NavController) {
                 true
             } else {
                 exercise.name.contains(searchQuery, ignoreCase = true) ||
-                exercise.category.contains(searchQuery, ignoreCase = true) ||
-                exercise.primaryMuscles.any { it.contains(searchQuery, ignoreCase = true) }
+                        exercise.category.contains(searchQuery, ignoreCase = true) ||
+                        exercise.primaryMuscles.any { it.contains(searchQuery, ignoreCase = true) }
             }
-            
-            val matchesBodyPart = selectedBodyPart == "Any Body Part" || 
-                exercise.primaryMuscles.any { it == selectedBodyPart }
-            
-            val matchesCategory = selectedCategory == "Any Category" || 
-                exercise.category == selectedCategory
+
+            val matchesBodyPart = selectedBodyPart == "Any Body Part" ||
+                    exercise.primaryMuscles.any { it == selectedBodyPart }
+
+            val matchesCategory = selectedCategory == "Any Category" ||
+                    exercise.category == selectedCategory
 
             matchesSearch && matchesBodyPart && matchesCategory
-        }.sortedBy { it.name } // Sort by name
+        }.sortedBy { it.name }
     }
-    
+
     // Group exercises by first letter
     val groupedExercises = remember(filteredExercises) {
         filteredExercises.groupBy { exercise ->
             exercise.name.first().uppercase()
-        }.toSortedMap() // Sort by letter
+        }.toSortedMap()
     }
 
     Scaffold(
@@ -201,7 +200,7 @@ fun ExercisesScreen(navController: NavController) {
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
-                
+
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -214,7 +213,7 @@ fun ExercisesScreen(navController: NavController) {
                     ) {
                         Text(selectedBodyPart)
                     }
-                    
+
                     FilledTonalButton(
                         onClick = { showCategoryDialog = true },
                         modifier = Modifier.weight(1f)
@@ -246,44 +245,11 @@ fun ExercisesScreen(navController: NavController) {
             }
         },
         bottomBar = {
-            NavigationBar {
-                NavigationBarItem(
-                    selected = selectedTabIndex == 0,
-                    onClick = {
-                        selectedTabIndex = 0
-                        navController.navigate(Screen.Dashboard.route)
-                    },
-                    icon = { Icon(Icons.Default.FitnessCenter, contentDescription = "Dashboard") },
-                    label = { Text("Dashboard") }
-                )
-                NavigationBarItem(
-                    selected = selectedTabIndex == 1,
-                    onClick = {
-                        selectedTabIndex = 1
-                        navController.navigate(Screen.History.route)
-                    },
-                    icon = { Icon(Icons.Default.DirectionsRun, contentDescription = "Geschiedenis") },
-                    label = { Text("Geschiedenis") }
-                )
-                NavigationBarItem(
-                    selected = selectedTabIndex == 2,
-                    onClick = {
-                        selectedTabIndex = 2
-                        navController.navigate(Screen.Exercises.route)
-                    },
-                    icon = { Icon(Icons.Default.FitnessCenter, contentDescription = "Oefeningen") },
-                    label = { Text("Oefeningen") }
-                )
-                NavigationBarItem(
-                    selected = selectedTabIndex == 3,
-                    onClick = {
-                        selectedTabIndex = 3
-                        navController.navigate(Screen.Stats.route)
-                    },
-                    icon = { Icon(Icons.Default.SelfImprovement, contentDescription = "Statistieken") },
-                    label = { Text("Statistieken") }
-                )
-            }
+            BottomNavBar(
+                selectedTabIndex = selectedTabIndex,
+                onTabSelected = { selectedTabIndex = it },
+                navController = navController
+            )
         }
     ) { paddingValues ->
         Box(
@@ -313,7 +279,7 @@ fun ExercisesScreen(navController: NavController) {
                                     .from("exercises")
                                     .select()
                                     .decodeList<ExerciseDTO>()
-                                
+
                                 exercises = exerciseDTOs.map { dto ->
                                     Exercise(
                                         name = dto.name,
@@ -340,7 +306,6 @@ fun ExercisesScreen(navController: NavController) {
                     verticalArrangement = Arrangement.spacedBy(0.dp)
                 ) {
                     groupedExercises.forEach { (letter, exercisesInGroup) ->
-                        // Add header for each letter
                         item {
                             Text(
                                 text = letter,
@@ -352,8 +317,7 @@ fun ExercisesScreen(navController: NavController) {
                                     .padding(vertical = 8.dp, horizontal = 16.dp)
                             )
                         }
-                        
-                        // Add exercises for this letter
+
                         items(exercisesInGroup) { exercise ->
                             ExerciseCard(
                                 exercise = exercise,

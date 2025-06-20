@@ -20,38 +20,68 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import com.example.workoutbuddyapplication.BuildConfig
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import com.example.workoutbuddyapplication.R
+import com.example.workoutbuddyapplication.data.SupabaseClient
+import io.github.jan.supabase.gotrue.auth
+import io.github.jan.supabase.gotrue.providers.builtin.Email
+import androidx.compose.ui.platform.LocalContext
+import com.example.workoutbuddyapplication.ui.theme.strings
+import com.example.workoutbuddyapplication.ui.theme.dutchStrings
+import com.example.workoutbuddyapplication.utils.EmailValidator
 
-suspend fun registerUser(email: String, password: String, name: String): Boolean = withContext(Dispatchers.IO) {
-    val client = OkHttpClient()
-    val json = JSONObject()
-    json.put("email", email)
-    json.put("password", password)
-    // Optionally, add user metadata
-    val userMeta = JSONObject()
-    userMeta.put("name", name)
-    json.put("data", userMeta)
+suspend fun registerUser(email: String, password: String, name: String): Boolean =
+    withContext(Dispatchers.IO) {
+        val client = OkHttpClient()
+        val json = JSONObject()
+        json.put("email", email)
+        json.put("password", password)
+        val userMeta = JSONObject()
+        userMeta.put("name", name)
+        json.put("data", userMeta)
 
-    val body = json.toString().toRequestBody("application/json".toMediaType())
-    val request = Request.Builder()
-        .url("https://attsgwsxdlblbqxnboqx.supabase.co/auth/v1/signup")
-        .post(body)
-        .addHeader("apikey", BuildConfig.SUPABASE_ANON_KEY)
-        .addHeader("Authorization", "Bearer ${BuildConfig.SUPABASE_ANON_KEY}")
-        .build()
+        val body = json.toString().toRequestBody("application/json".toMediaType())
+        val request = Request.Builder()
+            .url("https://attsgwsxdlblbqxnboqx.supabase.co/auth/v1/signup")
+            .post(body)
+            .addHeader("apikey", BuildConfig.SUPABASE_ANON_KEY)
+            .addHeader("Authorization", "Bearer ${BuildConfig.SUPABASE_ANON_KEY}")
+            .build()
 
-    try {
-        val response = client.newCall(request).execute()
-        val responseBody = response.body?.string()
-        if (!response.isSuccessful) {
-            println("Supabase signup error: $responseBody")
+        try {
+            val response = client.newCall(request).execute()
+            val responseBody = response.body?.string()
+            if (response.isSuccessful) {
+                // Update the profile with name, language, and unit preferences
+                val updateJson = JSONObject()
+                updateJson.put("name", name)
+                updateJson.put("language", "nl") // Default to Dutch
+                updateJson.put("unit_system", "metric") // Default to metric
+                val updateBody =
+                    updateJson.toString().toRequestBody("application/json".toMediaType())
+                val updateRequest = Request.Builder()
+                    .url("https://attsgwsxdlblbqxnboqx.supabase.co/rest/v1/profiles?email=eq.$email")
+                    .patch(updateBody)
+                    .addHeader("apikey", BuildConfig.SUPABASE_ANON_KEY)
+                    .addHeader("Authorization", "Bearer ${BuildConfig.SUPABASE_ANON_KEY}")
+                    .addHeader("Content-Type", "application/json")
+                    .build()
+                val updateResponse = client.newCall(updateRequest).execute()
+                if (!updateResponse.isSuccessful) {
+                    println("Failed to update profile: ${updateResponse.body?.string()}")
+                }
+            } else {
+                println("Supabase signup error: $responseBody")
+            }
+            response.isSuccessful
+        } catch (e: Exception) {
+            e.printStackTrace()
+            println("Supabase signup exception: ${e.message}")
+            false
         }
-        response.isSuccessful
-    } catch (e: Exception) {
-        e.printStackTrace()
-        println("Supabase signup exception: ${e.message}")
-        false
     }
-}
+
 
 @Composable
 fun SignupScreen(navController: NavController) {
@@ -60,7 +90,11 @@ fun SignupScreen(navController: NavController) {
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var isLoading by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val strings = strings()
+    val emailValidator = remember { EmailValidator() }
 
     Column(
         modifier = Modifier
@@ -69,8 +103,16 @@ fun SignupScreen(navController: NavController) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        Image(
+            painter = painterResource(id = R.drawable.aktiv_logo),
+            contentDescription = "App Icon",
+            modifier = Modifier.size(140.dp)
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         Text(
-            text = "Aktiv",
+            text = strings.appName,
             fontSize = 30.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
@@ -79,7 +121,7 @@ fun SignupScreen(navController: NavController) {
         Spacer(modifier = Modifier.height(40.dp))
 
         Text(
-            text = "Account Aanmaken",
+            text = strings.createAccount,
             fontSize = 24.sp,
             fontWeight = FontWeight.Medium
         )
@@ -89,7 +131,7 @@ fun SignupScreen(navController: NavController) {
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
-            label = { Text("Naam") },
+            label = { Text(strings.name) },
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -98,7 +140,7 @@ fun SignupScreen(navController: NavController) {
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
-            label = { Text("Email") },
+            label = { Text(strings.email) },
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -107,7 +149,7 @@ fun SignupScreen(navController: NavController) {
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
-            label = { Text("Wachtwoord") },
+            label = { Text(strings.password) },
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth()
         )
@@ -130,18 +172,43 @@ fun SignupScreen(navController: NavController) {
                     errorMessage = "Wachtwoorden komen niet overeen"
                     return@Button
                 }
+                if (!emailValidator.isValid(email)) {
+                    errorMessage = "Ongeldig e-mailadres"
+                    return@Button
+                }
                 coroutineScope.launch {
                     val success = registerUser(email, password, name)
                     if (success) {
-                        navController.navigate(Screen.Dashboard.route)
+                        try {
+                            SupabaseClient.client.auth.signInWith(Email) {
+                                this.email = email
+                                this.password = password
+                            }
+                            val user = SupabaseClient.client.auth.currentUserOrNull()
+                            user?.id?.let { userId ->
+                                saveUserId(context, userId)
+                            }
+                            navController.navigate(Screen.Dashboard.route)
+                        } catch (e: Exception) {
+                            errorMessage = "Automatisch inloggen mislukt: ${e.message}"
+                        }
                     } else {
                         errorMessage = "Registratie mislukt"
                     }
                 }
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isLoading
         ) {
-            Text("Registreren")
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.height(24.dp),
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Text(strings.createAccount)
+            }
         }
 
         errorMessage?.let {
@@ -151,8 +218,11 @@ fun SignupScreen(navController: NavController) {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        TextButton(onClick = { navController.navigate(Screen.Login.route) }) {
-            Text("Al een account? Log hier in")
+        TextButton(
+            onClick = { navController.navigate(Screen.Login.route) },
+            enabled = !isLoading
+        ) {
+            Text(if (strings === dutchStrings) "Al een account? Log hier in" else "Already have an account? Login here")
         }
     }
 }

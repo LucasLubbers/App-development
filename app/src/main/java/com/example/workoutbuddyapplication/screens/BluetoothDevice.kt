@@ -4,7 +4,6 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
-import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.provider.Settings
@@ -29,6 +28,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
 import com.example.workoutbuddyapplication.services.BluetoothService
+import com.example.workoutbuddyapplication.ui.theme.strings
 import kotlinx.coroutines.launch
 import androidx.core.net.toUri
 
@@ -40,6 +40,7 @@ fun BluetoothDeviceScreen(navController: NavController) {
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    val strings = strings()
 
     val bluetoothService = remember { BluetoothService(context) }
 
@@ -75,7 +76,7 @@ fun BluetoothDeviceScreen(navController: NavController) {
             bluetoothService.startScan()
         } else {
             scope.launch {
-                snackbarHostState.showSnackbar("Bluetooth moet ingeschakeld zijn om apparaten te scannen")
+                snackbarHostState.showSnackbar(strings.bluetoothRequired)
             }
         }
     }
@@ -123,30 +124,28 @@ fun BluetoothDeviceScreen(navController: NavController) {
     if (showBluetoothDisabledDialog) {
         AlertDialog(
             onDismissRequest = { showBluetoothDisabledDialog = false },
-            title = { Text("Bluetooth uitgeschakeld") },
-            text = { Text("Bluetooth moet ingeschakeld zijn om apparaten te scannen. Wil je Bluetooth inschakelen?") },
+            title = { Text(strings.bluetoothDisabled) },
+            text = { Text(strings.bluetoothDisabledPrompt) },
             confirmButton = {
                 TextButton(
                     onClick = {
                         showBluetoothDisabledDialog = false
                         val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
                         bluetoothEnableLauncher.launch(enableBtIntent)
-                    }
-                ) { Text("Inschakelen") }
+                    }) { Text(strings.enable) }
             },
             dismissButton = {
                 TextButton(onClick = { showBluetoothDisabledDialog = false }) {
-                    Text("Annuleren")
+                    Text(strings.cancel)
                 }
-            }
-        )
+            })
     }
 
     if (showPermissionDialog) {
         AlertDialog(
             onDismissRequest = { showPermissionDialog = false },
-            title = { Text("Toestemmingen vereist") },
-            text = { Text("Bluetooth scan en locatie toestemmingen zijn nodig om apparaten te vinden. Ga naar instellingen om deze toestemmingen te verlenen.") },
+            title = { Text(strings.permissionsRequired) },
+            text = { Text(strings.permissionsRequiredPrompt) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -155,48 +154,38 @@ fun BluetoothDeviceScreen(navController: NavController) {
                             data = "package:${context.packageName}".toUri()
                         }
                         context.startActivity(intent)
-                    }
-                ) { Text("Instellingen") }
+                    }) { Text(strings.settings) }
             },
             dismissButton = {
                 TextButton(onClick = { showPermissionDialog = false }) {
-                    Text("Annuleren")
+                    Text(strings.cancel)
                 }
-            }
-        )
+            })
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Bluetooth Apparaten") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Terug")
-                    }
-                },
-                actions = {
-                    IconButton(
-                        onClick = {
-                            if (bluetoothService.hasRequiredPermissions()) {
-                                if (bluetoothService.isBluetoothEnabled()) {
-                                    bluetoothService.startScan()
-                                } else {
-                                    showBluetoothDisabledDialog = true
-                                }
-                            } else {
-                                permissionsRequested = false
-                                requestPermissions(permissionLauncher)
-                            }
+    Scaffold(topBar = {
+        TopAppBar(title = { Text(strings.bluetoothDevices) }, navigationIcon = {
+            IconButton(onClick = { navController.navigateUp() }) {
+                Icon(Icons.Default.ArrowBack, contentDescription = strings.back)
+            }
+        }, actions = {
+            IconButton(
+                onClick = {
+                    if (bluetoothService.hasRequiredPermissions()) {
+                        if (bluetoothService.isBluetoothEnabled()) {
+                            bluetoothService.startScan()
+                        } else {
+                            showBluetoothDisabledDialog = true
                         }
-                    ) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Vernieuwen")
+                    } else {
+                        permissionsRequested = false
+                        requestPermissions(permissionLauncher)
                     }
-                }
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { paddingValues ->
+                }) {
+                Icon(Icons.Default.Refresh, contentDescription = strings.refresh)
+            }
+        })
+    }, snackbarHost = { SnackbarHost(snackbarHostState) }) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -212,21 +201,17 @@ fun BluetoothDeviceScreen(navController: NavController) {
                     horizontalArrangement = Arrangement.Center
                 ) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        strokeWidth = 2.dp
+                        modifier = Modifier.size(24.dp), strokeWidth = 2.dp
                     )
                     Spacer(modifier = Modifier.padding(8.dp))
                     Text(
-                        text = "Zoeken naar apparaten...",
-                        style = MaterialTheme.typography.bodyLarge
+                        text = strings.searchingDevices, style = MaterialTheme.typography.bodyLarge
                     )
                 }
             }
 
             Text(
-                text = "Beschikbare Apparaten",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Medium
+                text = strings.availableDevices, fontSize = 20.sp, fontWeight = FontWeight.Medium
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -251,139 +236,110 @@ fun BluetoothDeviceScreen(navController: NavController) {
                             )
                         } else {
                             Icon(
-                                imageVector = Icons.Default.BluetoothDisabled,
+                                imageVector = Icons.Default.SentimentDissatisfied,
                                 contentDescription = null,
                                 modifier = Modifier.size(64.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = strings.noDevicesFound,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            )
+                            Text(
+                                text = strings.ensureDeviceIsNear,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                textAlign = TextAlign.Center
                             )
                         }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Text(
-                            text = if (scanningState)
-                                "Zoeken naar apparaten..."
-                            else
-                                "Geen apparaten gevonden. Druk op vernieuwen om opnieuw te scannen.",
-                            textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
                     }
                 }
             } else {
-                LazyColumn(
-                    modifier = Modifier.weight(1f)
-                ) {
+                LazyColumn(modifier = Modifier.weight(1f)) {
                     items(discoveredDevices.size) { index ->
                         val device = discoveredDevices[index]
-                        val isConnected = bluetoothService.isDeviceConnected(device)
-                        DeviceCard(
+                        DeviceItem(
                             device = device,
-                            isConnected = isConnected,
-                            onConnectClick = {
+                            isConnected = device.address == connectedDevice?.address,
+                            onConnect = { device ->
                                 scope.launch {
-                                    if (isConnected) {
-                                        bluetoothService.disconnectDevice(device)
-                                    } else {
-                                        bluetoothService.connectToDevice(device)
-                                    }
+                                    bluetoothService.connectToDevice(device)
                                 }
                             },
-                            bluetoothService = bluetoothService,
-                            context = context
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
+                            onDisconnect = { bluetoothService.disconnect() })
                     }
                 }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Button(
-                onClick = { navController.navigateUp() },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Bevestigen")
             }
         }
     }
 }
 
+@SuppressLint("MissingPermission")
 @Composable
-fun DeviceCard(
+fun DeviceItem(
     device: BluetoothDevice,
     isConnected: Boolean,
-    onConnectClick: () -> Unit,
-    bluetoothService: BluetoothService,
-    context: Context
+    onConnect: (BluetoothDevice) -> Unit,
+    onDisconnect: () -> Unit
 ) {
-    val deviceName = remember(device) {
-        if (bluetoothService.hasRequiredPermissions()) {
-            try {
-                device.name ?: "Onbekend apparaat"
-            } catch (e: SecurityException) {
-                "Toestemming vereist"
-            }
-        } else {
-            "Toestemming vereist"
-        }
-    }
-
+    val strings = strings()
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 imageVector = if (isConnected) Icons.Default.BluetoothConnected else Icons.Default.Bluetooth,
-                contentDescription = "Bluetooth",
-                tint = if (isConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.size(24.dp)
+                contentDescription = null,
+                tint = if (isConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
             )
-
-            Spacer(modifier = Modifier.padding(8.dp))
-
+            Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = deviceName,
-                    fontWeight = FontWeight.Medium
+                    text = device.name ?: "Unknown Device", fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = device.address,
-                    style = MaterialTheme.typography.bodySmall
+                    text = device.address, style = MaterialTheme.typography.bodySmall
                 )
             }
-
             Button(
                 onClick = {
-                    if (bluetoothService.hasRequiredPermissions()) {
-                        onConnectClick()
-                    }
-                }
+                    if (isConnected) onDisconnect() else onConnect(device)
+                }, colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isConnected) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                )
             ) {
-                Text(if (isConnected) "Verbreken" else "Verbinden")
+                Text(
+                    text = when {
+                        isConnected -> strings.disconnect
+                        else -> strings.connect
+                    }.uppercase()
+                )
             }
         }
     }
 }
 
-private fun requestPermissions(permissionLauncher: ActivityResultLauncher<Array<String>>) {
-    val permissions = mutableListOf<String>()
-
+private fun requestPermissions(launcher: ActivityResultLauncher<Array<String>>) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        permissions.add(Manifest.permission.BLUETOOTH_SCAN)
-        permissions.add(Manifest.permission.BLUETOOTH_CONNECT)
-        permissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
+        launcher.launch(
+            arrayOf(
+                Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT
+            )
+        )
     } else {
-        permissions.add(Manifest.permission.BLUETOOTH)
-        permissions.add(Manifest.permission.BLUETOOTH_ADMIN)
-        permissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
+        launcher.launch(
+            arrayOf(
+                Manifest.permission.BLUETOOTH,
+                Manifest.permission.BLUETOOTH_ADMIN,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            )
+        )
     }
-
-    permissionLauncher.launch(permissions.toTypedArray())
 }

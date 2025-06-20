@@ -1,71 +1,74 @@
 package com.example.workoutbuddyapplication.screens
 
-import androidx.compose.foundation.Canvas
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DirectionsRun
-import androidx.compose.material.icons.filled.FitnessCenter
-import androidx.compose.material.icons.filled.SelfImprovement
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.workoutbuddyapplication.components.*
 import com.example.workoutbuddyapplication.navigation.Screen
+import com.example.workoutbuddyapplication.viewmodel.StatsViewModel
+import com.example.workoutbuddyapplication.utils.StatsResult
+import com.example.workoutbuddyapplication.data.WorkoutRepositoryImpl
+import com.example.workoutbuddyapplication.data.SupabaseClient
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
+import io.github.jan.supabase.gotrue.auth
+import java.time.LocalDate
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun StatsScreen(navController: NavController) {
-    var selectedTabIndex by remember { mutableStateOf(2) }
+fun StatsScreen(
+    navController: NavController
+) {
+    val user = remember { SupabaseClient.client.auth.currentUserOrNull() }
+    if (user == null) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("Je bent niet ingelogd.")
+        }
+        return
+    }
+    val profileId = user.id
+
+    val viewModel: StatsViewModel = viewModel(
+        factory = object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                @Suppress("UNCHECKED_CAST")
+                return StatsViewModel(WorkoutRepositoryImpl(profileId)) as T
+            }
+        }
+    )
+
+    var selectedTabIndex by remember { mutableStateOf(3) }
     var selectedTimeRange by remember { mutableStateOf(0) }
     val timeRanges = listOf("Week", "Maand", "Jaar")
 
+    val stats by viewModel.stats.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val error by viewModel.error.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.loadStats()
+    }
+
     Scaffold(
         bottomBar = {
-            NavigationBar {
-                NavigationBarItem(
-                    selected = selectedTabIndex == 0,
-                    onClick = {
-                        selectedTabIndex = 0
-                        navController.navigate(Screen.Dashboard.route)
-                    },
-                    icon = { Icon(Icons.Default.FitnessCenter, contentDescription = "Dashboard") },
-                    label = { Text("Dashboard") }
-                )
-                NavigationBarItem(
-                    selected = selectedTabIndex == 1,
-                    onClick = {
-                        selectedTabIndex = 1
-                        navController.navigate(Screen.History.route)
-                    },
-                    icon = { Icon(Icons.Default.DirectionsRun, contentDescription = "Geschiedenis") },
-                    label = { Text("Geschiedenis") }
-                )
-                NavigationBarItem(
-                    selected = selectedTabIndex == 2,
-                    onClick = {
-                        selectedTabIndex = 2
-                        navController.navigate(Screen.Exercises.route)
-                    },
-                    icon = { Icon(Icons.Default.FitnessCenter, contentDescription = "Oefeningen") },
-                    label = { Text("Oefeningen") }
-                )
-                NavigationBarItem(
-                    selected = selectedTabIndex == 3,
-                    onClick = {
-                        selectedTabIndex = 3
-                        navController.navigate(Screen.Stats.route)
-                    },
-                    icon = { Icon(Icons.Default.SelfImprovement, contentDescription = "Statistieken") },
-                    label = { Text("Statistieken") }
-                )
-            }
+            BottomNavBar(
+                selectedTabIndex = selectedTabIndex,
+                onTabSelected = { selectedTabIndex = it },
+                navController = navController
+            )
         }
     ) { paddingValues ->
         Column(
@@ -75,201 +78,125 @@ fun StatsScreen(navController: NavController) {
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            Text("Statistieken", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Statistieken",
+                    fontSize = 24.sp,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
+                )
+                Button(
+                    onClick = { navController.navigate(Screen.Goals.route) }
+                ) {
+                    Text("Doelen Bekijken")
+                }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             TabRow(selectedTabIndex = selectedTimeRange) {
-                timeRanges.forEachIndexed { index, title ->
+                timeRanges.forEachIndexed { index, label ->
                     Tab(
                         selected = selectedTimeRange == index,
                         onClick = { selectedTimeRange = index },
-                        text = { Text(title) }
+                        text = { Text(label) }
                     )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            StatsSummaryCards()
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text("Workout Activiteit", fontSize = 20.sp, fontWeight = FontWeight.Medium)
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    WorkoutActivityChart()
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text("Workout Verdeling", fontSize = 20.sp, fontWeight = FontWeight.Medium)
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    WorkoutTypeDistribution(45, 30, 15, 10)
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Button(
-                text = "Doelen Bekijken",
-                onClick = { navController.navigate(Screen.Goals.route) }
-            )
-        }
-    }
-}
+            when {
+                isLoading -> CircularProgressIndicator()
+                error != null -> Text(error!!, color = MaterialTheme.colorScheme.error)
+                stats == null -> {}
+                else -> {
+                    val stat: StatsResult = stats!!
+                    val now = LocalDate.now()
+                    val (workouts, totalDuration, totalDistance) = when (selectedTimeRange) {
+                        0 -> Triple(
+                            stat.currentWeekWorkouts,
+                            stat.currentWeekWorkouts.sumOf { it.duration },
+                            stat.currentWeekWorkouts.mapNotNull { it.distance }.sum()
+                        )
 
-@Composable
-fun WorkoutActivityChart() {
-    val values = listOf(0.3f, 0.5f, 0.7f, 0.4f, 0.6f, 0.2f, 0.8f)
-    val days = listOf("Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo")
+                        1 -> Triple(
+                            stat.currentMonthWorkouts,
+                            stat.currentMonthWorkouts.sumOf { it.duration },
+                            stat.currentMonthWorkouts.mapNotNull { it.distance }.sum()
+                        )
 
-    Canvas(modifier = Modifier.fillMaxWidth().height(200.dp)) {
-        val barWidth = size.width / (values.size * 1.5f)
-        val spacing = barWidth / 2
-        val maxBarHeight = size.height * 0.8f
-
-        // horizontale lijnen
-        for (i in 0..4) {
-            val y = size.height - (i * size.height / 4)
-            drawLine(
-                color = Color.LightGray,
-                start = Offset(0f, y),
-                end = Offset(size.width, y),
-                strokeWidth = 1f
-            )
-        }
-
-        values.forEachIndexed { index, value ->
-            val x = index * (barWidth + spacing) + spacing
-            val barHeight = maxBarHeight * value
-            val y = size.height - barHeight
-
-            drawLine(
-                color = Color.Blue,
-                start = Offset(x + barWidth / 2, size.height),
-                end = Offset(x + barWidth / 2, y),
-                strokeWidth = barWidth
-            )
-
-            // tekst onder balken
-            drawContext.canvas.nativeCanvas.apply {
-                drawText(
-                    days[index],
-                    x + barWidth / 2,
-                    size.height + 30,
-                    android.graphics.Paint().apply {
-                        color = android.graphics.Color.BLACK
-                        textSize = 30f
-                        textAlign = android.graphics.Paint.Align.CENTER
+                        else -> Triple(
+                            stat.currentYearWorkouts,
+                            stat.currentYearWorkouts.sumOf { it.duration },
+                            stat.currentYearWorkouts.mapNotNull { it.distance }.sum()
+                        )
                     }
-                )
+
+                    StatsSummaryCards(
+                        totalWorkouts = workouts.size,
+                        totalDurationHours = totalDuration / 60.0,
+                        totalDistance = totalDistance,
+                        avgPerWeek = stat.avgPerWeek,
+                        showAvgPerWeek = selectedTimeRange == 1,
+                        avgDurationPerWorkoutWeek = stat.avgDurationPerWorkoutWeek,
+                        showAvgDurationPerWorkoutWeek = selectedTimeRange == 0,
+                        avgWorkoutsPerMonth = stat.avgWorkoutsPerMonth,
+                        showAvgWorkoutsPerMonth = selectedTimeRange == 2
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Text(
+                        text = "Workout Activiteit",
+                        fontSize = 20.sp,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    when (selectedTimeRange) {
+                        0 -> WorkoutActivityChart(stat.currentWeekWorkouts)
+                        1 -> CalendarMonthViewStyled(
+                            year = now.year,
+                            month = now.monthValue,
+                            workoutDays = stat.currentMonthWorkouts.map { LocalDate.parse(it.date).dayOfMonth }
+                        )
+
+                        2 -> YearHeatmap(
+                            year = now.year,
+                            workoutDates = stat.currentYearWorkouts.map { LocalDate.parse(it.date) }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(48.dp))
+                    Text(
+                        text = "Verdeling per type",
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
+                        fontSize = 18.sp
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    val filteredTypeDist = when (selectedTimeRange) {
+                        0 -> stat.currentWeekWorkouts
+                        1 -> stat.currentMonthWorkouts
+                        else -> stat.currentYearWorkouts
+                    }.groupingBy { it.workoutTypeEnum }.eachCount().withDefault { 0 }
+                    val totalForDist = filteredTypeDist.values.sum().takeIf { it > 0 } ?: 1
+                    fun percent(count: Int) = (count * 100 / totalForDist)
+
+                    WorkoutTypeDistribution(
+                        running = percent(filteredTypeDist.getValue(com.example.workoutbuddyapplication.models.WorkoutType.RUNNING)),
+                        cycling = percent(filteredTypeDist.getValue(com.example.workoutbuddyapplication.models.WorkoutType.CYCLING)),
+                        strength = percent(filteredTypeDist.getValue(com.example.workoutbuddyapplication.models.WorkoutType.STRENGTH)),
+                        other = percent(filteredTypeDist.getValue(com.example.workoutbuddyapplication.models.WorkoutType.OTHER))
+                    )
+                }
             }
         }
-    }
-}
-
-@Composable
-fun StatsSummaryCards() {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        StatsSummaryCard("Totaal", "23", "workouts", Modifier.weight(1f))
-        Spacer(modifier = Modifier.width(8.dp))
-        StatsSummaryCard("Totale Tijd", "15.5", "uren", Modifier.weight(1f))
-    }
-
-    Spacer(modifier = Modifier.height(8.dp))
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        StatsSummaryCard("Afstand", "87", "km", Modifier.weight(1f))
-        Spacer(modifier = Modifier.width(8.dp))
-        StatsSummaryCard("Gemiddeld", "3.2", "per week", Modifier.weight(1f))
-    }
-}
-
-@Composable
-fun StatsSummaryCard(title: String, value: String, subtitle: String, modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier,
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(title, fontWeight = FontWeight.Bold)
-            Text(value, fontSize = 20.sp)
-            Text(subtitle, color = Color.Gray)
-        }
-    }
-}
-
-@Composable
-fun WorkoutTypeDistribution(running: Int, strength: Int, yoga: Int, other: Int) {
-    Column {
-        WorkoutTypeBar("Hardlopen", running, MaterialTheme.colorScheme.primary)
-        Spacer(modifier = Modifier.height(8.dp))
-        WorkoutTypeBar("Krachttraining", strength, MaterialTheme.colorScheme.secondary)
-        Spacer(modifier = Modifier.height(8.dp))
-        WorkoutTypeBar("Yoga", yoga, MaterialTheme.colorScheme.tertiary)
-        Spacer(modifier = Modifier.height(8.dp))
-        WorkoutTypeBar("Overig", other, MaterialTheme.colorScheme.surfaceVariant)
-    }
-}
-
-@Composable
-fun WorkoutTypeBar(type: String, percentage: Int, color: Color) {
-    Column {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(type)
-            Text("$percentage%")
-        }
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Canvas(modifier = Modifier.fillMaxWidth().height(16.dp)) {
-            val width = size.width * percentage / 100
-
-            drawLine(
-                color = Color.LightGray,
-                start = Offset(0f, size.height / 2),
-                end = Offset(size.width, size.height / 2),
-                strokeWidth = size.height
-            )
-
-            drawLine(
-                color = color,
-                start = Offset(0f, size.height / 2),
-                end = Offset(width, size.height / 2),
-                strokeWidth = size.height
-            )
-        }
-    }
-}
-
-@Composable
-fun Button(text: String, onClick: () -> Unit) {
-    androidx.compose.material3.Button(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Text(text)
     }
 }
