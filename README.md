@@ -11,14 +11,14 @@
 
 ### Step 2: Configure Properties File
 
-- Copy the contents of `gradle.properties.example` into a new file named `gradle.properties` in the project root:
+- Copy the contents of `gradle.properties.example` into a new file named `gradle.properties` in the project root.
 
 ### Step 3: Add Supabase API Key
 
 - Obtain your API key from your Supabase project dashboard
-- Open the newly created `gradle.properties` file and replace the placeholder value for `supabase_api_key` with your actual key:
+- Open the newly created `gradle.properties` file and replace the placeholder value for `supabase.anon.key` with your actual key:
   ```properties
-  supabase_api_key=your_actual_supabase_key
+  supabase.anon.key=your_actual_supabase_key
   ```
 
 ### Step 4: Open Project in Android Studio
@@ -39,4 +39,4 @@ You have two options to run the app:
 - Start an emulator via Android Studio.
 - Click **Run** and select the emulator.
 
-> ⚠️ **Note:** Some functionalities may not work correctly when using the emulator due to limitations (e.g., sensors, camera, location tracking, push notifications, ).
+> ⚠️ **Note:** Some functionalities may not work correctly when using the emulator due to limitations (e.g., sensors, camera, location tracking, push notifications).
